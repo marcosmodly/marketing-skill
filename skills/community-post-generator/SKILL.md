@@ -101,14 +101,24 @@ of writing a generic pitch and hoping.
    - **Track source tier as you go, not just the content.** WebFetch to
      reddit.com (or producthunt.com) can fail outright depending on the
      runtime's network policy — when this happens, falling back to
-     WebSearch still produces useful signal, but it's a materially
-     different confidence level: a rules page fetched directly from the
-     platform itself vs. third-party marketing/SEO blogs summarizing
-     (and possibly all echoing the same stale upstream source) what the
-     rules supposedly are. Note which one actually happened for each
-     claim, not just the claim itself — this feeds the required Source
-     Confidence line in the output below, and the go/no-go phrasing in
-     step 4.
+     WebSearch still produces useful signal, but not all of it is equally
+     trustworthy, and collapsing it into one undifferentiated "secondary"
+     bucket hides a real difference. When a direct fetch fails, look at
+     what the WebSearch snippets themselves are actually quoting:
+     - If a snippet is visibly quoting the platform's own official page
+       (its help center, its own community/forum posts, a named article
+       URL on reddit.com/producthunt.com) — the content still traces back
+       to the platform's own stated rules, just relayed one step removed
+       from a direct fetch instead of independently reachable.
+     - If a snippet is from a third-party marketing/SEO blog, "growth
+       agency," or guide *summarizing or guessing at* what the rules are
+       — that's someone else's interpretation, not the platform's own
+       words, and multiple such sites can all be echoing the same one
+       (possibly stale or wrong) upstream source without that being
+       apparent from search results alone.
+     Note which of these actually happened for each claim, not just the
+     claim itself — this feeds the required Source Confidence line in the
+     output below, and the go/no-go phrasing in step 4.
 
 4. **Decide go/no-go before drafting anything.** If research turns up a
    hard block — self-promotion banned outright, the subreddit is
@@ -119,13 +129,22 @@ of writing a generic pitch and hoping.
    the rule as written). Never draft a post the research itself says will
    be removed.
    - **A Go resting only on secondary sources is not the same claim as a
-     Go confirmed against the platform's own page — say which one it is.**
-     If every rules source in step 3 was secondary (primary fetch failed),
-     a "Go" must be phrased as conditional — e.g. "Go, but based on
-     secondary sources only; sanity-check the live rules/pinned threads
-     yourself before posting" — never presented with the same flat
-     confidence as a primary-confirmed Go. This isn't optional hedging;
-     it's the actual difference between "confirmed" and "probably."
+     Go confirmed against the platform's own page — say which one it is,
+     and which kind of secondary it is.** If every rules source in step 3
+     was secondary (primary fetch failed), phrase the Go accordingly:
+     - All secondary sources were the platform's own official content
+       relayed via search snippet (`Secondary (official)`) — e.g. "Go,
+       based on Product Hunt's own Help Center content via search snippet,
+       not a direct fetch — low-risk, but confirm before posting."
+     - Any secondary source was third-party guesswork about the rules
+       (`Secondary (third-party)`), or the mix is unclear — hedge harder:
+       e.g. "Go, but based on third-party summaries only, not the
+       platform's own stated rules — treat this as a lean, not a
+       confirmed rule, and sanity-check directly before posting."
+     Never present either as the same flat confidence as a
+     primary-confirmed Go. This isn't optional hedging; it's the actual
+     difference between "confirmed," "probably," and "someone's guess
+     about the rules, secondhand."
 
 5. **Draft the post** — title + body — matching the specific community's
    researched format and voice from step 3, not `references/brand-voice.md`'s
@@ -158,22 +177,30 @@ Use this exact section order, as Markdown `##` headings:
    line, exactly one of:
    - `Primary` — fetched directly from reddit.com's (or Product Hunt's)
      own rules/about page in this run.
-   - `Secondary` — the platform's own pages were unreachable this run;
-     everything below comes from third-party summaries or search
-     snippets only, not confirmed against the platform itself.
-   - `Mixed` — say which specific claims came from a primary fetch and
-     which came from secondary sources only, rather than blending them
-     into one undifferentiated summary.
+   - `Secondary (official)` — a direct fetch failed, but the WebSearch
+     snippets used are visibly quoting the platform's own official pages
+     (help center articles, named guideline pages, the platform's own
+     forum/mod posts) — one step removed from a direct read, but still
+     the platform's own words, not someone else's interpretation of them.
+   - `Secondary (third-party)` — a direct fetch failed and the sources
+     are third-party blogs, "growth guides," or marketing sites
+     summarizing or guessing at the rules — not the platform's own
+     stated words, and possibly several sites echoing one shared
+     (and possibly wrong or stale) upstream source.
+   - `Mixed` — say which specific claims came from which of the tiers
+     above, rather than blending them into one undifferentiated summary.
    Follow with what was actually found: self-promo policy,
    account-age/karma minimums if any, flair/title requirements, the
    typical post pattern observed, and the source(s) checked (links or
    search queries), noted as checked live in this run.
 2. **Go / No-Go** — one line: either "Clear to draft" with the reasoning,
    or the specific blocking rule and where it came from. **If Source
-   Confidence above is `Secondary` or `Mixed`, a go must say so in this
-   same line** (see step 4) — never state a secondary-sourced go with the
-   same flat confidence as a primary-confirmed one. **If it's a no-go,
-   stop here — no Drafted Post section.**
+   Confidence above is anything but `Primary`, a go must say so in this
+   same line, naming which tier it rests on** (see step 4) — a
+   `Secondary (official)` go and a `Secondary (third-party)` go don't
+   deserve the same hedge, and neither gets the same flat confidence as a
+   primary-confirmed one. **If it's a no-go, stop here — no Drafted Post
+   section.**
 3. **Drafted Post** *(only if step 2 is a go)* — title and body, with any
    required flair or disclosure called out separately, not buried in the
    body text.
@@ -205,11 +232,17 @@ Use this exact section order, as Markdown `##` headings:
 - If WebFetch to reddit.com is unreachable in this runtime, fall back to
   WebSearch and say so — never silently substitute general knowledge for
   a live check.
-- Always open the Community Research Summary with an explicit `Primary`/
-  `Secondary`/`Mixed` Source Confidence line, and always carry a
-  `Secondary`/`Mixed` confidence into the Go/No-Go line itself when the
+- Always open the Community Research Summary with an explicit Source
+  Confidence line — `Primary`, `Secondary (official)`,
+  `Secondary (third-party)`, or `Mixed` — and always carry a non-`Primary`
+  confidence, naming its tier, into the Go/No-Go line itself when the
   verdict is a go — this is a required field, not an optional caveat to
   remember on a case-by-case basis.
+- Don't collapse `Secondary (official)` and `Secondary (third-party)`
+  into one undifferentiated "secondary" note — a WebSearch snippet
+  quoting the platform's own help-center page is not the same reliability
+  as a marketing blog's guess at what the rules probably are, even though
+  neither involved a direct fetch.
 
 ## Example output
 
@@ -254,14 +287,32 @@ two options above you want, and this skill will draft that version next.
 > Markdown `##` heading immediately after **Go / No-Go**, as a title line
 > plus the full self-post body in the community's own voice from step 3.
 
-> **What `Secondary` confidence actually looks like** (this happened in a
-> real run, not hypothetical): WebFetch to reddit.com was blocked outright
-> by the runtime's network policy — every path on the domain failed, not
-> just one page — so research fell back to WebSearch, which surfaced
+> **What the two `Secondary` tiers actually look like** (both happened in
+> real runs, not hypotheticals):
+>
+> `Secondary (third-party)` — WebFetch to reddit.com was blocked outright
+> by the runtime's network policy (every path on the domain failed, not
+> just one page), so research fell back to WebSearch, which surfaced
 > several third-party marketing-blog summaries converging on the same
-> numbers (a self-promo cadence limit, a designated feedback-thread lane).
-> That run's Community Research Summary opened with `**Source Confidence:
-> Secondary** — reddit.com was unreachable this run; the below comes from
-> third-party summaries only, not Reddit's own rules page`, and its Go/No-Go
-> line (a no-go, in that case) still would have needed the "based on
-> secondary sources only" qualifier had the verdict been a go instead.
+> numbers (a self-promo cadence limit, a designated feedback-thread lane) —
+> but none of them were reddit.com or Reddit's own words, and sites like
+> these can all be echoing one shared, unverified source. That run opened
+> with `**Source Confidence: Secondary (third-party)** — reddit.com was
+> unreachable; the below comes from third-party summaries only, not
+> Reddit's own rules page`.
+>
+> `Secondary (official)` — a separate run against Product Hunt also had
+> its direct fetches blocked (producthunt.com and help.producthunt.com
+> both denied by the network policy), but several of the WebSearch
+> snippets were visibly quoting Product Hunt's own Help Center articles
+> by name and URL (its Forum Guidelines and Community Guidelines pages) —
+> one step removed from a direct read, but still Product Hunt's own
+> stated words, not a third party's guess at them. That run opened with
+> `**Source Confidence: Secondary (official)** — producthunt.com was
+> blocked this run; the below comes from search snippets that quote
+> Product Hunt's own Help Center articles directly, not a direct fetch`.
+>
+> Either way, a go verdict built on either tier still needs the
+> corresponding hedge in the Go/No-Go line (step 4) — `Secondary
+> (official)` earns a lighter one than `Secondary (third-party)`, but
+> neither is presented as flatly as a `Primary`-confirmed go.
