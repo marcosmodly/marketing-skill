@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Scaffolding for posting text directly to LinkedIn, X, Meta (Facebook Page),
-or Reddit - no n8n/Make in between.
+Reddit, or Discord - no n8n/Make in between.
 
 WARNING - read this before using it for anything real:
 
@@ -15,11 +15,12 @@ integration. Before relying on it:
     platform gates posting behind its own developer-app review, X
     additionally requires a paid API tier for write access, and Reddit
     closed instant self-service app registration in late 2025 in favor of
-    a manual approval queue - see the "reddit" note below.
+    a manual approval queue - see the "reddit" note below. Discord is the
+    exception - a webhook needs no app review at all, see "discord" below.
   - Confirm the endpoint/version below is still current - check
-    developers.linkedin.com, developer.x.com, developers.facebook.com, and
-    Reddit's own API docs directly, since these APIs change and this
-    script cannot check for you.
+    developers.linkedin.com, developer.x.com, developers.facebook.com,
+    Reddit's own API docs, and Discord's own API docs directly, since
+    these APIs change and this script cannot check for you.
   - Run with --dry-run and compare the printed request against that
     platform's current docs before ever passing --confirmed.
   - Do one manual --confirmed test post yourself before wiring this into
@@ -30,6 +31,12 @@ integration. Before relying on it:
     (missing flair, self-promo policy, karma/age minimums, banned
     domains). Run the `community-post-generator` skill against the target
     subreddit first and resolve everything it flags before sending.
+  - For Discord specifically: `community-post-generator` can't
+    independently verify a given server's rules the way it can for
+    Reddit/Product Hunt/Hacker News/Indie Hackers, since most servers
+    have no public page to check at all - it works from whatever rules
+    you (as an actual member) supply it. Confirm that's still current
+    yourself before sending, same as you would before posting by hand.
 
 Text-only. None of these platforms' media-attachment flows are
 implemented here (Instagram in particular has no text-only post endpoint
@@ -74,12 +81,26 @@ NOTES = {
               "guarantee the post survives AutoModerator; run "
               "community-post-generator against the target subreddit "
               "first.",
+    "discord": "The easiest of the five to set up: a webhook needs no "
+               "OAuth app review, just MANAGE_WEBHOOKS permission on the "
+               "target channel to create one (Channel Settings > "
+               "Integrations > Webhooks). The webhook URL itself is the "
+               "credential - anyone with it can post, so treat it like a "
+               "password (this script redacts it in --dry-run output, "
+               "same as other platforms' tokens). Sends a plain chat "
+               "message (2000-character limit; longer text is rejected, "
+               "not truncated, by Discord's API) - no title field exists, "
+               "this isn't a self-post the way Reddit is. Unlike the "
+               "other platforms, community-post-generator did not "
+               "independently verify the target server's rules for this "
+               "draft - it worked from what you supplied - so recheck the "
+               "server's own rules channel yourself before sending.",
 }
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Post text directly to LinkedIn, X, Meta (Facebook Page), or Reddit. "
+        description="Post text directly to LinkedIn, X, Meta (Facebook Page), Reddit, or Discord. "
                     "Scaffolding only - read the module docstring before using for real.",
         epilog=(
             "Required environment variables per platform:\n"
@@ -90,10 +111,11 @@ def parse_args():
             f"{META_GRAPH_API_VERSION})\n"
             "  reddit    REDDIT_ACCESS_TOKEN, REDDIT_USER_AGENT\n"
             "            (also requires --subreddit and --title; --flair-id optional)\n"
+            "  discord   DISCORD_WEBHOOK_URL  (the full webhook URL - itself the credential)\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--platform", required=True, choices=["linkedin", "x", "meta", "reddit"],
+    parser.add_argument("--platform", required=True, choices=["linkedin", "x", "meta", "reddit", "discord"],
                          help="Which platform to post to.")
     parser.add_argument("--text", help="Post text. Reads stdin if omitted.")
     parser.add_argument("--subreddit", help="Target subreddit, no 'r/' prefix. Required for --platform reddit.")
@@ -189,10 +211,28 @@ def build_reddit_request(text, subreddit, title, flair_id):
     return url, headers, body, [env["REDDIT_ACCESS_TOKEN"]]
 
 
+def build_discord_request(text):
+    env = require_env("DISCORD_WEBHOOK_URL")
+    url = env["DISCORD_WEBHOOK_URL"]
+    if len(text) > 2000:
+        print(
+            f"Message is {len(text)} characters; Discord rejects messages over 2000 "
+            "characters outright rather than truncating them. Shorten it before sending.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    headers = {"Content-Type": "application/json"}
+    body = json.dumps({"content": text}).encode("utf-8")
+    # The webhook URL itself is the credential (no separate token/header) - redact the
+    # whole thing, not just a header value, or --dry-run would print it in the clear.
+    return url, headers, body, [url]
+
+
 BUILDERS = {
     "linkedin": build_linkedin_request,
     "x": build_x_request,
     "meta": build_meta_request,
+    "discord": build_discord_request,
 }
 
 
@@ -233,7 +273,9 @@ def main():
         print(f"Platform: {args.platform}")
         print(f"Note: {NOTES[args.platform]}")
         print("Method: POST")
-        print(f"URL: {url}")
+        # redact the URL itself, not just headers/body - Discord's webhook URL IS the
+        # credential, so printing it unredacted here would defeat the point of --dry-run.
+        print(f"URL: {redact(url, secrets)}")
         print("Headers:")
         for name, value in headers.items():
             print(f"  {name}: {redact(value, secrets)}")

@@ -1,6 +1,6 @@
 ---
 name: community-post-generator
-description: Researches a specific subreddit's, Product Hunt's, Hacker News's, or Indie Hackers' actual rules and typical post style live before drafting — never a generic templated post, verifying each source is actually about the named target before trusting it, and writes it to read like a person wrote it. Use when the user wants to post in a specific subreddit, on Product Hunt, on Hacker News (including Show HN), on Indie Hackers (including Show IH), or any other rules-driven community/forum.
+description: Researches a specific subreddit's, Product Hunt's, Hacker News's, or Indie Hackers' actual rules and typical post style live before drafting — never a generic templated post, verifying each source is actually about the named target before trusting it, and writes it to read like a person wrote it. For Discord, where most servers have no public page to research at all, it asks the user (an actual member) for the rules instead of pretending to fetch them. Use when the user wants to post in a specific subreddit, on Product Hunt, on Hacker News (including Show HN), on Indie Hackers (including Show IH), in a specific Discord server, or any other rules-driven community/forum.
 allowed-tools: Read, Grep, Glob, Write, WebSearch, WebFetch
 ---
 
@@ -8,22 +8,34 @@ allowed-tools: Read, Grep, Glob, Write, WebSearch, WebFetch
 
 ## Purpose
 
-Reddit, Product Hunt, Hacker News, and Indie Hackers aren't broadcast
-platforms like LinkedIn or Twitter/X — they're communities that set and
-enforce their own rules per-subreddit, per-forum, or per-group, through
-moderators, AutoMod, or (on HN) the community's own flagging behavior, and
-a post that ignores those rules gets removed, buried, or gets the account
-banned, no matter how good the copy is. This skill's job is to research
-the *specific* target community first, decide honestly whether the
-intended post is even welcome there, and only then draft something that
-actually fits its rules and voice, instead of writing a generic pitch and
-hoping. "Research" means the source actually has to be about the named
-target, not just something with a similar name — a subreddit about a
-community isn't the same as that community's own site, and confusing the
-two is a real, confirmed way this has gone wrong (see step 3). The copy
-itself also has to survive first contact: something that reads as
-obviously AI-polished marketing text gets the same skeptical reaction on
-these platforms as overt promotion does (see step 5), so drafts are
+Reddit, Product Hunt, Hacker News, Indie Hackers, and Discord aren't
+broadcast platforms like LinkedIn or Twitter/X — they're communities that
+set and enforce their own rules per-subreddit, per-forum, per-group, or
+per-server, through moderators, AutoMod, or (on HN) the community's own
+flagging behavior, and a post that ignores those rules gets removed,
+buried, or gets the account banned, no matter how good the copy is. This
+skill's job is to research the *specific* target community first, decide
+honestly whether the intended post is even welcome there, and only then
+draft something that actually fits its rules and voice, instead of
+writing a generic pitch and hoping. "Research" means the source actually
+has to be about the named target, not just something with a similar name
+— a subreddit about a community isn't the same as that community's own
+site, and confusing the two is a real, confirmed way this has gone wrong
+(see step 3).
+
+Discord breaks the "research it live" assumption itself, not just the
+target-matching part of it: most servers have no public page at all —
+you generally can't see a server's rules, or anything else, without
+already being a member — so there's usually nothing for WebFetch or
+WebSearch to find regardless of network access. For Discord specifically,
+this skill asks the user (who, if they want to post there, is presumably
+already a member) to supply the rules instead of pretending it looked
+them up itself. See step 3's Discord section and the `User-Supplied`
+Source Confidence tier.
+
+The copy itself also has to survive first contact: something that reads
+as obviously AI-polished marketing text gets the same skeptical reaction
+on these platforms as overt promotion does (see step 5), so drafts are
 written to read like an actual person wrote them.
 
 ## Step-by-step process
@@ -78,6 +90,17 @@ written to read like an actual person wrote them.
      "here's my product, give me feedback," with its own content
      convention — see step 3) is the right fit, or whether a different
      group matches the content better.
+   - For Discord: get the exact server *and* the exact channel within it
+     (never just "Discord," and not even just the server name — rules and
+     norms are per-channel as much as per-server). Then confirm the user
+     is actually a member of that server. If they aren't, say plainly that
+     this skill can't research or verify anything about a server neither
+     of you can see, and the honest options are: join first and come
+     back, or proceed with only generic best-practice guidance, clearly
+     labeled as unverified against that server's actual rules. Set the
+     expectation now that step 3 will ask them to supply what the rules
+     actually say, not fetch them independently the way it does for the
+     other four platforms.
    - The underlying content/offer/topic, and any link or CTA (paste, file,
      URL, or "our product" — check `README*`, `CHANGELOG*`, `docs/**/*.md`,
      and `package.json`/`pyproject.toml` at the project root first if so,
@@ -162,14 +185,33 @@ written to read like an actual person wrote them.
      indiehackers.com/post/... and indiehackers.com/group/... threads
      count as the platform's own words even via snippet, same as HN's
      item threads. Unlike Reddit, there's typically no hard cooldown or
-     karma/account-age gate; unlike all three other platforms, IH is
-     explicitly hospitable to founders sharing their own product, but
-     only in the right shape — the **Show IH** convention specifically is
-     lead with the founder story, state the current stage, and ask one or
-     two concrete questions, not a bare link or a pitch. Posting the same
+     karma/account-age gate; unlike Reddit, Product Hunt, and Hacker News,
+     IH is explicitly hospitable to founders sharing their own product,
+     but only in the right shape — the **Show IH** convention specifically
+     is lead with the founder story, state the current stage, and ask one
+     or two concrete questions, not a bare link or a pitch. Posting the same
      pitch to multiple groups instead of the single most relevant one is
      discouraged, same spirit as cross-posting the same pitch to multiple
      subreddits.
+   - **Discord.** Try the public route first, but expect it to come up
+     empty for most servers: a large, established, Discovery-listed
+     server (1,000+ members, opted into Server Discovery) may have a
+     public description and preview via Discord's own site, and the
+     no-auth invite-metadata endpoint (`discord.com/api/v9/invites/<code>`)
+     returns a server name/description/member count if an invite link is
+     available — but none of that includes rules text or message history,
+     for any server, Discovery-listed or not. For the typical case (a
+     private or invite-only server, which is most of them), there is
+     nothing to fetch. **Ask the user directly** for what the server's
+     rules channel actually says, and for that specific channel's own
+     posting norms if it's a designated self-promo/showcase channel
+     (common pattern: a `#self-promo` or `#show-and-tell` channel with its
+     own pinned rules, separate from the server-wide ones). If they don't
+     know or haven't checked, **don't proceed to drafting on a guess** —
+     ask them to go check the pinned rules message first, the same way a
+     No-Go elsewhere stops the process rather than working around it.
+     Silence or "probably fine" from the user isn't the same as an actual
+     answer.
    - Cite what was actually found — link the rules page or search result
      checked, note it was checked just now. Never assert a community's
      norms from training knowledge alone; subreddit rules change, and a
@@ -197,7 +239,15 @@ written to read like an actual person wrote them.
        apparent from search results alone.
      Note which of these actually happened for each claim, not just the
      claim itself — this feeds the required Source Confidence line in the
-     output below, and the go/no-go phrasing in step 4.
+     output below, and the go/no-go phrasing in step 4. For Discord, this
+     tiering doesn't apply the same way: rules that came from the user
+     rather than from anything this skill fetched or searched are
+     `User-Supplied`, a distinct tier from Primary/Secondary — not because
+     it's automatically worse, but because it's a fundamentally different
+     kind of claim (self-reported by the requester, not independently
+     checked by this skill at all) and needs to be labeled as such rather
+     than folded into a tier that implies some amount of independent
+     verification happened.
 
 4. **Decide go/no-go before drafting anything.** If research turns up a
    hard block — self-promotion banned outright, the subreddit is
@@ -224,6 +274,14 @@ written to read like an actual person wrote them.
      primary-confirmed Go. This isn't optional hedging; it's the actual
      difference between "confirmed," "probably," and "someone's guess
      about the rules, secondhand."
+   - **For Discord, a Go is always `User-Supplied`, never higher** — say
+     so plainly: e.g. "Go, based on the rules you described — this skill
+     couldn't verify them independently, so if you're not certain you
+     have the current rules yourself, double-check the pinned message
+     before sending." A No-Go still applies the normal way if what the
+     user described rules this out (self-promo banned entirely, wrong
+     channel, no posting permission) — a friendlier tier name doesn't mean
+     a friendlier bar for saying no.
 
 5. **Draft the post** — shape depends on the platform (see Output
    structure below) — matching the specific community's researched format
@@ -231,12 +289,16 @@ written to read like an actual person wrote them.
    when the two conflict. Most subreddits, Product Hunt Discussions,
    Hacker News, and Indie Hackers all actively punish corporate or
    salesy-sounding copy — Indie Hackers is more welcoming to the *fact* of
-   self-promotion than the other three, but just as unforgiving of a
-   pitch-first tone instead of a story-first one; when the configured
-   brand voice would read as too polished for that community,
-   override it toward the community's own norm and **tell the user this
+   self-promotion than Reddit, Product Hunt, or Hacker News are, but just
+   as unforgiving of a pitch-first tone instead of a story-first one; when
+   the configured brand voice would read as too polished for that
+   community, override it toward the community's own norm and **tell the user this
    happened and why** rather than silently picking one. The banned-words
-   list from brand-voice.md still applies regardless.
+   list from brand-voice.md still applies regardless. For Discord, match
+   whatever tone the user described that channel having — if they haven't
+   said, ask rather than guessing, since server culture varies enormously
+   more than it does between subreddits and this skill has no independent
+   way to sample it.
    - **Write it to read like an actual person typed it, not AI-polished
      marketing copy** — these communities react to that almost as badly
      as they react to overt promotion, since it's a strong tell for
@@ -261,7 +323,9 @@ written to read like an actual person wrote them.
    expects it, no banned link/domain, title matches any enforced format)
    checked off explicitly, not assumed satisfied — plus a pass for the
    writing-tell list above (no em dashes, no throat-clearing opener, no
-   triadic padding) before the draft is shown to the user.
+   triadic padding) before the draft is shown to the user. For Discord
+   specifically, also confirm the draft is under Discord's 2000-character
+   message limit (rejected outright, not truncated, if it's over).
 
 ## When to use this skill
 
@@ -272,6 +336,8 @@ Trigger on requests like:
 - "Draft a Product Hunt Discussions post / launch description"
 - "Write a Show HN for this" / "Should I post this on Hacker News?"
 - "Post this on Indie Hackers" / "Write a Show IH for this"
+- "Post this in [Discord server]" / "Write a message for our Discord's
+  #self-promo channel"
 - "What's the best way to post this in [subreddit]?"
 
 If the request just says "Indie Hackers" with no other context, confirm
@@ -307,18 +373,25 @@ Use this exact section order, as Markdown `##` headings:
      (and possibly wrong or stale) upstream source.
    - `Mixed` — say which specific claims came from which of the tiers
      above, rather than blending them into one undifferentiated summary.
+   - `User-Supplied` (Discord only) — the rules came from the user
+     describing their own server, not from anything this skill fetched or
+     searched. Not a reliability ranking alongside the others (it isn't
+     "worse than Secondary" or "better than" it) — it's a different kind
+     of claim, self-reported by the requester rather than independently
+     checked at all, and has to be labeled as exactly that.
    Follow with what was actually found: self-promo policy,
    account-age/karma minimums if any, flair/title requirements, the
-   typical post pattern observed, and the source(s) checked (links or
-   search queries), noted as checked live in this run.
+   typical post pattern observed, and the source(s) checked (links,
+   search queries, or — for `User-Supplied` — what the user said and
+   when), noted as checked (or supplied) in this run.
 2. **Go / No-Go** — one line: either "Clear to draft" with the reasoning,
    or the specific blocking rule and where it came from. **If Source
    Confidence above is anything but `Primary`, a go must say so in this
    same line, naming which tier it rests on** (see step 4) — a
-   `Secondary (official)` go and a `Secondary (third-party)` go don't
-   deserve the same hedge, and neither gets the same flat confidence as a
-   primary-confirmed one. **If it's a no-go, stop here — no Drafted Post
-   section.**
+   `Secondary (official)` go, a `Secondary (third-party)` go, and a
+   `User-Supplied` go each need their own distinct hedge, and none of them
+   gets the same flat confidence as a primary-confirmed one. **If it's a
+   no-go, stop here — no Drafted Post section.**
 3. **Drafted Post** *(only if step 2 is a go)* — shape follows the actual
    platform, never forced into one universal template:
    - Reddit / Product Hunt Discussions: title + self-post body, with any
@@ -334,6 +407,10 @@ Use this exact section order, as Markdown `##` headings:
      — founder story, current stage, one or two concrete questions — not
      just a product description; a draft missing any of the three isn't
      a real Show IH post regardless of how well-written it is.
+   - Discord: a single chat message, no separate title field at all —
+     Discord posts don't have one, so don't invent one. Under 2000
+     characters (see step 6). Label it clearly as built from the rules
+     the user supplied, not independently verified.
    - Product Hunt launch (if that's the confirmed surface from step 2):
      tagline + description + first-comment text, labeled as draft assets
      for a process this skill doesn't manage end-to-end, not a single
@@ -342,21 +419,28 @@ Use this exact section order, as Markdown `##` headings:
    (their account clears any age/karma minimum or, for Hacker News and
    Indie Hackers, has a genuine participation history rather than being
    promotion-only; they're posting from the right account; any mod
-   pre-approval was actually obtained).
+   pre-approval was actually obtained; for Discord, that the rules they
+   described are actually still current — this skill took their word for
+   it and never independently checked, so if they're not fully sure they
+   read the pinned rules themselves, that's on them to confirm before
+   sending, not something this skill already verified).
 5. **Next Step** — the primary path is pasting it in manually; note that
    `publish-pipeline`'s optional direct-post path can send a Reddit
-   self-post programmatically if the user already has their own approved
-   Reddit API credentials (see that skill and the plugin README). The
-   other three platforms have no equivalent send path here, for three
-   different reasons worth naming rather than lumping together: Product
-   Hunt's write API exists but needs Product Hunt's own special approval;
-   Hacker News's official API has no write/submit endpoint at all, for
-   anyone; and Indie Hackers' API situation is genuinely unclear from this
-   run's research (some sources reference an API, but it appears scoped
-   to read-only product/revenue data, and a community thread literally
-   asks whether IH has a developer API at all) — don't round that
-   uncertainty off to a confident yes or no, say plainly it's unverified
-   and treat it as manual-only until proven otherwise.
+   self-post, or a Discord message, programmatically if the user already
+   has the right credentials (a Reddit API app, or — much simpler — a
+   Discord webhook URL for that channel; see that skill and the plugin
+   README). Product Hunt and Hacker News have no equivalent send path
+   here, for two different reasons worth naming rather than lumping
+   together: Product Hunt's write API exists but needs Product Hunt's own
+   special approval; Hacker News's official API has no write/submit
+   endpoint at all, for anyone. Indie Hackers' API situation is genuinely
+   unclear from this skill's research (some sources reference an API, but
+   it appears scoped to read-only product/revenue data, and a community
+   thread literally asks whether IH has a developer API at all) — don't
+   round that uncertainty off to a confident yes or no, say plainly it's
+   unverified and treat it as manual-only until proven otherwise. Discord
+   is the one platform here where sending is actually the easy part —
+   researching the rules is what's hard.
 
 ## Formatting rules
 
@@ -398,17 +482,29 @@ Use this exact section order, as Markdown `##` headings:
   a product description alone isn't a valid Show IH post regardless of
   how well it's written, and this skill shouldn't hand over something
   that doesn't match the format it just researched.
+- On Discord specifically: never draft a post for a server the user isn't
+  a member of, and never draft one on a guess when the user says they
+  don't know or haven't checked the server's rules — ask them to check
+  first, the same way a No-Go elsewhere stops the process rather than
+  being worked around. A draft over 2000 characters isn't valid Discord
+  output; shorten it before presenting it, don't rely on the platform to
+  truncate it (it won't — it rejects the send outright).
 - Always open the Community Research Summary with an explicit Source
   Confidence line — `Primary`, `Secondary (official)`,
-  `Secondary (third-party)`, or `Mixed` — and always carry a non-`Primary`
-  confidence, naming its tier, into the Go/No-Go line itself when the
-  verdict is a go — this is a required field, not an optional caveat to
-  remember on a case-by-case basis.
+  `Secondary (third-party)`, `Mixed`, or (Discord only) `User-Supplied` —
+  and always carry a non-`Primary` confidence, naming its tier, into the
+  Go/No-Go line itself when the verdict is a go — this is a required
+  field, not an optional caveat to remember on a case-by-case basis.
 - Don't collapse `Secondary (official)` and `Secondary (third-party)`
   into one undifferentiated "secondary" note — a WebSearch snippet
   quoting the platform's own help-center page is not the same reliability
   as a marketing blog's guess at what the rules probably are, even though
   neither involved a direct fetch.
+- Don't collapse `User-Supplied` into the `Secondary` tiers either, even
+  informally — it isn't "even more secondary," it's evidence from a
+  different source entirely (the requester, not a web search), and
+  conflating the two obscures that this skill did zero independent
+  verification for Discord rather than some-but-not-total verification.
 
 ## Example output
 
@@ -536,3 +632,49 @@ two options above you want, and this skill will draft that version next.
 > something else. This is the failure mode step 3's target-verification
 > check exists to catch before a claim ever reaches the Source Confidence
 > tiers above.
+
+> **What a `User-Supplied` Discord case looks like.** Unlike the examples
+> above, this one is illustrative, not from an actual run — this skill
+> hasn't been tested against a real Discord server with a real user in
+> this session, so it's shown as a worked hypothetical rather than
+> mislabeled as something that happened:
+>
+> ```markdown
+> ## Community Research Summary
+> **Source Confidence: User-Supplied** — the server isn't Discovery-listed
+> and has no public page to check; the requester is a member and
+> described the rules directly, checked just now in conversation, not
+> independently verified against the server itself.
+>
+> Target: the fictional "BuildSpace" Discord, #showcase channel. Per the
+> requester: self-promotion is welcome in #showcase specifically (not in
+> #general), one post per project, screenshots or a working link expected,
+> no cross-posting the same thing in multiple channels. No stated account
+> age or role requirement.
+>
+> ## Go / No-Go
+> Go, based on what the requester described — this skill couldn't check
+> BuildSpace's actual rules channel itself, so if you're not sure that's
+> still current, glance at the pinned message before sending.
+>
+> ## Drafted Post
+> Shipped a small thing this week: [product], a [one-line description].
+> Built it because [the actual reason], and the part I wasn't sure would
+> work was [specific detail]. Screenshot below. Would genuinely like to
+> know if the [specific feature] makes sense to anyone outside my own
+> head.
+>
+> ## Compliance Checklist
+> - Confirm #showcase is still the right channel and the one-post-per-
+>   project rule hasn't changed since you last checked.
+>
+> ## Next Step
+> Nothing sent. If BuildSpace has a webhook set up for #showcase,
+> `publish-pipeline`'s direct-post path can send this immediately, no
+> approval queue involved — see the plugin README.
+> ```
+>
+> Same natural-writing bar as every other draft (no em dashes, no
+> throat-clearing opener), same explicit hedge pattern as the Secondary
+> tiers, just labeled for what it actually is: unverified by this skill,
+> taken on the requester's own word.
