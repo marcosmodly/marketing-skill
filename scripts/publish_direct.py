@@ -1,0 +1,214 @@
+#!/usr/bin/env python3
+"""
+Scaffolding for posting text directly to LinkedIn, X, or Meta (Facebook
+Page) - no n8n/Make in between.
+
+WARNING - read this before using it for anything real:
+
+This talks to live, versioned platform APIs. It was written without a
+connected account or working credentials for any of these platforms to
+test against, so treat every request shape below as best-effort against
+each platform's last publicly documented stable API, not a verified
+integration. Before relying on it:
+
+  - Confirm you actually have the right kind of API access first. Each
+    platform gates posting behind its own developer-app review, and X
+    additionally requires a paid API tier for write access.
+  - Confirm the endpoint/version below is still current - check
+    developers.linkedin.com, developer.x.com, and developers.facebook.com
+    directly, since these APIs change and this script cannot check for
+    you.
+  - Run with --dry-run and compare the printed request against that
+    platform's current docs before ever passing --confirmed.
+  - Do one manual --confirmed test post yourself before wiring this into
+    anything scheduled or unattended.
+
+Text-only. None of the three platforms' media-attachment flows are
+implemented here (Instagram in particular has no text-only post endpoint
+at all - see NOTES below).
+
+Same safety pattern as publish_webhook.py: refuses to send unless you
+pass --dry-run or --confirmed explicitly, and never sends without one.
+"""
+import argparse
+import json
+import os
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+
+
+META_GRAPH_API_VERSION = os.environ.get("META_GRAPH_API_VERSION", "v21.0")
+
+NOTES = {
+    "linkedin": "Uses the legacy UGC Posts API (v2/ugcPosts). LinkedIn has "
+                "been migrating products to a newer versioned Posts API "
+                "(/rest/posts, requires a LinkedIn-Version header) - check "
+                "which one your app's product access actually grants.",
+    "x": "Requires a user-context OAuth2 access token with tweet.write "
+         "scope (3-legged OAuth) - an app-only bearer token cannot post on "
+         "someone's behalf. X also gates write access behind a paid API "
+         "tier as of recent pricing - confirm your access level.",
+    "meta": "Facebook Page text posts only. Instagram has no text-only "
+            "post endpoint - it requires an image/video container plus a "
+            "separate publish call, not implemented here.",
+}
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Post text directly to LinkedIn, X, or Meta (Facebook Page). "
+                    "Scaffolding only - read the module docstring before using for real.",
+        epilog=(
+            "Required environment variables per platform:\n"
+            "  linkedin  LINKEDIN_ACCESS_TOKEN, LINKEDIN_AUTHOR_URN\n"
+            "  x         X_ACCESS_TOKEN  (user-context OAuth2, tweet.write scope)\n"
+            "  meta      META_PAGE_ACCESS_TOKEN, META_PAGE_ID\n"
+            "            (optional: META_GRAPH_API_VERSION, defaults to "
+            f"{META_GRAPH_API_VERSION})\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("--platform", required=True, choices=["linkedin", "x", "meta"],
+                         help="Which platform to post to.")
+    parser.add_argument("--text", help="Post text. Reads stdin if omitted.")
+    parser.add_argument("--timeout", type=float, default=15, help="Request timeout in seconds (default: 15).")
+    parser.add_argument("--dry-run", action="store_true", help="Print the request instead of sending it.")
+    parser.add_argument("--confirmed", action="store_true",
+                         help="Required to actually send. Only pass this after a human has seen the exact "
+                              "request and explicitly said to proceed, in this conversation.")
+    return parser.parse_args()
+
+
+def load_text(text_arg):
+    text = text_arg if text_arg is not None else sys.stdin.read()
+    text = text.strip()
+    if not text:
+        print("No post text given. Pass --text or pipe it via stdin.", file=sys.stderr)
+        sys.exit(2)
+    return text
+
+
+def require_env(*names):
+    missing = [n for n in names if not os.environ.get(n)]
+    if missing:
+        print(f"Missing required environment variable(s): {', '.join(missing)}", file=sys.stderr)
+        sys.exit(2)
+    return {n: os.environ[n] for n in names}
+
+
+def build_linkedin_request(text):
+    env = require_env("LINKEDIN_ACCESS_TOKEN", "LINKEDIN_AUTHOR_URN")
+    url = "https://api.linkedin.com/v2/ugcPosts"
+    headers = {
+        "Authorization": f"Bearer {env['LINKEDIN_ACCESS_TOKEN']}",
+        "Content-Type": "application/json",
+        "X-Restli-Protocol-Version": "2.0.0",
+    }
+    body = {
+        "author": env["LINKEDIN_AUTHOR_URN"],
+        "lifecycleState": "PUBLISHED",
+        "specificContent": {
+            "com.linkedin.ugc.ShareContent": {
+                "shareCommentary": {"text": text},
+                "shareMediaCategory": "NONE",
+            }
+        },
+        "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"},
+    }
+    return url, headers, json.dumps(body).encode("utf-8"), [env["LINKEDIN_ACCESS_TOKEN"]]
+
+
+def build_x_request(text):
+    env = require_env("X_ACCESS_TOKEN")
+    url = "https://api.twitter.com/2/tweets"
+    headers = {
+        "Authorization": f"Bearer {env['X_ACCESS_TOKEN']}",
+        "Content-Type": "application/json",
+    }
+    body = {"text": text}
+    return url, headers, json.dumps(body).encode("utf-8"), [env["X_ACCESS_TOKEN"]]
+
+
+def build_meta_request(text):
+    env = require_env("META_PAGE_ACCESS_TOKEN", "META_PAGE_ID")
+    url = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{env['META_PAGE_ID']}/feed"
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    body = urllib.parse.urlencode({
+        "message": text,
+        "access_token": env["META_PAGE_ACCESS_TOKEN"],
+    }).encode("utf-8")
+    return url, headers, body, [env["META_PAGE_ACCESS_TOKEN"]]
+
+
+BUILDERS = {
+    "linkedin": build_linkedin_request,
+    "x": build_x_request,
+    "meta": build_meta_request,
+}
+
+
+def redact(text, secrets):
+    for secret in secrets:
+        if secret:
+            text = text.replace(secret, "<redacted>")
+    return text
+
+
+def main():
+    args = parse_args()
+
+    if not args.dry_run and not args.confirmed:
+        print(
+            "Refusing to send: pass --dry-run to preview the request, or --confirmed to "
+            "actually send it. This script never sends without one of those being explicit.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    text = load_text(args.text)
+    url, headers, body, secrets = BUILDERS[args.platform](text)
+
+    if args.dry_run:
+        print("=== DRY RUN: no request sent ===")
+        print(f"Platform: {args.platform}")
+        print(f"Note: {NOTES[args.platform]}")
+        print("Method: POST")
+        print(f"URL: {url}")
+        print("Headers:")
+        for name, value in headers.items():
+            print(f"  {name}: {redact(value, secrets)}")
+        print(f"Body ({len(body)} bytes):")
+        print(redact(body.decode("utf-8"), secrets))
+        print("=== END DRY RUN ===")
+        sys.exit(0)
+
+    request = urllib.request.Request(url, data=body, headers=headers, method="POST")
+
+    try:
+        with urllib.request.urlopen(request, timeout=args.timeout) as response:
+            status = response.getcode()
+            reason = response.reason
+            response_body = response.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as e:
+        try:
+            error_body = e.read().decode("utf-8", errors="replace")
+        except Exception:
+            error_body = ""
+        print(f"{args.platform} API returned non-2xx status", file=sys.stderr)
+        print(f"Status: {e.code} {e.reason}", file=sys.stderr)
+        print(f"Response: {error_body[:500] or '(empty body)'}", file=sys.stderr)
+        sys.exit(4)
+    except (urllib.error.URLError, OSError) as e:
+        print(f"Failed to reach {args.platform} API: {e}", file=sys.stderr)
+        sys.exit(3)
+
+    print(f"Posted to {args.platform}")
+    print(f"Status: {status} {reason}")
+    print(f"Response: {response_body[:500] or '(empty body)'}")
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

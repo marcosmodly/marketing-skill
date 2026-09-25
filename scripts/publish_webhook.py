@@ -17,6 +17,9 @@ def parse_args():
                          help="Extra HTTP header. Repeatable.")
     parser.add_argument("--timeout", type=float, default=15, help="Request timeout in seconds (default: 15).")
     parser.add_argument("--dry-run", action="store_true", help="Print the request instead of sending it.")
+    parser.add_argument("--confirmed", action="store_true",
+                         help="Required to actually send. Only pass this after a human has seen the exact "
+                              "payload and destination and explicitly said to proceed, in this conversation.")
     return parser.parse_args()
 
 
@@ -51,6 +54,14 @@ def parse_headers(header_args):
 
 def main():
     args = parse_args()
+
+    if not args.dry_run and not args.confirmed:
+        print(
+            "Refusing to send: pass --dry-run to preview the request, or --confirmed to "
+            "actually send it. This script never sends without one of those being explicit.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
     url = args.url or os.environ.get("MARKETING_WEBHOOK_URL")
     if not url:

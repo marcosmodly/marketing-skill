@@ -8,7 +8,7 @@
     {
       "name": "marketing-skill",
       "source": ".",
-      "description": "A suite of composable marketing skills: competitor research, multi-platform content repurposing, visual generation briefs, and an automated publishing pipeline with n8n/Make webhook handoff."
+      "description": "A suite of composable marketing skills: competitor research, batch content calendaring, multi-platform content repurposing, SEO briefs, ad copy, email sequences, visual generation briefs, and a publishing pipeline with n8n/Make webhook handoff or optional direct platform posting."
     }
   ]
 }
