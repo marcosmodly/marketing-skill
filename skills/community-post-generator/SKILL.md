@@ -98,6 +98,17 @@ of writing a generic pitch and hoping.
      checked, note it was checked just now. Never assert a community's
      norms from training knowledge alone; subreddit rules change, and a
      stale assumption is exactly how a post gets removed.
+   - **Track source tier as you go, not just the content.** WebFetch to
+     reddit.com (or producthunt.com) can fail outright depending on the
+     runtime's network policy — when this happens, falling back to
+     WebSearch still produces useful signal, but it's a materially
+     different confidence level: a rules page fetched directly from the
+     platform itself vs. third-party marketing/SEO blogs summarizing
+     (and possibly all echoing the same stale upstream source) what the
+     rules supposedly are. Note which one actually happened for each
+     claim, not just the claim itself — this feeds the required Source
+     Confidence line in the output below, and the go/no-go phrasing in
+     step 4.
 
 4. **Decide go/no-go before drafting anything.** If research turns up a
    hard block — self-promotion banned outright, the subreddit is
@@ -107,6 +118,14 @@ of writing a generic pitch and hoping.
    *would* be welcome, if one honestly exists, rather than a workaround for
    the rule as written). Never draft a post the research itself says will
    be removed.
+   - **A Go resting only on secondary sources is not the same claim as a
+     Go confirmed against the platform's own page — say which one it is.**
+     If every rules source in step 3 was secondary (primary fetch failed),
+     a "Go" must be phrased as conditional — e.g. "Go, but based on
+     secondary sources only; sanity-check the live rules/pinned threads
+     yourself before posting" — never presented with the same flat
+     confidence as a primary-confirmed Go. This isn't optional hedging;
+     it's the actual difference between "confirmed" and "probably."
 
 5. **Draft the post** — title + body — matching the specific community's
    researched format and voice from step 3, not `references/brand-voice.md`'s
@@ -135,13 +154,26 @@ Trigger on requests like:
 
 Use this exact section order, as Markdown `##` headings:
 
-1. **Community Research Summary** — what was actually found: self-promo
-   policy, account-age/karma minimums if any, flair/title requirements,
-   the typical post pattern observed, and the source(s) checked (links or
+1. **Community Research Summary** — open with a **Source Confidence**
+   line, exactly one of:
+   - `Primary` — fetched directly from reddit.com's (or Product Hunt's)
+     own rules/about page in this run.
+   - `Secondary` — the platform's own pages were unreachable this run;
+     everything below comes from third-party summaries or search
+     snippets only, not confirmed against the platform itself.
+   - `Mixed` — say which specific claims came from a primary fetch and
+     which came from secondary sources only, rather than blending them
+     into one undifferentiated summary.
+   Follow with what was actually found: self-promo policy,
+   account-age/karma minimums if any, flair/title requirements, the
+   typical post pattern observed, and the source(s) checked (links or
    search queries), noted as checked live in this run.
 2. **Go / No-Go** — one line: either "Clear to draft" with the reasoning,
-   or the specific blocking rule and where it came from. **If it's a
-   no-go, stop here — no Drafted Post section.**
+   or the specific blocking rule and where it came from. **If Source
+   Confidence above is `Secondary` or `Mixed`, a go must say so in this
+   same line** (see step 4) — never state a secondary-sourced go with the
+   same flat confidence as a primary-confirmed one. **If it's a no-go,
+   stop here — no Drafted Post section.**
 3. **Drafted Post** *(only if step 2 is a go)* — title and body, with any
    required flair or disclosure called out separately, not buried in the
    body text.
@@ -173,6 +205,11 @@ Use this exact section order, as Markdown `##` headings:
 - If WebFetch to reddit.com is unreachable in this runtime, fall back to
   WebSearch and say so — never silently substitute general knowledge for
   a live check.
+- Always open the Community Research Summary with an explicit `Primary`/
+  `Secondary`/`Mixed` Source Confidence line, and always carry a
+  `Secondary`/`Mixed` confidence into the Go/No-Go line itself when the
+  verdict is a go — this is a required field, not an optional caveat to
+  remember on a case-by-case basis.
 
 ## Example output
 
@@ -182,6 +219,9 @@ Use this exact section order, as Markdown `##` headings:
 
 ```markdown
 ## Community Research Summary
+**Source Confidence: Primary** — fetched directly from `r/exampleSaaS`'s
+own rules page and post listing just now.
+
 Checked `r/exampleSaaS`'s rules (fetched just now) and its last ~15
 top-of-month posts. Rule 3 reads: "No direct promotion of your own
 product outside the weekly Self-Promo Saturday thread; posts that are
@@ -213,3 +253,15 @@ two options above you want, and this skill will draft that version next.
 > If step 2 had been a clear go, **Drafted Post** would follow the same
 > Markdown `##` heading immediately after **Go / No-Go**, as a title line
 > plus the full self-post body in the community's own voice from step 3.
+
+> **What `Secondary` confidence actually looks like** (this happened in a
+> real run, not hypothetical): WebFetch to reddit.com was blocked outright
+> by the runtime's network policy — every path on the domain failed, not
+> just one page — so research fell back to WebSearch, which surfaced
+> several third-party marketing-blog summaries converging on the same
+> numbers (a self-promo cadence limit, a designated feedback-thread lane).
+> That run's Community Research Summary opened with `**Source Confidence:
+> Secondary** — reddit.com was unreachable this run; the below comes from
+> third-party summaries only, not Reddit's own rules page`, and its Go/No-Go
+> line (a no-go, in that case) still would have needed the "based on
+> secondary sources only" qualifier had the verdict been a go instead.
