@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Scaffolding for posting text directly to LinkedIn, X, Meta (Facebook Page),
-Reddit, or Discord - no n8n/Make in between.
+Reddit, Discord, or Slack - no n8n/Make in between.
 
 WARNING - read this before using it for anything real:
 
@@ -15,12 +15,17 @@ integration. Before relying on it:
     platform gates posting behind its own developer-app review, X
     additionally requires a paid API tier for write access, and Reddit
     closed instant self-service app registration in late 2025 in favor of
-    a manual approval queue - see the "reddit" note below. Discord is the
-    exception - a webhook needs no app review at all, see "discord" below.
+    a manual approval queue - see the "reddit" note below. Discord needs
+    no app review at all - see "discord" below. Slack sits in between:
+    no OAuth review from Slack itself, but many workspaces require a
+    Workspace Owner/Admin to approve new apps before a webhook can even
+    be created - see "slack" below, don't assume it's as simple as
+    Discord.
   - Confirm the endpoint/version below is still current - check
     developers.linkedin.com, developer.x.com, developers.facebook.com,
-    Reddit's own API docs, and Discord's own API docs directly, since
-    these APIs change and this script cannot check for you.
+    Reddit's own API docs, Discord's own API docs, and Slack's own API
+    docs directly, since these APIs change and this script cannot check
+    for you.
   - Run with --dry-run and compare the printed request against that
     platform's current docs before ever passing --confirmed.
   - Do one manual --confirmed test post yourself before wiring this into
@@ -31,12 +36,13 @@ integration. Before relying on it:
     (missing flair, self-promo policy, karma/age minimums, banned
     domains). Run the `community-post-generator` skill against the target
     subreddit first and resolve everything it flags before sending.
-  - For Discord specifically: `community-post-generator` can't
-    independently verify a given server's rules the way it can for
-    Reddit/Product Hunt/Hacker News/Indie Hackers, since most servers
-    have no public page to check at all - it works from whatever rules
-    you (as an actual member) supply it. Confirm that's still current
-    yourself before sending, same as you would before posting by hand.
+  - For Discord and Slack specifically: `community-post-generator` can't
+    independently verify a given server's or workspace's rules the way it
+    can for Reddit/Product Hunt/Hacker News/Indie Hackers, since most
+    servers and workspaces have no public page to check at all - it works
+    from whatever rules you (as an actual member) supply it. Confirm
+    that's still current yourself before sending, same as you would
+    before posting by hand.
 
 Text-only. None of these platforms' media-attachment flows are
 implemented here (Instagram in particular has no text-only post endpoint
@@ -81,26 +87,45 @@ NOTES = {
               "guarantee the post survives AutoModerator; run "
               "community-post-generator against the target subreddit "
               "first.",
-    "discord": "The easiest of the five to set up: a webhook needs no "
-               "OAuth app review, just MANAGE_WEBHOOKS permission on the "
-               "target channel to create one (Channel Settings > "
-               "Integrations > Webhooks). The webhook URL itself is the "
-               "credential - anyone with it can post, so treat it like a "
-               "password (this script redacts it in --dry-run output, "
-               "same as other platforms' tokens). Sends a plain chat "
-               "message (2000-character limit; longer text is rejected, "
+    "discord": "One of the easiest to set up: a webhook needs no OAuth "
+               "app review, just MANAGE_WEBHOOKS permission on the target "
+               "channel to create one (Channel Settings > Integrations > "
+               "Webhooks). The webhook URL itself is the credential - "
+               "anyone with it can post, so treat it like a password "
+               "(this script redacts it in --dry-run output, same as "
+               "other platforms' tokens). Sends a plain chat message "
+               "(2000-character limit; longer text is rejected outright, "
                "not truncated, by Discord's API) - no title field exists, "
                "this isn't a self-post the way Reddit is. Unlike the "
                "other platforms, community-post-generator did not "
                "independently verify the target server's rules for this "
                "draft - it worked from what you supplied - so recheck the "
                "server's own rules channel yourself before sending.",
+    "slack": "Not as simple as Discord, despite looking similar: the "
+             "direct-webhook-URL path is legacy, and creating a webhook "
+             "now means creating a Slack App, which many workspaces "
+             "require a Workspace Owner/Admin to approve before it can "
+             "even be installed - confirm your workspace's app-approval "
+             "setting before assuming self-serve setup. The webhook URL "
+             "itself is the credential, same as Discord (redacted in "
+             "--dry-run output). Sends plain text - format it in Slack's "
+             "own 'mrkdwn' syntax, not standard Markdown: a single "
+             "asterisk (*bold*) is bold in Slack, not italic, the "
+             "opposite of standard Markdown - community-post-generator "
+             "drafts in mrkdwn for this platform for exactly that reason. "
+             "Hard-capped at 40000 characters (rejected, not truncated, "
+             "past that by this script; Slack itself recommends staying "
+             "under 4000 for how the message actually displays - this "
+             "script only warns, doesn't block, between 4000 and 40000). "
+             "Same as Discord: this skill worked from whatever rules you "
+             "supplied, not independent verification, so recheck the "
+             "workspace's actual rules yourself before sending.",
 }
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Post text directly to LinkedIn, X, Meta (Facebook Page), Reddit, or Discord. "
+        description="Post text directly to LinkedIn, X, Meta (Facebook Page), Reddit, Discord, or Slack. "
                     "Scaffolding only - read the module docstring before using for real.",
         epilog=(
             "Required environment variables per platform:\n"
@@ -112,10 +137,11 @@ def parse_args():
             "  reddit    REDDIT_ACCESS_TOKEN, REDDIT_USER_AGENT\n"
             "            (also requires --subreddit and --title; --flair-id optional)\n"
             "  discord   DISCORD_WEBHOOK_URL  (the full webhook URL - itself the credential)\n"
+            "  slack     SLACK_WEBHOOK_URL  (the full webhook URL - itself the credential)\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--platform", required=True, choices=["linkedin", "x", "meta", "reddit", "discord"],
+    parser.add_argument("--platform", required=True, choices=["linkedin", "x", "meta", "reddit", "discord", "slack"],
                          help="Which platform to post to.")
     parser.add_argument("--text", help="Post text. Reads stdin if omitted.")
     parser.add_argument("--subreddit", help="Target subreddit, no 'r/' prefix. Required for --platform reddit.")
@@ -228,11 +254,37 @@ def build_discord_request(text):
     return url, headers, body, [url]
 
 
+def build_slack_request(text):
+    env = require_env("SLACK_WEBHOOK_URL")
+    url = env["SLACK_WEBHOOK_URL"]
+    if len(text) > 40000:
+        print(
+            f"Message is {len(text)} characters; Slack rejects messages over 40000 "
+            "characters outright. Shorten it before sending.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    if len(text) > 4000:
+        print(
+            f"Warning: message is {len(text)} characters. Slack technically allows up to "
+            "40000, but recommends staying under 4000 for how the message actually "
+            "displays (longer messages get collapsed behind a 'see more' link). Not "
+            "blocking the send, just flagging it - not the same as Discord, which draws "
+            "the line at a hard 2000-character cutoff.",
+            file=sys.stderr,
+        )
+    headers = {"Content-Type": "application/json"}
+    body = json.dumps({"text": text}).encode("utf-8")
+    # The webhook URL itself is the credential, same as Discord - redact the whole thing.
+    return url, headers, body, [url]
+
+
 BUILDERS = {
     "linkedin": build_linkedin_request,
     "x": build_x_request,
     "meta": build_meta_request,
     "discord": build_discord_request,
+    "slack": build_slack_request,
 }
 
 

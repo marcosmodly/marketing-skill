@@ -4,11 +4,11 @@ A Claude Code plugin that packages a marketing workflow as ten composable
 skills: research a competitor, batch-plan a content calendar, repurpose
 findings across channels (including SEO, paid ads, and email), brief out
 a visual asset, research a specific subreddit's, Product Hunt's, Hacker
-News's, Indie Hackers', or (from what you tell it, since most servers
-have no public page to check) a Discord server's own rules before
-drafting a post for it, and hand the finished content off to your own
-automation — or, with real credentials you provide, straight to a
-platform API — for publishing.
+News's, Indie Hackers', or (from what you tell it, since most
+servers/workspaces have no public page to check) a Discord server's or
+Slack workspace's own rules before drafting a post for it, and hand the
+finished content off to your own automation — or, with real credentials
+you provide, straight to a platform API — for publishing.
 
 **[See a full worked run →](EXAMPLE.md)** — one continuous
 `full-pipeline` call from research to the approval checkpoint before
@@ -25,7 +25,7 @@ anything actually publishes.
 | `ad-copy-generator` | "ad copy," "Meta/Google/LinkedIn ad variants," "A/B test copy" | Multiple ad variants per platform, each a distinct hook angle, sized to that platform's character limits |
 | `email-sequence` | "email sequence," "drip campaign," "welcome series" | A multi-email sequence with send timing, subject lines, and a real narrative arc across emails |
 | `visual-brief-generator` | "visual brief," "video brief," "shot list," "image prompts for X" | A structured shot list, per-scene prompts, aspect ratios, and style guide; generates the actual asset only if a visual-gen tool is connected |
-| `community-post-generator` | "post this to r/[subreddit]," "help me post on Product Hunt," "write a Show HN/Show IH for this," "post this in our Discord" | Live-researches that specific subreddit's, Product Hunt's, Hacker News's, or Indie Hackers' actual rules and typical post style first (verifying each source is actually about that target, not a similarly-named one); for Discord, asks you for the rules instead, since it can't research a private server. Gives a plain Go/No-Go either way, and only drafts a post (shaped for that platform — title+body, title+URL+first comment for Show HN, or a single chat message for Discord) if it's actually welcome there, written to read like a person wrote it |
+| `community-post-generator` | "post this to r/[subreddit]," "help me post on Product Hunt," "write a Show HN/Show IH for this," "post this in our Discord/Slack" | Live-researches that specific subreddit's, Product Hunt's, Hacker News's, or Indie Hackers' actual rules and typical post style first (verifying each source is actually about that target, not a similarly-named one); for Discord and Slack, asks you for the rules instead, since it can't research a private server/workspace. Gives a plain Go/No-Go either way, and only drafts a post (shaped for that platform — title+body, title+URL+first comment for Show HN, or a single chat message in Discord's or Slack's own formatting for the last two) if it's actually welcome there, written to read like a person wrote it |
 | `publish-pipeline` | "publish this," "send to n8n/Make," "fire the webhook," "send the queued post for [date]" | Packages finished content/assets into JSON and hands off to your automation via webhook (or, optionally, straight to a platform API) after showing you the exact payload |
 | `full-pipeline` | "run the full pipeline," "research X and publish it," "do the whole thing end to end" | Chains research, repurposing, visual brief, and publish into one run, with a mandatory pause before anything actually publishes |
 
@@ -148,49 +148,68 @@ send.
 ### Posting directly to a platform (optional, needs your own credentials)
 
 `scripts/publish_direct.py` posts straight to LinkedIn, X, Meta (Facebook
-Page), Reddit, or Discord instead of going through your own automation —
-`python3 scripts/publish_direct.py --help` lists what each platform
-needs. **Read the script's module docstring before using it.** It was
-written without a connected account or live credentials for any of these
-platforms to test against, so it's best-effort against each platform's
-last publicly documented API, not a verified integration — confirm the
-endpoint is still current against that platform's own developer docs
-(developers.linkedin.com, developer.x.com, developers.facebook.com,
-Reddit's own API docs, and Discord's own API docs), confirm you actually
-have write-access API scope (X in particular gates this behind a paid
-tier, and Reddit closed instant self-service app registration in late
-2025 for a manual approval queue — existing approved apps still work),
+Page), Reddit, Discord, or Slack instead of going through your own
+automation — `python3 scripts/publish_direct.py --help` lists what each
+platform needs. **Read the script's module docstring before using it.**
+It was written without a connected account or live credentials for any
+of these platforms to test against, so it's best-effort against each
+platform's last publicly documented API, not a verified integration —
+confirm the endpoint is still current against that platform's own
+developer docs (developers.linkedin.com, developer.x.com,
+developers.facebook.com, Reddit's own API docs, Discord's own API docs,
+and Slack's own API docs), confirm you actually have write-access API
+scope (X in particular gates this behind a paid tier, Reddit closed
+instant self-service app registration in late 2025 for a manual approval
+queue — existing approved apps still work, and Slack may need a
+Workspace Owner/Admin to approve the app a webhook requires — see below),
 and do one manual `--confirmed` test post yourself before trusting it in
 anything automated. It's text-only — no media attachments, and Instagram
 isn't supported at all since it has no text-only post endpoint. Same
 `--dry-run`/`--confirmed` safety pattern as the webhook script, including
-credential redaction in `--dry-run` output — for Discord specifically,
-the webhook URL itself is the credential (there's no separate token), so
-that whole URL gets redacted, not just a header. For Reddit, a successful
-response doesn't guarantee the post survives that subreddit's
-AutoModerator — see "Posting to Reddit, Product Hunt, Hacker News, Indie
-Hackers & Discord" below before sending anything for real.
+credential redaction in `--dry-run` output — for Discord and Slack
+specifically, the webhook URL itself is the credential (there's no
+separate token), so that whole URL gets redacted, not just a header. For
+Reddit, a successful response doesn't guarantee the post survives that
+subreddit's AutoModerator — see "Posting to Reddit, Product Hunt, Hacker
+News, Indie Hackers, Discord & Slack" below before sending anything for
+real.
 
-**Discord is the easiest of the five to actually set up** — a webhook
+**Discord is the easiest of the six to actually set up** — a webhook
 needs no OAuth app review at all, just `MANAGE_WEBHOOKS` permission on
 the channel to create one (Channel Settings → Integrations → Webhooks).
 That's the one place this script is easier than the platform it's
 replacing, not harder: `community-post-generator` can't independently
-verify a Discord server's rules the way it can for the other four (see
-below), so the actual bottleneck for Discord is research, not access.
+verify a Discord server's rules the way it can for the researchable four
+(see below), so the actual bottleneck for Discord is research, not
+access.
+
+**Slack looks similar to Discord but isn't as simple, and the difference
+matters.** The direct-webhook-URL path is legacy; creating one now means
+creating a Slack App, and many workspaces require a Workspace Owner/Admin
+to approve new apps before that's even possible — confirm your
+workspace's app-approval setting rather than assuming self-serve setup
+the way Discord's is. Slack also expects plain text formatted in its own
+**mrkdwn** syntax, not standard Markdown — a single asterisk (`*bold*`)
+is bold in Slack, the opposite of standard Markdown's italic, and
+`community-post-generator` drafts Slack posts in mrkdwn for exactly that
+reason. Character limit is shaped differently too: this script hard-caps
+at Slack's technical ceiling of 40,000 characters (rejecting, not
+truncating, past that) but only warns, doesn't block, between 4,000 and
+40,000, since 4,000 is a display recommendation, not a hard limit —
+compare Discord's flat 2,000-character rejection.
 
 **Product Hunt, Hacker News, and Indie Hackers all have no direct-send
 path here, for different reasons.** Product Hunt's write API
 (`createPost`, etc.) requires special approval from Product Hunt itself —
 the free/default API tier is explicitly read-only, non-commercial (see
-below) — so unlike LinkedIn/X/Meta/Reddit/Discord, there's no "just bring
-your own API credentials" option to script against, though that approval
-process at least exists. Hacker News has no write API to even apply for —
-its official API is read-only by design, full stop, so this isn't a "not
-yet approved" situation, it's "nothing to approve." Indie Hackers is
-genuinely unverified rather than confirmed either way — some sources
-mention an API, but it looks scoped to read-only product/revenue data,
-and nothing confirms a way to submit a post through it.
+below) — so unlike LinkedIn/X/Meta/Reddit/Discord/Slack, there's no "just
+bring your own API credentials" option to script against, though that
+approval process at least exists. Hacker News has no write API to even
+apply for — its official API is read-only by design, full stop, so this
+isn't a "not yet approved" situation, it's "nothing to approve." Indie
+Hackers is genuinely unverified rather than confirmed either way — some
+sources mention an API, but it looks scoped to read-only product/revenue
+data, and nothing confirms a way to submit a post through it.
 `community-post-generator` still drafts the post text either way; you
 paste it into producthunt.com, news.ycombinator.com, or indiehackers.com
 yourself.
@@ -215,9 +234,9 @@ way to do that, on the theory that a live company account posting
 unsupervised is a decision only you should make explicitly, not one a
 scheduling tool should make for you by default.
 
-## Posting to Reddit, Product Hunt, Hacker News, Indie Hackers & Discord
+## Posting to Reddit, Product Hunt, Hacker News, Indie Hackers, Discord & Slack
 
-`community-post-generator` treats these five differently from the
+`community-post-generator` treats these six differently from the
 broadcast platforms above: instead of a fixed post template, it does a
 live research pass — the target subreddit's actual rules, a sample of
 what's currently working there, Product Hunt's own guidelines, HN's
@@ -230,19 +249,26 @@ actual person wrote it — no em dashes, no AI-polish tells — since these
 communities react to that almost as badly as they react to overt
 promotion.
 
-**Discord works differently from the other four, and it's worth
-understanding why.** Reddit, Product Hunt, Hacker News, and Indie Hackers
-all publish rules on the open web — this skill can, at least in
-principle, look them up. Most Discord servers can't be seen at all
-without joining first: there's no public rules page, no crawlable post
-history, nothing for WebFetch or WebSearch to find, for the typical
-private or invite-only server (the rare large, Discovery-listed server is
-a narrow exception, and even then Discord's own public preview never
-includes rules text). So for Discord, the skill asks *you* — presumably
-already a member of whatever server you want to post in — what the rules
-actually say, and labels the result `User-Supplied` rather than
-pretending it verified anything independently. If you say you don't know
-the rules, it'll ask you to go check rather than draft on a guess.
+**Discord and Slack both work differently from the other four, and it's
+worth understanding why — and why they aren't the same as each other
+either.** Reddit, Product Hunt, Hacker News, and Indie Hackers all
+publish rules on the open web — this skill can, at least in principle,
+look them up. Most Discord servers and virtually all Slack workspaces
+can't be seen at all without joining first: no public rules page, no
+crawlable post history, nothing for WebFetch or WebSearch to find. So for
+both, the skill asks *you* — presumably already a member — what the
+rules actually say, and labels the result `User-Supplied` rather than
+pretending it verified anything independently; if you say you don't know
+the rules, it'll ask you to go check rather than draft on a guess. But
+they diverge from there: Discord has a narrow exception (a rare large,
+Discovery-listed server can be previewed, though never its rules text),
+Slack has no research exception at all. Discord's webhook access is close
+to always available to a channel member; Slack's often needs workspace
+admin approval first. And Discord tolerates something close to standard
+Markdown, while Slack requires its own **mrkdwn** syntax where the
+formatting actually inverts (`*bold*` is bold, not italic) — so the skill
+drafts Slack posts in mrkdwn specifically, not a copy of the Discord
+format.
 
 A few things worth knowing going in:
 - **Similarly-named platforms are a real trap, not a hypothetical one.**
@@ -262,24 +288,24 @@ A few things worth knowing going in:
   researchable platforms to the *fact* of self-promotion (it's built for
   founders sharing their own products) but still requires the right shape
   — Show IH specifically wants a founder story, your current stage, and
-  real questions, not a pitch. Discord varies entirely by server — some
-  have a dedicated self-promo channel and welcome it, some ban it outright
-  — which is exactly why this skill asks rather than guesses. None of
-  this is something the skill can audit against your actual account
-  history or standing — double-check that yourself wherever a minimum or
-  a pattern is at stake.
+  real questions, not a pitch. Discord and Slack both vary entirely by
+  server/workspace — some have a dedicated self-promo channel and welcome
+  it, some ban it outright — which is exactly why this skill asks rather
+  than guesses for either. None of this is something the skill can audit
+  against your actual account history or standing — double-check that
+  yourself wherever a minimum or a pattern is at stake.
 - **Don't batch-blast the same pitch across subreddits, groups, servers,
-  or forums.** Each community gets its own research pass (or, for
-  Discord, its own ask) and its own angle; reusing one pitch verbatim
-  across several is against most communities' rules and a fast way to
-  get an account banned.
-- **API access to actually post varies a lot by platform, and Discord is
-  the outlier — easier, not harder.** Reddit closed instant self-service
-  app registration in late 2025 in favor of a manual approval queue (see
-  "Posting directly to a platform" above) — you can still get
-  `submit`-scope access, it just isn't instant. Product Hunt's write API
-  requires Product Hunt's own special approval and isn't meant for
-  individual developers at all. Hacker News's official API has **no
+  workspaces, or forums.** Each community gets its own research pass (or,
+  for Discord/Slack, its own ask) and its own angle; reusing one pitch
+  verbatim across several is against most communities' rules and a fast
+  way to get an account banned.
+- **API access to actually post varies a lot by platform, and Discord and
+  Slack land in different places, not the same one.** Reddit closed
+  instant self-service app registration in late 2025 in favor of a manual
+  approval queue (see "Posting directly to a platform" above) — you can
+  still get `submit`-scope access, it just isn't instant. Product Hunt's
+  write API requires Product Hunt's own special approval and isn't meant
+  for individual developers at all. Hacker News's official API has **no
   write/submit endpoint whatsoever** — not gated, not approval-only,
   simply doesn't exist for anyone. Indie Hackers' API situation is
   genuinely unclear — some sources mention one, but it appears scoped to
@@ -287,23 +313,29 @@ A few things worth knowing going in:
   a post through it, so it's treated as manual-only rather than assumed
   either way. **Discord webhooks need no approval process at all** — a
   few clicks in channel settings and you have a working send path, no
-  OAuth review, no waiting. For Discord the hard part is research, not
-  access; for the other three with no send path, it's the reverse. Either
-  way, the drafted post stands on its own — paste it in manually if you'd
-  rather not set up API access.
+  OAuth review, no waiting. **Slack sits in between**: no OAuth review
+  from Slack itself either, but many workspaces require a Workspace
+  Owner/Admin to approve the app a webhook needs before it can be
+  created — don't assume it's as instant as Discord's. For Discord the
+  hard part is research, not access; for Slack, both research and access
+  can be real friction; for the other three with no send path at all,
+  it's the reverse of Discord entirely. Either way, the drafted post
+  stands on its own — paste it in manually if you'd rather not set up API
+  access.
 - **A "Go" from this skill isn't a guarantee.** It's reading the same
-  public rules a human would (or, for Discord, taking your word for
+  public rules a human would (or, for Discord/Slack, taking your word for
   them); a subreddit can still remove a post for a reason its rules page
   doesn't spell out, AutoModerator can act on something the skill
   couldn't see (an exact karma threshold, a banned domain list), HN or
   Indie Hackers can flag a post for reasons tied to your account's
-  history the skill simply can't see, and a Discord server's actual
-  current rules might differ from what you remembered when asked.
-- **No dedicated Reddit, Product Hunt, Hacker News, Indie Hackers, or
-  Discord connector exists to plug in here** (checked against Claude's
-  connector directory as of this writing) — `community-post-generator`
+  history the skill simply can't see, and a Discord server's or Slack
+  workspace's actual current rules might differ from what you remembered
+  when asked.
+- **No dedicated Reddit, Product Hunt, Hacker News, Indie Hackers,
+  Discord, or Slack connector exists to plug in here** (checked against
+  Claude's connector directory as of this writing) — `community-post-generator`
   does its research with plain WebFetch/WebSearch against each site's own
-  public pages (or, for Discord, by asking you), not a purpose-built API
+  public pages (or, for Discord/Slack, by asking you), not a purpose-built API
   client. If that changes, connecting one wouldn't need a code change
   here, just point the skill at it.
 
@@ -334,7 +366,7 @@ state/
   posts/                  # one file per queued post's full content, linked from the index above
 scripts/
   publish_webhook.py     # stdlib-only webhook sender (see --help)
-  publish_direct.py      # stdlib-only direct-to-platform scaffold (LinkedIn/X/Meta/Reddit/Discord), needs your own API credentials (see --help)
+  publish_direct.py      # stdlib-only direct-to-platform scaffold (LinkedIn/X/Meta/Reddit/Discord/Slack), needs your own API credentials (see --help)
 ```
 
 ## Contributors

@@ -56,11 +56,15 @@ Sending is `publish-pipeline`'s job, one approved row at a time.
      particular rarely belongs in a recurring cadence at all — a Show HN
      is closer to a one-time launch than something to batch weekly, so
      confirm that's really what's wanted before queuing one as a regular
-     slot. If any slot is Discord, get the exact server *and* channel, and
-     ask for that channel's rules **now, in this scope-confirmation step**
-     — `community-post-generator` can't look them up later the way it can
-     for the other platforms, so a Discord slot can't be silently deferred
-     to draft time the way the others can.
+     slot. If any slot is Discord or Slack, get the exact server/workspace
+     *and* channel, and ask for that channel's rules **now, in this
+     scope-confirmation step** — `community-post-generator` can't look
+     them up later the way it can for the other platforms, so those slots
+     can't be silently deferred to draft time the way the others can. For
+     a Slack slot specifically, also ask whether sending it later will
+     need workspace admin approval for a webhook — that's not guaranteed
+     the way it is for Discord, and is worth knowing before the slot gets
+     queued, not after.
    - Content type per slot — text/social post, short-form video, long-form
      video, or image — default to whatever `references/brand-voice.md`'s
      Content Types preference indicates, or ask if genuinely unclear.
@@ -80,19 +84,19 @@ Sending is `publish-pipeline`'s job, one approved row at a time.
      structure rules as `content-repurposer` (read
      `${CLAUDE_PLUGIN_ROOT}/skills/content-repurposer/SKILL.md` for the
      exact formatting rules rather than reinventing them here).
-   - Reddit / Product Hunt / Hacker News / Indie Hackers / Discord slots:
-     hand off to
+   - Reddit / Product Hunt / Hacker News / Indie Hackers / Discord / Slack
+     slots: hand off to
      `${CLAUDE_PLUGIN_ROOT}/skills/community-post-generator/SKILL.md`
      for that slot instead of the above — it needs a live rules/norms
      check against that specific subreddit, Product Hunt, Hacker News, or
-     Indie Hackers group before drafting (or, for Discord, the rules
-     gathered from the user back in step 3), which is a genuine research
-     step, not a template fill. If that research (or, for Discord, what
-     the user supplied) comes back No-Go, **don't draft a substitute post
-     for the slot** — report the block in the Batch Summary and skip
-     queuing that slot (or swap in a different platform/subreddit if the
-     user redirects on the spot) rather than writing a row with no real
-     content behind it.
+     Indie Hackers group before drafting (or, for Discord/Slack, the
+     rules gathered from the user back in step 3), which is a genuine
+     research step, not a template fill. If that research (or, for
+     Discord/Slack, what the user supplied) comes back No-Go, **don't
+     draft a substitute post for the slot** — report the block in the
+     Batch Summary and skip queuing that slot (or swap in a different
+     platform/subreddit if the user redirects on the spot) rather than
+     writing a row with no real content behind it.
    - Never invent a fact, statistic, or quote not present in the source
      material for that slot, regardless of platform.
 
@@ -140,14 +144,14 @@ Use this exact section order, as Markdown `##` headings:
 1. **Batch Summary** — date range, cadence, platforms, how many slots,
    and a one-line note on what (if anything) was skipped or varied — to
    avoid repeating a recent topic, or because a Reddit/Product Hunt/
-   Hacker News/Indie Hackers/Discord slot came back No-Go from
-   `community-post-generator`'s research (or, for Discord, from what the
-   user supplied).
+   Hacker News/Indie Hackers/Discord/Slack slot came back No-Go from
+   `community-post-generator`'s research (or, for Discord/Slack, from
+   what the user supplied).
 2. **Queued Posts** — one `###` subsection per date, each containing the
    full drafted content for that slot (using that slot's normal output
    structure — `content-repurposer` for LinkedIn/Twitter/newsletter,
    `community-post-generator` for Reddit/Product Hunt/Hacker News/Indie
-   Hackers/Discord, including its Community Research Summary and
+   Hackers/Discord/Slack, including its Community Research Summary and
    Go/No-Go).
 3. **Calendar File Update** — confirmation of how many rows were
    appended to `state/content-calendar.md` and their Status value.

@@ -1,6 +1,6 @@
 ---
 name: community-post-generator
-description: Researches a specific subreddit's, Product Hunt's, Hacker News's, or Indie Hackers' actual rules and typical post style live before drafting — never a generic templated post, verifying each source is actually about the named target before trusting it, and writes it to read like a person wrote it. For Discord, where most servers have no public page to research at all, it asks the user (an actual member) for the rules instead of pretending to fetch them. Use when the user wants to post in a specific subreddit, on Product Hunt, on Hacker News (including Show HN), on Indie Hackers (including Show IH), in a specific Discord server, or any other rules-driven community/forum.
+description: Researches a specific subreddit's, Product Hunt's, Hacker News's, or Indie Hackers' actual rules and typical post style live before drafting — never a generic templated post, verifying each source is actually about the named target before trusting it, and writes it to read like a person wrote it. For Discord and Slack, where servers/workspaces have no public page to research at all, it asks the user (an actual member) for the rules instead of pretending to fetch them, and for Slack specifically drafts in Slack's own mrkdwn syntax rather than standard Markdown. Use when the user wants to post in a specific subreddit, on Product Hunt, on Hacker News (including Show HN), on Indie Hackers (including Show IH), in a specific Discord server or Slack workspace, or any other rules-driven community/forum.
 allowed-tools: Read, Grep, Glob, Write, WebSearch, WebFetch
 ---
 
@@ -8,30 +8,36 @@ allowed-tools: Read, Grep, Glob, Write, WebSearch, WebFetch
 
 ## Purpose
 
-Reddit, Product Hunt, Hacker News, Indie Hackers, and Discord aren't
-broadcast platforms like LinkedIn or Twitter/X — they're communities that
-set and enforce their own rules per-subreddit, per-forum, per-group, or
-per-server, through moderators, AutoMod, or (on HN) the community's own
-flagging behavior, and a post that ignores those rules gets removed,
-buried, or gets the account banned, no matter how good the copy is. This
-skill's job is to research the *specific* target community first, decide
-honestly whether the intended post is even welcome there, and only then
-draft something that actually fits its rules and voice, instead of
-writing a generic pitch and hoping. "Research" means the source actually
-has to be about the named target, not just something with a similar name
-— a subreddit about a community isn't the same as that community's own
-site, and confusing the two is a real, confirmed way this has gone wrong
-(see step 3).
+Reddit, Product Hunt, Hacker News, Indie Hackers, Discord, and Slack
+aren't broadcast platforms like LinkedIn or Twitter/X — they're
+communities that set and enforce their own rules per-subreddit,
+per-forum, per-group, per-server, or per-workspace, through moderators,
+AutoMod, or (on HN) the community's own flagging behavior, and a post
+that ignores those rules gets removed, buried, or gets the account
+banned, no matter how good the copy is. This skill's job is to research
+the *specific* target community first, decide honestly whether the
+intended post is even welcome there, and only then draft something that
+actually fits its rules and voice, instead of writing a generic pitch and
+hoping. "Research" means the source actually has to be about the named
+target, not just something with a similar name — a subreddit about a
+community isn't the same as that community's own site, and confusing the
+two is a real, confirmed way this has gone wrong (see step 3).
 
-Discord breaks the "research it live" assumption itself, not just the
-target-matching part of it: most servers have no public page at all —
-you generally can't see a server's rules, or anything else, without
-already being a member — so there's usually nothing for WebFetch or
-WebSearch to find regardless of network access. For Discord specifically,
+Discord and Slack both break the "research it live" assumption itself,
+not just the target-matching part of it: most servers and workspaces have
+no public page at all — you generally can't see one's rules, or anything
+else, without already being a member — so there's usually nothing for
+WebFetch or WebSearch to find regardless of network access. For both,
 this skill asks the user (who, if they want to post there, is presumably
 already a member) to supply the rules instead of pretending it looked
-them up itself. See step 3's Discord section and the `User-Supplied`
-Source Confidence tier.
+them up itself, under the `User-Supplied` Source Confidence tier (see
+step 3). They aren't interchangeable beyond that, though: Slack has no
+research exception at all — not even Discord's narrow one for large,
+Discovery-listed servers — sending isn't uniformly easy the way a Discord
+webhook is (many workspaces gate app creation behind admin approval), and
+Slack's own formatting syntax (mrkdwn) actively conflicts with standard
+Markdown rather than just lacking rich formatting, so drafts for Slack
+are written in mrkdwn specifically, not treated as a Discord clone.
 
 The copy itself also has to survive first contact: something that reads
 as obviously AI-polished marketing text gets the same skeptical reaction
@@ -101,6 +107,18 @@ written to read like an actual person wrote them.
      expectation now that step 3 will ask them to supply what the rules
      actually say, not fetch them independently the way it does for the
      other four platforms.
+   - For Slack: same as Discord — exact workspace *and* exact channel,
+     confirm the user is actually a member, set the expectation that
+     step 3 asks rather than fetches. Two things that are genuinely
+     different from Discord, not just restated: (1) don't imply sending
+     will be as easy as Discord's — many workspaces require a Workspace
+     Owner/Admin to approve creating the app a webhook needs, so ask
+     whether the user actually has (or can get) that, rather than
+     assuming a webhook is a quick self-serve step; (2) the draft will be
+     written in Slack's own mrkdwn syntax (single `*asterisks*` for bold,
+     not double), not standard Markdown — mention this now if the user
+     seems to expect a Markdown-formatted post, so it's not a surprise at
+     draft time.
    - The underlying content/offer/topic, and any link or CTA (paste, file,
      URL, or "our product" — check `README*`, `CHANGELOG*`, `docs/**/*.md`,
      and `package.json`/`pyproject.toml` at the project root first if so,
@@ -212,6 +230,19 @@ written to read like an actual person wrote them.
      No-Go elsewhere stops the process rather than working around it.
      Silence or "probably fine" from the user isn't the same as an actual
      answer.
+   - **Slack.** Even more closed than Discord: there's no evidence of
+     anything analogous to Discord's Server Discovery/Lurker Mode for
+     Slack workspaces — every "browse channels" feature found describes
+     browsing public channels *inside a workspace you're already a
+     member of*, not previewing a workspace from outside before joining,
+     and Slack's API is fully OAuth-gated per-workspace with no public
+     unauthenticated lookup found equivalent to Discord's invite-metadata
+     endpoint. Treat the public-research route as not available at all for
+     Slack, not just unlikely — **ask the user directly**, same pattern
+     as Discord (the actual rules, the specific channel's own norms if
+     it's a designated channel, and if they don't know, ask them to check
+     rather than drafting on a guess). Same "silence isn't an answer" rule
+     applies.
    - Cite what was actually found — link the rules page or search result
      checked, note it was checked just now. Never assert a community's
      norms from training knowledge alone; subreddit rules change, and a
@@ -239,15 +270,19 @@ written to read like an actual person wrote them.
        apparent from search results alone.
      Note which of these actually happened for each claim, not just the
      claim itself — this feeds the required Source Confidence line in the
-     output below, and the go/no-go phrasing in step 4. For Discord, this
-     tiering doesn't apply the same way: rules that came from the user
-     rather than from anything this skill fetched or searched are
+     output below, and the go/no-go phrasing in step 4. For Discord and
+     Slack, this tiering doesn't apply the same way: rules that came from
+     the user rather than from anything this skill fetched or searched are
      `User-Supplied`, a distinct tier from Primary/Secondary — not because
      it's automatically worse, but because it's a fundamentally different
      kind of claim (self-reported by the requester, not independently
      checked by this skill at all) and needs to be labeled as such rather
      than folded into a tier that implies some amount of independent
-     verification happened.
+     verification happened. For Slack specifically, `User-Supplied` isn't
+     just the likely outcome, it's the *only* possible one — there's no
+     Primary or Secondary path at all, unlike Discord's narrow
+     Discovery-listed exception, so don't research-and-report for Slack as
+     if a `Primary` or `Secondary` result were ever on the table.
 
 4. **Decide go/no-go before drafting anything.** If research turns up a
    hard block — self-promotion banned outright, the subreddit is
@@ -274,14 +309,14 @@ written to read like an actual person wrote them.
      primary-confirmed Go. This isn't optional hedging; it's the actual
      difference between "confirmed," "probably," and "someone's guess
      about the rules, secondhand."
-   - **For Discord, a Go is always `User-Supplied`, never higher** — say
-     so plainly: e.g. "Go, based on the rules you described — this skill
-     couldn't verify them independently, so if you're not certain you
-     have the current rules yourself, double-check the pinned message
-     before sending." A No-Go still applies the normal way if what the
-     user described rules this out (self-promo banned entirely, wrong
-     channel, no posting permission) — a friendlier tier name doesn't mean
-     a friendlier bar for saying no.
+   - **For Discord or Slack, a Go is always `User-Supplied`, never
+     higher** — say so plainly: e.g. "Go, based on the rules you
+     described — this skill couldn't verify them independently, so if
+     you're not certain you have the current rules yourself, double-check
+     the pinned message/channel topic before sending." A No-Go still
+     applies the normal way if what the user described rules this out
+     (self-promo banned entirely, wrong channel, no posting permission) —
+     a friendlier tier name doesn't mean a friendlier bar for saying no.
 
 5. **Draft the post** — shape depends on the platform (see Output
    structure below) — matching the specific community's researched format
@@ -294,11 +329,21 @@ written to read like an actual person wrote them.
    the configured brand voice would read as too polished for that
    community, override it toward the community's own norm and **tell the user this
    happened and why** rather than silently picking one. The banned-words
-   list from brand-voice.md still applies regardless. For Discord, match
-   whatever tone the user described that channel having — if they haven't
-   said, ask rather than guessing, since server culture varies enormously
-   more than it does between subreddits and this skill has no independent
-   way to sample it.
+   list from brand-voice.md still applies regardless. For Discord or
+   Slack, match whatever tone the user described that channel having — if
+   they haven't said, ask rather than guessing, since server/workspace
+   culture varies enormously more than it does between subreddits and
+   this skill has no independent way to sample it.
+   - **For Slack specifically, draft in mrkdwn, not standard Markdown —
+     this is a formatting-correctness issue, not a style choice.** Slack's
+     mrkdwn inverts the most common convention: a single asterisk
+     (`*text*`) renders **bold** in Slack, not italic — the opposite of
+     standard Markdown, where a single asterisk means italic and bold
+     needs double asterisks. Handing over standard-Markdown-formatted text
+     for Slack would render wrong (inverted emphasis, or literal asterisks
+     showing up depending on what's typed) — use `*bold*`, `_italic_`,
+     `~strikethrough~`, and `` `code` `` per Slack's own syntax, not
+     GitHub-flavored Markdown's.
    - **Write it to read like an actual person typed it, not AI-polished
      marketing copy** — these communities react to that almost as badly
      as they react to overt promotion, since it's a strong tell for
@@ -325,7 +370,14 @@ written to read like an actual person wrote them.
    writing-tell list above (no em dashes, no throat-clearing opener, no
    triadic padding) before the draft is shown to the user. For Discord
    specifically, also confirm the draft is under Discord's 2000-character
-   message limit (rejected outright, not truncated, if it's over).
+   message limit (rejected outright, not truncated, if it's over). For
+   Slack specifically, confirm standard Markdown didn't slip back in
+   (check for stray `**double asterisks**`, which mean nothing special in
+   mrkdwn and will show up literally) and flag if the draft is over ~4,000
+   characters — Slack's hard technical cap is 40,000, but a message over
+   4,000 gets visually truncated behind a "see more" link, a display
+   problem Discord's flat 2,000-character rule doesn't have an equivalent
+   of.
 
 ## When to use this skill
 
@@ -338,6 +390,8 @@ Trigger on requests like:
 - "Post this on Indie Hackers" / "Write a Show IH for this"
 - "Post this in [Discord server]" / "Write a message for our Discord's
   #self-promo channel"
+- "Post this in our Slack" / "Write a message for the #announcements
+  channel in [workspace]'s Slack"
 - "What's the best way to post this in [subreddit]?"
 
 If the request just says "Indie Hackers" with no other context, confirm
@@ -373,12 +427,14 @@ Use this exact section order, as Markdown `##` headings:
      (and possibly wrong or stale) upstream source.
    - `Mixed` — say which specific claims came from which of the tiers
      above, rather than blending them into one undifferentiated summary.
-   - `User-Supplied` (Discord only) — the rules came from the user
-     describing their own server, not from anything this skill fetched or
-     searched. Not a reliability ranking alongside the others (it isn't
-     "worse than Secondary" or "better than" it) — it's a different kind
-     of claim, self-reported by the requester rather than independently
-     checked at all, and has to be labeled as exactly that.
+   - `User-Supplied` (Discord and Slack only) — the rules came from the
+     user describing their own server or workspace, not from anything
+     this skill fetched or searched. Not a reliability ranking alongside
+     the others (it isn't "worse than Secondary" or "better than" it) —
+     it's a different kind of claim, self-reported by the requester
+     rather than independently checked at all, and has to be labeled as
+     exactly that. For Slack, this is the *only* tier that can ever
+     apply — there's no research exception the way Discord has one.
    Follow with what was actually found: self-promo policy,
    account-age/karma minimums if any, flair/title requirements, the
    typical post pattern observed, and the source(s) checked (links,
@@ -411,6 +467,12 @@ Use this exact section order, as Markdown `##` headings:
      Discord posts don't have one, so don't invent one. Under 2000
      characters (see step 6). Label it clearly as built from the rules
      the user supplied, not independently verified.
+   - Slack: also a single chat message, no title field — but written in
+     mrkdwn (`*bold*`, not `**bold**`; see step 5), not the same syntax as
+     the Discord draft above even though the shape looks similar. Flag if
+     it's pushing past ~4,000 characters (display truncation risk, not a
+     hard rejection the way Discord's 2000-character line is). Same
+     User-Supplied labeling as Discord.
    - Product Hunt launch (if that's the confirmed surface from step 2):
      tagline + description + first-comment text, labeled as draft assets
      for a process this skill doesn't manage end-to-end, not a single
@@ -419,34 +481,45 @@ Use this exact section order, as Markdown `##` headings:
    (their account clears any age/karma minimum or, for Hacker News and
    Indie Hackers, has a genuine participation history rather than being
    promotion-only; they're posting from the right account; any mod
-   pre-approval was actually obtained; for Discord, that the rules they
-   described are actually still current — this skill took their word for
-   it and never independently checked, so if they're not fully sure they
-   read the pinned rules themselves, that's on them to confirm before
-   sending, not something this skill already verified).
+   pre-approval was actually obtained; for Discord or Slack, that the
+   rules they described are actually still current — this skill took
+   their word for it and never independently checked, so if they're not
+   fully sure they read the pinned rules/channel topic themselves, that's
+   on them to confirm before sending, not something this skill already
+   verified; for Slack specifically, also that they actually have — or
+   can get — the workspace permissions a webhook requires, since that
+   isn't guaranteed the way it is on Discord).
 5. **Next Step** — the primary path is pasting it in manually; note that
    `publish-pipeline`'s optional direct-post path can send a Reddit
-   self-post, or a Discord message, programmatically if the user already
-   has the right credentials (a Reddit API app, or — much simpler — a
-   Discord webhook URL for that channel; see that skill and the plugin
-   README). Product Hunt and Hacker News have no equivalent send path
-   here, for two different reasons worth naming rather than lumping
-   together: Product Hunt's write API exists but needs Product Hunt's own
-   special approval; Hacker News's official API has no write/submit
-   endpoint at all, for anyone. Indie Hackers' API situation is genuinely
-   unclear from this skill's research (some sources reference an API, but
-   it appears scoped to read-only product/revenue data, and a community
-   thread literally asks whether IH has a developer API at all) — don't
-   round that uncertainty off to a confident yes or no, say plainly it's
-   unverified and treat it as manual-only until proven otherwise. Discord
-   is the one platform here where sending is actually the easy part —
-   researching the rules is what's hard.
+   self-post, a Discord message, or a Slack message programmatically if
+   the user already has the right credentials (a Reddit API app, or a
+   webhook URL for that Discord channel or Slack channel; see that skill
+   and the plugin README) — but don't present Slack's path with the same
+   confidence as Discord's: Discord webhooks are close to always
+   available to a channel member, Slack's often need a Workspace
+   Owner/Admin to approve the app first. Product Hunt and Hacker News
+   have no equivalent send path here, for two different reasons worth
+   naming rather than lumping together: Product Hunt's write API exists
+   but needs Product Hunt's own special approval; Hacker News's official
+   API has no write/submit endpoint at all, for anyone. Indie Hackers'
+   API situation is genuinely unclear from this skill's research (some
+   sources reference an API, but it appears scoped to read-only
+   product/revenue data, and a community thread literally asks whether IH
+   has a developer API at all) — don't round that uncertainty off to a
+   confident yes or no, say plainly it's unverified and treat it as
+   manual-only until proven otherwise. Discord is the one platform here
+   where sending is unambiguously the easy part; Slack is closer to that
+   than to Product Hunt/HN/IH, but "closer to" isn't "the same as" — say
+   which one it actually is for this specific user rather than defaulting
+   to either assumption.
 
 ## Formatting rules
 
 - Never draft a post before completing the live rules research for that
   specific community in this run — no generic, reusable Reddit, Product
-  Hunt, Hacker News, or Indie Hackers template.
+  Hunt, Hacker News, or Indie Hackers template. (Discord and Slack get the
+  user-supplied equivalent — asking counts as "completing" the step,
+  skipping the ask doesn't.)
 - Never treat a source as evidence about a target before confirming it's
   actually about that target, not a similarly-named different platform
   or community — this check happens before Source Confidence is assessed
@@ -489,12 +562,22 @@ Use this exact section order, as Markdown `##` headings:
   being worked around. A draft over 2000 characters isn't valid Discord
   output; shorten it before presenting it, don't rely on the platform to
   truncate it (it won't — it rejects the send outright).
+- On Slack specifically: same member/don't-guess rules as Discord above.
+  Additionally, never draft in standard Markdown — use mrkdwn syntax
+  (single `*asterisk*` for bold), since standard Markdown will render
+  wrong, not just plainly. Never claim `Primary` or `Secondary` confidence
+  for a Slack target under any circumstance — that tier doesn't exist for
+  this platform. Never present a webhook send as guaranteed available the
+  way it effectively is for Discord — Slack's app-approval requirement
+  varies by workspace and this skill has no way to know which way a given
+  workspace is configured.
 - Always open the Community Research Summary with an explicit Source
   Confidence line — `Primary`, `Secondary (official)`,
-  `Secondary (third-party)`, `Mixed`, or (Discord only) `User-Supplied` —
-  and always carry a non-`Primary` confidence, naming its tier, into the
-  Go/No-Go line itself when the verdict is a go — this is a required
-  field, not an optional caveat to remember on a case-by-case basis.
+  `Secondary (third-party)`, `Mixed`, or (Discord and Slack only)
+  `User-Supplied` — and always carry a non-`Primary` confidence, naming
+  its tier, into the Go/No-Go line itself when the verdict is a go — this
+  is a required field, not an optional caveat to remember on a
+  case-by-case basis.
 - Don't collapse `Secondary (official)` and `Secondary (third-party)`
   into one undifferentiated "secondary" note — a WebSearch snippet
   quoting the platform's own help-center page is not the same reliability
@@ -504,7 +587,15 @@ Use this exact section order, as Markdown `##` headings:
   informally — it isn't "even more secondary," it's evidence from a
   different source entirely (the requester, not a web search), and
   conflating the two obscures that this skill did zero independent
-  verification for Discord rather than some-but-not-total verification.
+  verification for Discord or Slack rather than some-but-not-total
+  verification.
+- Don't treat Discord and Slack as interchangeable just because they share
+  the `User-Supplied` tier — they don't share a sending-friction profile
+  (Discord's webhook access is close to guaranteed, Slack's isn't), a
+  formatting syntax (Discord tolerates something close to standard
+  Markdown, Slack actively requires mrkdwn instead), or a character-limit
+  failure mode (Discord rejects over its limit, Slack truncates). Same
+  research pattern, different platform, in every other respect.
 
 ## Example output
 
@@ -678,3 +769,51 @@ two options above you want, and this skill will draft that version next.
 > throat-clearing opener), same explicit hedge pattern as the Secondary
 > tiers, just labeled for what it actually is: unverified by this skill,
 > taken on the requester's own word.
+
+> **What a `User-Supplied` Slack case looks like, and how it differs from
+> Discord's.** Also illustrative, not from an actual run:
+>
+> ```markdown
+> ## Community Research Summary
+> **Source Confidence: User-Supplied** — no research path exists for a
+> private Slack workspace (no Discovery-style exception the way Discord
+> has one); the requester is a member and described the rules directly,
+> checked just now in conversation.
+>
+> Target: the fictional "Foundersync" Slack, #wins channel. Per the
+> requester: #wins is specifically for sharing things you shipped,
+> screenshots welcome, no more than one post per week per person, keep it
+> to the actual update rather than a pitch. Sending would need a webhook
+> for that channel, and the requester isn't sure whether their workspace
+> requires admin approval to create one.
+>
+> ## Go / No-Go
+> Go, based on what the requester described — this skill couldn't check
+> Foundersync's actual channel rules itself, so confirm that's still
+> current before sending.
+>
+> ## Drafted Post
+> Shipped the export feature today. Someone asked for this three separate
+> times last month and I kept saying "soon" - it's live now, one click,
+> picks the format automatically. *Screenshot below.* Still rough around
+> the edges on large files, working on that next.
+>
+> ## Compliance Checklist
+> - Confirm this doesn't exceed one #wins post this week already.
+> - Confirm whether creating a webhook for #wins needs Workspace
+>   Owner/Admin approval in this specific workspace, or whether the
+>   requester can just do it themselves.
+>
+> ## Next Step
+> Nothing sent. Sending isn't guaranteed to be a quick self-serve step
+> here the way it would be for Discord - if Foundersync requires app
+> approval, that has to happen before `publish-pipeline`'s direct-post
+> path can be used at all.
+> ```
+>
+> Notice `*Screenshot below.*` uses a single asterisk on purpose — that's
+> mrkdwn bold, not italic, matching step 5's rule. A Discord draft with
+> that same intent would use `**Screenshot below.**` instead. Same
+> `User-Supplied` tier, same honest hedging pattern, genuinely different
+> syntax and a genuinely more cautious Next Step - not a find-and-replace
+> of the Discord example.

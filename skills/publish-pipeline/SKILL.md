@@ -89,33 +89,38 @@ step 5) for users who've set up their own platform API credentials.
      Don't assume it's connected — check available tools first.
    - **Alternate path (optional, not the default): direct platform
      posting.** If the user wants to post straight to LinkedIn, X, Meta,
-     Reddit, or Discord rather than handing off to their own automation,
-     see `${CLAUDE_PLUGIN_ROOT}/scripts/publish_direct.py --help`. It only
-     works if the user has already set up real API credentials for that
-     platform (see the plugin README) — check with `--dry-run` first,
-     same confirmation rules as above apply, and be explicit that this
-     path is less proven than the webhook path since it talks to live
-     platform APIs this plugin's author can't verify from here. For
-     Reddit specifically, a successful API response doesn't guarantee the
-     post survives that subreddit's AutoModerator — confirm the content
-     actually came from a `community-post-generator` go (not a no-go)
-     before sending. For Discord specifically, confirm the content came
-     from a go too — and since a Discord go is always `User-Supplied`
-     confidence (this skill never independently verified that server's
-     rules), that's one more reason not to skip step 4's confirmation
-     just because the request "sounds routine." **Product Hunt, Hacker
-     News, and Indie Hackers have no equivalent direct-send path, for
-     different reasons** (see README): Product Hunt's write API requires
-     special approval from Product Hunt itself; Hacker News's API has no
-     write/submit endpoint at all, for anyone; and Indie Hackers' API
-     situation is unverified rather than confirmed either way, so it's
-     treated as manual-only too — all three always go out by pasting the
-     draft in manually (producthunt.com, news.ycombinator.com, or
-     indiehackers.com), never through this script, and that's permanent
-     for Hacker News, not a "not yet approved" situation. Discord is the
-     one exception with a genuinely easy send path — a webhook URL, no
-     approval queue — so don't assume every non-Reddit platform here is
-     manual-only.
+     Reddit, Discord, or Slack rather than handing off to their own
+     automation, see `${CLAUDE_PLUGIN_ROOT}/scripts/publish_direct.py
+     --help`. It only works if the user has already set up real API
+     credentials for that platform (see the plugin README) — check with
+     `--dry-run` first, same confirmation rules as above apply, and be
+     explicit that this path is less proven than the webhook path since it
+     talks to live platform APIs this plugin's author can't verify from
+     here. For Reddit specifically, a successful API response doesn't
+     guarantee the post survives that subreddit's AutoModerator — confirm
+     the content actually came from a `community-post-generator` go (not a
+     no-go) before sending. For Discord or Slack specifically, confirm the
+     content came from a go too — and since a Discord or Slack go is
+     always `User-Supplied` confidence (this skill never independently
+     verified that server's/workspace's rules), that's one more reason not
+     to skip step 4's confirmation just because the request "sounds
+     routine." For Slack in particular, also confirm the user actually has
+     (or can get) the workspace permission a webhook needs before treating
+     the send as a quick step — it isn't guaranteed self-serve the way
+     Discord's is. **Product Hunt, Hacker News, and Indie Hackers have no
+     equivalent direct-send path, for different reasons** (see README):
+     Product Hunt's write API requires special approval from Product Hunt
+     itself; Hacker News's API has no write/submit endpoint at all, for
+     anyone; and Indie Hackers' API situation is unverified rather than
+     confirmed either way, so it's treated as manual-only too — all three
+     always go out by pasting the draft in manually (producthunt.com,
+     news.ycombinator.com, or indiehackers.com), never through this
+     script, and that's permanent for Hacker News, not a "not yet
+     approved" situation. Discord has a genuinely easy send path — a
+     webhook URL, no approval queue; Slack's send path is real but not
+     guaranteed-easy — so don't lump either into "every non-Reddit
+     platform here is manual-only," and don't lump Slack in with Discord's
+     ease either.
 
 6. **Report the result** plainly: exit code, HTTP status if a real send
    was made, and a one-line human-readable summary of what went where.
@@ -142,7 +147,8 @@ Trigger on requests like:
     "twitter_thread": ["...", "..."],
     "newsletter_blurb": "...",
     "reddit_post": { "subreddit": "...", "title": "...", "body": "..." },
-    "discord_message": "..."
+    "discord_message": "...",
+    "slack_message": "..."
   },
   "assets": [
     { "type": "image|video", "description": "...", "url": "...or null", "prompt_reference": "..." }
