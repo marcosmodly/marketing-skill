@@ -1,7 +1,7 @@
 ---
 name: visual-brief-generator
 description: "Turns content into a structured video/image generation brief: shot list, per-scene prompts, aspect ratio, style/mood. Use when the user asks for a visual brief, video brief, or shot list."
-allowed-tools: Read, Write
+allowed-tools: Read, Grep, Glob, Write
 ---
 
 # Visual Brief Generator
@@ -31,7 +31,12 @@ available at runtime instead of hardcoding a tool name.
    date. Otherwise, read it for mood/tone consistency below.
 
 2. **Confirm scope.**
-   - Source content or campaign this brief is for.
+   - Source content or campaign this brief is for. If the user references
+     a project feature/launch without describing it, look for it first —
+     Glob for `README*`, `CHANGELOG*`, and `docs/**/*.md` at the project
+     root, then Read whichever look relevant — before asking them to
+     describe it. Only check documentation-oriented files this way, not
+     arbitrary source code. If nothing relevant turns up, ask directly.
    - Deliverable type: video, image, or both.
    - Target platform(s) — this determines aspect ratio (e.g. Reels/TikTok
      9:16, LinkedIn 1:1 or 16:9, YouTube 16:9).

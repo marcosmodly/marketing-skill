@@ -1,7 +1,7 @@
 ---
 name: competitor-research
 description: Writes a structured, analytical competitor-research brief for marketing teams. Use when the user asks to research a competitor, analyze a rival, or build a competitive brief or battlecard.
-allowed-tools: WebSearch, WebFetch, Write
+allowed-tools: Read, Grep, Glob, WebSearch, WebFetch, Write
 ---
 
 # Competitor Research Brief
@@ -34,8 +34,11 @@ Trigger on requests like:
 
 2. **Confirm scope.** Identify:
    - Competitor name and website/domain.
-   - Our own product or company name, for comparison context (proceed with
-     a generic "us" framing if the user doesn't provide this).
+   - Our own product or company name, for comparison context. If the user
+     doesn't state it, check the current project first — Glob for
+     `README*` and `package.json`/`pyproject.toml`, then Read whichever
+     exists, for a product name/description — before falling back to a
+     generic "us" framing.
    - Time window for "recent moves" (default: last 90 days if not stated).
    - Any specific focus areas the user mentions (pricing, product, GTM,
      hiring, funding). If none are given, cover all of them.

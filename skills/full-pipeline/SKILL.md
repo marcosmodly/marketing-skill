@@ -1,7 +1,7 @@
 ---
 name: full-pipeline
 description: Chains research, repurposing, visual briefs, and publishing into one run, pausing before the publish step fires. Use for one-shot 'full campaign' or 'do everything' requests.
-allowed-tools: WebSearch, WebFetch, Read, Write, Bash
+allowed-tools: WebSearch, WebFetch, Read, Grep, Glob, Write, Bash
 ---
 
 # Full Marketing Pipeline

@@ -1,7 +1,7 @@
 ---
 name: content-repurposer
 description: Reformats source content into a LinkedIn post, a Twitter/X thread, and a newsletter blurb in one pass. Use when the user asks to repurpose or adapt content for multiple channels.
-allowed-tools: Read, WebFetch, Write
+allowed-tools: Read, Grep, Glob, WebFetch, Write
 ---
 
 # Multi-Platform Content Repurposer
@@ -27,22 +27,40 @@ shared brand voice; only the format changes per channel.
    formatting constraints to apply below.
 
 2. **Confirm scope.**
-   - What's the source? Pasted text, a file, a URL, or the output of
-     another skill (e.g. a `competitor-research` brief)?
+   - What's the source? Pasted text, a file, a URL, the output of another
+     skill (e.g. a `competitor-research` brief), or something in the
+     current project (e.g. "our new feature," "our latest changelog
+     entry")? If it's the latter and no text was actually pasted or
+     linked, use the project-content search below before asking the user
+     to paste it themselves.
    - Which formats are wanted — default to all three (LinkedIn, Twitter/X
      thread, newsletter blurb) unless the user asks for only one.
    - Is there a CTA or link that should appear in every format?
 
-3. **Extract the core material.** Identify the source's central thesis and
+3. **Finding project content (when needed).** If the user refers to "our
+   product," "our feature," "our changelog," "our docs," etc. without
+   pasting or linking the actual content, look for it in the current
+   project before asking them to paste it:
+   - Use Glob to check for `README*`, `CHANGELOG*`, and `docs/**/*.md` at
+     the project root, then Read whichever file(s) look most relevant to
+     what the user mentioned.
+   - Also check `package.json` or `pyproject.toml` for the product's
+     name/description if identity/positioning is needed.
+   - Only look at documentation-oriented files this way — don't scan
+     arbitrary source code for marketing content.
+   - If nothing relevant turns up, say so and ask the user to paste or
+     point at the right content instead of guessing.
+
+4. **Extract the core material.** Identify the source's central thesis and
    any facts, stats, or quotes worth carrying forward. Carry these forward
    exactly — never invent a claim, statistic, or quote that isn't in the
    source.
 
-4. **Draft each requested format** using the exact structures in "Output
+5. **Draft each requested format** using the exact structures in "Output
    structure" below, applying the brand voice, audience, and banned-words
    list from `references/brand-voice.md`.
 
-5. **Self-check before finalizing**: scan all drafts against the
+6. **Self-check before finalizing**: scan all drafts against the
    banned-words list and formatting constraints, and confirm the CTA/link
    (if any) is present and identical across formats.
 

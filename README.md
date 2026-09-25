@@ -17,6 +17,18 @@ automation for scheduling and publishing.
 
 Plus one setup command: `/marketing-skill:marketing-setup`.
 
+## Using your own project as source material
+
+`competitor-research`, `content-repurposer`, and `visual-brief-generator`
+can pull from the project they're installed in instead of requiring you to
+paste content every time. If you reference "our product," "our feature,"
+"our changelog," etc. without providing the text, they'll check `README*`,
+`CHANGELOG*`, `docs/**/*.md`, and `package.json`/`pyproject.toml` at the
+project root first, and ask you directly only if nothing relevant turns
+up. They only read documentation-oriented files this way — never arbitrary
+source code — so install this in your product's own repo to get the most
+out of it.
+
 ## Install
 
 **Plugin method (recommended):**
