@@ -33,9 +33,14 @@ step 5) for users who've set up their own platform API credentials.
    - If the user is pointing at a calendar entry (e.g. "send the queued
      post for Tuesday"), read
      `${CLAUDE_PLUGIN_ROOT}/state/content-calendar.md`, find the matching
-     row, and use its content as the source. Refuse to re-send a row
-     already marked `Sent` without the user explicitly confirming they
-     want to send it again.
+     row, then **read the post file named in that row's Notes column**
+     (`state/posts/<date>-<platform-slug>.md`) — that file, not the
+     calendar table, holds the actual content to send. A row with no
+     post-file path in Notes, or whose named file doesn't exist, isn't a
+     usable source — say so and stop rather than improvising content
+     from the short Topic/Hook label. Refuse to re-send a row already
+     marked `Sent` without the user explicitly confirming they want to
+     send it again.
    - Destination webhook URL, if not already set via `MARKETING_WEBHOOK_URL`.
    - Is this a real send, or a dry run to inspect the payload first?
 
