@@ -1,7 +1,7 @@
 ---
 name: full-pipeline
 description: Chains research, repurposing, visual briefs, and publishing into one run, pausing before the publish step fires. Use for one-shot 'full campaign' or 'do everything' requests.
-allowed-tools: WebSearch, WebFetch, Read, Grep, Glob, Write, Bash
+allowed-tools: WebSearch, WebFetch, Read, Grep, Glob, Write, Edit, Bash
 ---
 
 # Full Marketing Pipeline
@@ -53,7 +53,13 @@ want the whole thing done in one shot rather than one skill at a time.
    `publish-pipeline`'s payload structure) and destination. Require an
    explicit go/no-go. A request phrased as "do everything end to end"
    authorizes running the chain up to this point — it does not authorize
-   skipping this confirmation.
+   skipping this confirmation. Silence, a timeout, or no reply is never a
+   go — that holds whether this run started from an interactive chat or
+   from a scheduled/automated trigger; if no actual affirmative reply
+   arrives in this conversation, stop here and leave Stage 3's output
+   queued in `state/content-calendar.md` (Status `Ready for Approval`)
+   instead of sending it, rather than treating the trigger itself as
+   authorization.
 
 7. **Stage 5 — Publish.** Only after explicit confirmation, read
    `${CLAUDE_PLUGIN_ROOT}/skills/publish-pipeline/SKILL.md` and follow its
@@ -83,7 +89,8 @@ One end-of-run report, as Markdown `##` headings:
 ## Formatting rules
 
 - Never skip the Stage 4 checkpoint, regardless of how the original
-  request was phrased.
+  request was phrased, and never treat silence or no reply as the go/no-go
+  decision — only an actual affirmative reply moves the run to Stage 5.
 - Label which stage produced each piece of output in the final report.
 - Brand-voice compliance (tone, banned words, formatting constraints)
   carries forward from Stage 2 onward.

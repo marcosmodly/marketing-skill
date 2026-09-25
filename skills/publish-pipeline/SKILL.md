@@ -1,7 +1,7 @@
 ---
 name: publish-pipeline
 description: Packages finished content and asset references into JSON and sends it to n8n, Make, or another automation tool via webhook. Use when the user asks to publish, ship, or send content live.
-allowed-tools: Read, Write, Bash
+allowed-tools: Read, Write, Edit, Bash
 ---
 
 # Publish Pipeline
@@ -11,8 +11,10 @@ allowed-tools: Read, Write, Bash
 Final handoff step: package finished content and any asset references into
 a structured JSON payload, then send it to the user's own automation
 system (n8n, Make, or anything else that accepts an incoming webhook) so
-it can take over scheduling and posting. This skill never posts to social
-platforms directly — it hands off to automation the user already owns.
+it can take over scheduling and posting. By default this skill hands off
+to automation the user already owns rather than posting directly — direct
+platform posting exists only as an explicit, optional alternate path (see
+step 5) for users who've set up their own platform API credentials.
 
 ## Step-by-step process
 
@@ -26,7 +28,14 @@ platforms directly — it hands off to automation the user already owns.
 
 2. **Confirm scope.**
    - Which content pieces are ready to send (from `content-repurposer`,
-     `visual-brief-generator`, or pasted directly)?
+     `visual-brief-generator`, a row in `state/content-calendar.md`, or
+     pasted directly)?
+   - If the user is pointing at a calendar entry (e.g. "send the queued
+     post for Tuesday"), read
+     `${CLAUDE_PLUGIN_ROOT}/state/content-calendar.md`, find the matching
+     row, and use its content as the source. Refuse to re-send a row
+     already marked `Sent` without the user explicitly confirming they
+     want to send it again.
    - Destination webhook URL, if not already set via `MARKETING_WEBHOOK_URL`.
    - Is this a real send, or a dry run to inspect the payload first?
 
@@ -36,7 +45,19 @@ platforms directly — it hands off to automation the user already owns.
    explicit user go-ahead before a real send.** This step fires an
    external side effect the user may not be able to easily undo — never
    skip this confirmation, even if the user's original request sounded
-   like blanket authorization (e.g. "just publish it").
+   like blanket authorization (e.g. "just publish it"). **Silence, a
+   timeout, or no reply in this conversation is never a yes** — only an
+   actual affirmative reply from the user counts, and if none arrives,
+   stop here without sending. This applies exactly the same way whether
+   the run is an interactive chat or something else (a scheduled or
+   automated trigger, for instance) invoked this skill — there is no
+   framing of "the run itself is standing authorization" that substitutes
+   for a real reply.
+   - If the source is a `state/content-calendar.md` row, this is the
+     point where — and only where — its Status may move to `Approved`,
+     immediately after the affirmative reply and immediately before
+     sending. No skill in this plugin sets `Approved` at any other time;
+     `content-calendar` in particular never writes it.
 
 5. **Send it:**
    - Write the JSON payload to a temporary file (e.g. via `mktemp`).
@@ -44,13 +65,29 @@ platforms directly — it hands off to automation the user already owns.
      > the `MARKETING_WEBHOOK_URL` environment variable > ask the user for
      one if neither is available.
    - Run via Bash:
-     `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/publish_webhook.py --payload-file <tmp-path> [--dry-run]`
+     `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/publish_webhook.py --payload-file <tmp-path> --dry-run`
+     to preview, then, only after step 4's confirmation,
+     `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/publish_webhook.py --payload-file <tmp-path> --confirmed`
+     to actually send. The script refuses to run without one of those two
+     flags — there is no default-sends behavior to be careful about.
    - Remove the temporary file afterward regardless of outcome.
-   - **Alternate path (optional, not the default):** if a Make MCP
-     connector is connected in this session (tools like `scenarios_run`,
-     `scenarios_list`), you may call `scenarios_run` directly instead of
-     the webhook script, if the user prefers that. Don't assume it's
-     connected — check available tools first.
+   - If the source was a calendar row, update it to `Sent` in
+     `state/content-calendar.md` immediately after a successful send
+     (keep the row — this is the history log, don't delete it).
+   - **Alternate path (optional, not the default): Make MCP.** If a Make
+     MCP connector is connected in this session (tools like
+     `scenarios_run`, `scenarios_list`), you may call `scenarios_run`
+     directly instead of the webhook script, if the user prefers that.
+     Don't assume it's connected — check available tools first.
+   - **Alternate path (optional, not the default): direct platform
+     posting.** If the user wants to post straight to LinkedIn, X, or
+     Meta rather than handing off to their own automation, see
+     `${CLAUDE_PLUGIN_ROOT}/scripts/publish_direct.py --help`. It only
+     works if the user has already set up real API credentials for that
+     platform (see the plugin README) — check with `--dry-run` first,
+     same confirmation rules as above apply, and be explicit that this
+     path is less proven than the webhook path since it talks to live
+     platform APIs this plugin's author can't verify from here.
 
 6. **Report the result** plainly: exit code, HTTP status if a real send
    was made, and a one-line human-readable summary of what went where.
@@ -63,6 +100,7 @@ Trigger on requests like:
 - "Send this to n8n / Make"
 - "Trigger the automation"
 - "Fire the webhook"
+- "Send the queued post for [date]" / "approve and send calendar item"
 
 ## Payload structure (required)
 
@@ -92,9 +130,12 @@ rely on it.
 - Never claim a send succeeded if the script returned a non-zero exit
   code — report the actual failure and exit code instead.
 - Never fire a real send without showing the exact payload and getting
-  explicit confirmation first.
+  explicit confirmation first — and never pass `--confirmed` without
+  having received an actual affirmative reply in this conversation first.
 - Keep the payload's top-level keys stable across runs; add new content
   under `content` rather than renaming existing keys.
+- Never write `Approved` to `state/content-calendar.md` except in step 4,
+  immediately after a real human reply, immediately before sending.
 
 ## Example output
 
