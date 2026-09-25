@@ -49,9 +49,12 @@ Sending is `publish-pipeline`'s job, one approved row at a time.
      rules are per-subreddit, not platform-wide, and drafting one needs a
      live research pass per slot (see step 4), so budget more time for
      those slots than a LinkedIn/Twitter/newsletter slot. Same research
-     overhead applies to a Product Hunt or Hacker News slot; Hacker News
-     in particular rarely belongs in a recurring cadence at all — a Show
-     HN is closer to a one-time launch than something to batch weekly, so
+     overhead applies to a Product Hunt, Hacker News, or Indie Hackers
+     slot; if any slot names "Indie Hackers," confirm it means
+     indiehackers.com and not r/indiehackers (a separate subreddit with
+     the same casual name) before scoping it further. Hacker News in
+     particular rarely belongs in a recurring cadence at all — a Show HN
+     is closer to a one-time launch than something to batch weekly, so
      confirm that's really what's wanted before queuing one as a regular
      slot.
    - Content type per slot — text/social post, short-form video, long-form
@@ -73,11 +76,12 @@ Sending is `publish-pipeline`'s job, one approved row at a time.
      structure rules as `content-repurposer` (read
      `${CLAUDE_PLUGIN_ROOT}/skills/content-repurposer/SKILL.md` for the
      exact formatting rules rather than reinventing them here).
-   - Reddit / Product Hunt / Hacker News slots: hand off to
-     `${CLAUDE_PLUGIN_ROOT}/skills/community-post-generator/SKILL.md` for
-     that slot instead of the above — it needs a live rules/norms check
-     against that specific subreddit, Product Hunt, or Hacker News before
-     drafting, which is a genuine research step, not a template fill. If
+   - Reddit / Product Hunt / Hacker News / Indie Hackers slots: hand off
+     to `${CLAUDE_PLUGIN_ROOT}/skills/community-post-generator/SKILL.md`
+     for that slot instead of the above — it needs a live rules/norms
+     check against that specific subreddit, Product Hunt, Hacker News, or
+     Indie Hackers group before drafting, which is a genuine research
+     step, not a template fill. If
      that research comes back No-Go, **don't draft a substitute post for
      the slot** — report the block in the Batch Summary and skip queuing
      that slot (or swap in a different platform/subreddit if the user
@@ -130,8 +134,8 @@ Use this exact section order, as Markdown `##` headings:
 1. **Batch Summary** — date range, cadence, platforms, how many slots,
    and a one-line note on what (if anything) was skipped or varied — to
    avoid repeating a recent topic, or because a Reddit/Product Hunt/
-   Hacker News slot came back No-Go from `community-post-generator`'s
-   research.
+   Hacker News/Indie Hackers slot came back No-Go from
+   `community-post-generator`'s research.
 2. **Queued Posts** — one `###` subsection per date, each containing the
    full drafted content for that slot (using that slot's normal output
    structure — `content-repurposer` for LinkedIn/Twitter/newsletter,
