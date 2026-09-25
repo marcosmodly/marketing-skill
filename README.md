@@ -7,6 +7,10 @@ a visual asset, and hand the finished content off to your own automation
 — or, with real credentials you provide, straight to a platform API — for
 publishing.
 
+**[See a full worked run →](EXAMPLE.md)** — one continuous
+`full-pipeline` call from research to the approval checkpoint before
+anything actually publishes.
+
 ## Skills
 
 | Skill | Triggers on | Does |
