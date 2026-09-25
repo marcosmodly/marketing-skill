@@ -1,6 +1,6 @@
 ---
 name: community-post-generator
-description: Researches a specific subreddit's, Product Hunt's, Hacker News's, or Indie Hackers' actual rules and typical post style live before drafting — never a generic templated post, verifying each source is actually about the named target before trusting it, and writes it to read like a person wrote it. For Discord and Slack, where servers/workspaces have no public page to research at all, it asks the user (an actual member) for the rules instead of pretending to fetch them, and for Slack specifically drafts in Slack's own mrkdwn syntax rather than standard Markdown. Telegram is bimodal: a public channel/group can actually be previewed live (t.me/s/<username>), a private one can't, so which research path applies is determined per-target rather than fixed platform-wide, and drafts default to Telegram's HTML formatting tags. Use when the user wants to post in a specific subreddit, on Product Hunt, on Hacker News (including Show HN), on Indie Hackers (including Show IH), in a specific Discord server, Slack workspace, or Telegram channel/group, or any other rules-driven community/forum.
+description: Researches a specific subreddit's, Product Hunt's, Hacker News's, Indie Hackers', or dev.to's actual rules and typical post style live before drafting — never a generic templated post, verifying each source is actually about the named target before trusting it, and writes it to read like a person wrote it. For Discord and Slack, where servers/workspaces have no public page to research at all, it asks the user (an actual member) for the rules instead of pretending to fetch them, and for Slack specifically drafts in Slack's own mrkdwn syntax rather than standard Markdown. Telegram is bimodal: a public channel/group can actually be previewed live (t.me/s/<username>), a private one can't, so which research path applies is determined per-target rather than fixed platform-wide, and drafts default to Telegram's HTML formatting tags. Use when the user wants to post in a specific subreddit, on Product Hunt, on Hacker News (including Show HN), on Indie Hackers (including Show IH), on dev.to (including the #showdev tag), in a specific Discord server, Slack workspace, or Telegram channel/group, or any other rules-driven community/forum.
 allowed-tools: Read, Grep, Glob, Write, WebSearch, WebFetch
 ---
 
@@ -22,6 +22,25 @@ hoping. "Research" means the source actually has to be about the named
 target, not just something with a similar name — a subreddit about a
 community isn't the same as that community's own site, and confusing the
 two is a real, confirmed way this has gone wrong (see step 3).
+
+dev.to fits the "always researchable" group Reddit, Product Hunt, Hacker
+News, and Indie Hackers belong to — its rules live on the open web, not
+behind membership the way Discord/Slack/a private Telegram target do —
+but its internal shape is its own, not a copy of any of the four. Rules
+apply at two levels at once, not one: a sitewide Code of Conduct, plus
+per-tag submission guidelines that volunteer Tag Moderators set and
+enforce by adding or stripping a tag from a post that doesn't fit it —
+softer than a subreddit's outright removal, but a real enforcement
+mechanism this skill has to research, not assume away. A post can also
+carry up to 4 tags at once, unlike one-subreddit-per-post or
+one-group-per-post elsewhere, so step 2 asks for tags, plural. The
+`#showdev` tag is dev.to's version of Show HN/Show IH — for a real,
+triable project, not a tutorial — but its shape is neither of theirs: a
+single title-plus-body article, not Show HN's three-piece split, and with
+no required founder-story/stage/questions structure the way Show IH has
+one. dev.to also has a sanctioned company-page feature (Organizations),
+so step 2 asks which identity a post goes out under, personal or
+Organization, rather than assuming.
 
 Discord and Slack both break the "research it live" assumption itself,
 not just the target-matching part of it: most servers and workspaces have
@@ -114,6 +133,16 @@ written to read like an actual person wrote them.
      "here's my product, give me feedback," with its own content
      convention — see step 3) is the right fit, or whether a different
      group matches the content better.
+   - For dev.to: get the tag(s) — up to 4, and get all of them now, not
+     just the primary one, since dev.to posts carry multiple tags at once
+     rather than living under one community the way a subreddit or IH
+     group does. If the post is showing off a finished, triable project
+     (not a tutorial), confirm whether `#showdev` is the right fit
+     alongside the topical tags. Also confirm **which identity it posts
+     under**: the user's personal account, or a dev.to Organization (a
+     sanctioned company/brand page) if they're a member of one — this
+     changes the API payload (see `publish_direct.py`) and is worth
+     surfacing now rather than assuming personal by default.
    - For Discord: get the exact server *and* the exact channel within it
      (never just "Discord," and not even just the server name — rules and
      norms are per-channel as much as per-server). Then confirm the user
@@ -124,7 +153,7 @@ written to read like an actual person wrote them.
      labeled as unverified against that server's actual rules. Set the
      expectation now that step 3 will ask them to supply what the rules
      actually say, not fetch them independently the way it does for the
-     other four platforms.
+     other five platforms.
    - For Slack: same as Discord — exact workspace *and* exact channel,
      confirm the user is actually a member, set the expectation that
      step 3 asks rather than fetches. Two things that are genuinely
@@ -248,6 +277,22 @@ written to read like an actual person wrote them.
      pitch to multiple groups instead of the single most relevant one is
      discouraged, same spirit as cross-posting the same pitch to multiple
      subreddits.
+   - **dev.to.** Research two layers, not one: the sitewide Code of
+     Conduct (`dev.to/code-of-conduct`), and each target tag's own
+     submission guidelines, shown in that tag's sidebar
+     (`dev.to/t/<tag>`) — a tag can carry its own posting guidance the
+     same way a subreddit's sidebar does, enforced by that tag's
+     volunteer Tag Moderators rather than sitewide staff. Sample recent
+     posts under the target tag(s) (`dev.to/api/articles?tag=<tag>` is a
+     public, unauthenticated read endpoint, similar in spirit to Reddit's
+     `.json` listings) for tone/format. If `#showdev` is one of the
+     target tags, confirm the content is a real, triable project rather
+     than a tutorial or a bare announcement — a moderator can and does
+     strip the tag from posts that don't fit, independent of whether the
+     post itself survives. Don't treat a 2xx from the API (if drafting
+     for direct send) as the same thing as "this was welcome" — API
+     acceptance and tag/content moderation are two different, later,
+     independent checks.
    - **Discord.** Try the public route first, but expect it to come up
      empty for most servers: a large, established, Discovery-listed
      server (1,000+ members, opted into Server Discovery) may have a
@@ -310,8 +355,8 @@ written to read like an actual person wrote them.
      norms from training knowledge alone; subreddit rules change, and a
      stale assumption is exactly how a post gets removed.
    - **Track source tier as you go, not just the content.** WebFetch to
-     reddit.com, producthunt.com, news.ycombinator.com, or
-     indiehackers.com can fail outright depending on the runtime's
+     reddit.com, producthunt.com, news.ycombinator.com, indiehackers.com,
+     or dev.to can fail outright depending on the runtime's
      network policy — when this happens, falling back to WebSearch still
      produces useful signal, but not all of it is equally trustworthy,
      and collapsing it into one undifferentiated "secondary" bucket hides
@@ -397,6 +442,18 @@ written to read like an actual person wrote them.
      private channel/group." Either way, if step 2 found it's a channel and
      the user isn't an admin, say so again here too — a Go still means "this
      content is welcome," not "the user can personally post it."
+   - **For dev.to, a No-Go isn't the only outcome research can produce —
+     say plainly when it's actually a modified Go instead.** Because tag
+     guidelines are enforced by stripping a tag rather than removing the
+     whole post, research might turn up "this is fine sitewide, but
+     `#showdev` isn't a fit for this content" (e.g. it reads as a tutorial,
+     not a project) rather than a hard block — in that case say so as a Go
+     without that specific tag, not a No-Go, since the post itself was
+     never actually rejected. Reserve an actual No-Go for what the sitewide
+     Code of Conduct itself would block. Also carry forward the Code of
+     Conduct gap from step 3 if it applies: if its self-promotion wording
+     couldn't be directly confirmed this run, say that in the Go line
+     itself, the same as any other non-`Primary` hedge.
 
 5. **Draft the post** — shape depends on the platform (see Output
    structure below) — matching the specific community's researched format
@@ -405,10 +462,16 @@ written to read like an actual person wrote them.
    Hacker News, and Indie Hackers all actively punish corporate or
    salesy-sounding copy — Indie Hackers is more welcoming to the *fact* of
    self-promotion than Reddit, Product Hunt, or Hacker News are, but just
-   as unforgiving of a pitch-first tone instead of a story-first one; when
-   the configured brand voice would read as too polished for that
-   community, override it toward the community's own norm and **tell the user this
-   happened and why** rather than silently picking one. The banned-words
+   as unforgiving of a pitch-first tone instead of a story-first one.
+   dev.to sits closer to Indie Hackers on this than to Reddit or Hacker
+   News — `#showdev` and Organizations both signal the platform itself
+   welcomes self-promotion structurally — but a post that reads as an ad
+   rather than a real project write-up is still exactly what gets a tag
+   stripped or a report filed, so the same story-first-not-pitch-first bar
+   still applies. When the configured brand voice would read as too
+   polished for that community, override it toward the community's own
+   norm and **tell the user this happened and why** rather than silently
+   picking one. The banned-words
    list from brand-voice.md still applies regardless. For Discord or
    Slack, match whatever tone the user described that channel having — if
    they haven't said, ask rather than guessing, since server/workspace
@@ -435,6 +498,14 @@ written to read like an actual person wrote them.
      wants MarkdownV2 (or the target expects it), that's fine to switch to,
      but say plainly that it needs careful escaping and isn't the default
      for a reason.
+   - **For dev.to specifically, draft a full title-plus-body article in
+     standard Markdown, not a short chat message** — closer in effort and
+     length to a Reddit self-post than to Discord/Slack/Telegram's single
+     message, and not forced into Show HN's three-piece split or Show IH's
+     founder-story/stage/questions structure either, since neither is how
+     `#showdev` actually works (see step 3). Include the finalized tag list
+     (up to 4) as part of the draft, not as an afterthought — which tags
+     make the final cut affects who actually sees the post.
    - **Write it to read like an actual person typed it, not AI-polished
      marketing copy** — these communities react to that almost as badly
      as they react to overt promotion, since it's a strong tell for
@@ -471,7 +542,10 @@ written to read like an actual person wrote them.
    of. For Telegram specifically, confirm the draft is under Telegram's
    4096-character hard limit — like Discord, this is an outright rejection
    ("message is too long"), not a truncation or a display-only issue like
-   Slack's ~4,000 threshold.
+   Slack's ~4,000 threshold. For dev.to specifically, confirm the tag list
+   is 4 or fewer (the API rejects more) and that a title is actually
+   present — no character-limit check applies here, unlike the four chat
+   platforms above, since dev.to articles are long-form by design.
 
 ## When to use this skill
 
@@ -482,6 +556,7 @@ Trigger on requests like:
 - "Draft a Product Hunt Discussions post / launch description"
 - "Write a Show HN for this" / "Should I post this on Hacker News?"
 - "Post this on Indie Hackers" / "Write a Show IH for this"
+- "Post this on dev.to" / "Write a #showdev post for this project"
 - "Post this in [Discord server]" / "Write a message for our Discord's
   #self-promo channel"
 - "Post this in our Slack" / "Write a message for the #announcements
@@ -510,7 +585,8 @@ Use this exact section order, as Markdown `##` headings:
    discarded before confidence was even assessed. Exactly one of:
    - `Primary` — fetched directly from the platform's own rules/about/
      guidelines page (reddit.com, producthunt.com, news.ycombinator.com,
-     or indiehackers.com) in this run.
+     indiehackers.com, or dev.to — its sitewide Code of Conduct and/or the
+     specific tag's own sidebar guidelines) in this run.
    - `Secondary (official)` — a direct fetch failed, but the WebSearch
      snippets used are visibly quoting the platform's own official pages
      (help center articles, named guideline pages, the platform's own
@@ -567,6 +643,14 @@ Use this exact section order, as Markdown `##` headings:
      — founder story, current stage, one or two concrete questions — not
      just a product description; a draft missing any of the three isn't
      a real Show IH post regardless of how well-written it is.
+   - dev.to: title + body in standard Markdown, plus the finalized tag
+     list (up to 4) called out separately, the same way Reddit's flair is
+     called out rather than buried in the body. Not forced into Show HN's
+     three-piece split or Show IH's founder-story/stage/questions
+     structure (see step 5) — a real project write-up is enough if
+     `#showdev` is one of the tags, no fixed narrative shape required
+     beyond that. No character-limit note needed here, unlike the four
+     chat-message platforms below.
    - Discord: a single chat message, no separate title field at all —
      Discord posts don't have one, so don't invent one. Under 2000
      characters (see step 6). Label it clearly as built from the rules
@@ -609,16 +693,19 @@ Use this exact section order, as Markdown `##` headings:
    via BotFather needs no approval from anyone, but that doesn't mean it
    can post anywhere yet; and for a private channel/group, that the rules
    they described are still current, same caveat as Discord/Slack's
-   User-Supplied cases).
+   User-Supplied cases; for dev.to specifically, that its Code of Conduct's
+   self-promotion wording is actually acceptable, if this run couldn't
+   confirm it directly — this skill's research had that gap, and a 2xx
+   from the API is not the same thing as a moderator agreeing the tags fit).
 5. **Next Step** — the primary path is pasting it in manually; note that
    `publish-pipeline`'s optional direct-post path can send a Reddit
-   self-post, a Discord message, a Slack message, or a Telegram message
-   programmatically if the user already has the right credentials (a
-   Reddit API app, a webhook URL for that Discord channel or Slack
-   channel, or a bot token plus that chat's ID for Telegram; see that
-   skill and the plugin README) — but the three chat platforms don't share
-   one friction profile, so don't present any of them with borrowed
-   confidence from another:
+   self-post, a Discord message, a Slack message, a Telegram message, or a
+   dev.to article programmatically if the user already has the right
+   credentials (a Reddit API app, a webhook URL for that Discord channel or
+   Slack channel, a bot token plus that chat's ID for Telegram, or a dev.to
+   API key for dev.to; see that skill and the plugin README) — but these
+   don't share one friction profile, so don't present any of them with
+   borrowed confidence from another:
    - Discord: sending is unambiguously the easy part — a webhook is close
      to always available to any channel member, no approval step.
    - Slack: closer to Discord than to the platforms below, but not the
@@ -631,6 +718,13 @@ Use this exact section order, as Markdown `##` headings:
      admins before it can post there at all. Easy first step, a real
      second gate — don't round that off to "as easy as Discord" just
      because bot creation alone is.
+   - dev.to: the simplest access story of any platform here — an API key
+     generated from account settings, no approval process found in this
+     skill's research at all, not even Discord's one-click-but-still-a-step
+     webhook creation. That ease is about *access*, though, not content —
+     it says nothing about whether a Tag Moderator strips a tag afterward,
+     which is a separate, later check this skill can't make on the user's
+     behalf.
    Product Hunt and Hacker News have no equivalent send path here, for two
    different reasons worth naming rather than lumping together: Product
    Hunt's write API exists but needs Product Hunt's own special approval;
@@ -641,14 +735,14 @@ Use this exact section order, as Markdown `##` headings:
    asks whether IH has a developer API at all) — don't round that
    uncertainty off to a confident yes or no, say plainly it's unverified
    and treat it as manual-only until proven otherwise. Say which of the
-   three send-path profiles above actually applies to this specific user
+   four send-path profiles above actually applies to this specific user
    and target rather than defaulting to any one of them by habit.
 
 ## Formatting rules
 
 - Never draft a post before completing the live rules research for that
   specific community in this run — no generic, reusable Reddit, Product
-  Hunt, Hacker News, or Indie Hackers template. (Discord and Slack get the
+  Hunt, Hacker News, Indie Hackers, or dev.to template. (Discord and Slack get the
   user-supplied equivalent — asking counts as "completing" the step,
   skipping the ask doesn't. Telegram gets whichever applies: a real
   research attempt for a public target, the user-supplied equivalent for a
@@ -672,7 +766,7 @@ Use this exact section order, as Markdown `##` headings:
   every draft, but override its tone/formatting defaults toward the
   target community's own norm when they conflict, and say so explicitly.
 - If WebFetch to the platform's own domain (reddit.com, producthunt.com,
-  news.ycombinator.com, or indiehackers.com) is unreachable in this
+  news.ycombinator.com, indiehackers.com, or dev.to) is unreachable in this
   runtime, fall back to WebSearch and say so — never silently substitute
   general knowledge for a live check.
 - Never use an em dash in drafted post copy, and never let a draft carry
@@ -689,6 +783,19 @@ Use this exact section order, as Markdown `##` headings:
   a product description alone isn't a valid Show IH post regardless of
   how well it's written, and this skill shouldn't hand over something
   that doesn't match the format it just researched.
+- On dev.to specifically: never present a `#showdev`-tagged draft that's
+  actually a tutorial rather than a real, triable project — that's the one
+  thing the tag is explicitly not for. Never exceed 4 tags on a draft, and
+  never present a finished draft without its tag list called out
+  separately, the way flair is for Reddit. Never claim the Code of
+  Conduct's self-promotion wording as confirmed if this run's research
+  couldn't actually reach it (direct fetch and WebSearch both came up
+  short) — say plainly that it's an open gap rather than assuming the
+  structurally-welcoming signals (the `#showdev` tag, Organizations) settle
+  it. A tag getting stripped by a Tag Moderator after the fact is a real
+  possible outcome this skill can't prevent or predict with certainty, not
+  a failure mode to paper over as equivalent to a subreddit's clean
+  remove-or-keep decision.
 - On Discord specifically: never draft a post for a server the user isn't
   a member of, and never draft one on a guess when the user says they
   don't know or haven't checked the server's rules — ask them to check
@@ -751,8 +858,18 @@ Use this exact section order, as Markdown `##` headings:
   Slack's app-approval gate, its formatting is HTML tags rather than
   near-standard Markdown or mrkdwn, and its character limit (4096) rejects
   outright like Discord's rather than truncating like Slack's. Same
-  research-and-draft pattern as all six other platforms, genuinely
+  research-and-draft pattern as all seven other platforms, genuinely
   different mechanics in every category above.
+- Don't treat dev.to as a reskinned Reddit, Hacker News, or Indie Hackers
+  either, despite surface similarities to each — it isn't one
+  subreddit-style target but up to 4 tags at once, its moderation acts on
+  the tag (stripping it) rather than only the whole post the way
+  Reddit's/HN's/IH's does, its show-your-project convention (`#showdev`)
+  has neither Show HN's three-piece split nor Show IH's required
+  founder-story/stage/questions shape, and it's the only one of the four
+  researchable platforms with a sanctioned company-page feature
+  (Organizations) and an apparently approval-free write API. Same
+  research-and-draft pattern, genuinely different mechanics.
 
 ## Example output
 
@@ -1030,3 +1147,97 @@ two options above you want, and this skill will draft that version next.
 > look identical in shape to the Discord or Slack `User-Supplied` examples
 > above — same tier, same hedging — just with HTML tags in the draft
 > instead of near-standard Markdown or mrkdwn.
+
+> **A real research run, dev.to** — dev.to's own domain was blocked in this
+> runtime (same pattern as reddit.com, producthunt.com, and the others), so
+> this fell back to WebSearch, same as the `Secondary`-tier examples above.
+> Unlike those, one specific claim stayed unconfirmed rather than resolving
+> to a tier at all — shown here as it actually happened, gap included, not
+> smoothed over:
+>
+> ```markdown
+> ## Community Research Summary
+> **Source Confidence: Secondary (official)** — dev.to's own domain was
+> unreachable this run, but WebSearch surfaced content that traces back to
+> dev.to's own pages: the `#showdev` tag's purpose confirmed by a named DEV
+> Tag Moderator's own explanatory post, and the Organizations feature
+> described in what reads as dev.to's own marketing copy for it. One gap:
+> the Code of Conduct's specific self-promotion/spam wording could not be
+> directly confirmed this run, from either a fetch or a search snippet.
+>
+> Target tags: `showdev`, `ai`, `opensource`, `buildinpublic` (4, the
+> platform's per-post maximum). dev.to has a real per-tag moderation layer
+> on top of its sitewide Code of Conduct — volunteer Tag Moderators can
+> strip a tag that doesn't fit it, separately from the post itself being
+> removed. `#showdev` is confirmed for real, triable projects, explicitly
+> not tutorials, with no required founder-story/stage/questions shape the
+> way Indie Hackers' Show IH has one. Posting under a personal account, not
+> a dev.to Organization (requester isn't a member of one for this project).
+>
+> ## Go / No-Go
+> Go, based on `Secondary (official)` sourcing — the structural signals
+> (the `#showdev` tag's whole purpose, the Organizations feature's own
+> marketing framing) both point toward self-promotion being welcome here,
+> but the Code of Conduct's specific wording on it stayed unconfirmed this
+> run. Treat this as a lean, not a fully confirmed rule, and skim
+> `dev.to/code-of-conduct` directly before posting.
+>
+> ## Drafted Post
+> **Title:** I built a Claude Code plugin that can't post anything without a human saying so
+> **Tags:** showdev, ai, opensource, buildinpublic
+>
+> I got tired of "AI marketing automation" tools that assume it's fine to
+> post on your behalf the moment you connect an account. So I built the
+> opposite of that.
+>
+> marketing-skill is a Claude Code plugin: competitor research, batch
+> content calendars, turning one piece of content into a LinkedIn post or a
+> Twitter thread or a newsletter blurb, ad copy, video briefs, and a
+> publishing step that hands finished content to your own automation or a
+> platform API.
+>
+> The part I actually care about is the approval gate. Every skill that
+> drafts content is hard-blocked from marking anything "Approved." The only
+> thing that can flip that status is a real human reply in the same
+> conversation, right before it sends. A scheduled run that fires with
+> nobody there to answer just leaves the draft queued. It doesn't quietly
+> go out anyway.
+>
+> For platforms like Reddit, Product Hunt, Hacker News, and Indie Hackers,
+> there's a research step before drafting anything: the skill checks that
+> specific subreddit's or forum's current rules and typical post style, and
+> says plainly if a post wouldn't be welcome there. Discord, Slack, and
+> Telegram get a variant of this, since most servers, workspaces, and
+> private chats have no public page to check at all.
+>
+> Plain Markdown instructions plus two stdlib-only Python scripts. No
+> backend, nothing running on my own servers.
+>
+> Genuinely curious whether the approval-gate design holds up against real
+> use, or if there's a hole in it I'm not seeing yet.
+>
+> ## Compliance Checklist
+> - Confirm the Code of Conduct's self-promotion/spam wording directly
+>   before posting — this run's research couldn't reach it, so treat it as
+>   unread, not as cleared.
+> - Confirm this doesn't exceed whatever cadence dev.to considers normal
+>   for one account — no stated cooldown was found, but this skill didn't
+>   independently verify account-history norms, the same limit it can't
+>   check for Hacker News either.
+>
+> ## Next Step
+> Nothing sent. If the requester has a dev.to API key, `publish-pipeline`'s
+> direct-post path can publish this immediately — dev.to's write API needs
+> no approval process found in this skill's research, the simplest access
+> story of any platform here. That ease is about access, though, not
+> content: it says nothing about whether a Tag Moderator leaves all 4 tags
+> in place afterward.
+> ```
+>
+> The gap is part of the output, not hidden — a `Secondary (official)`
+> tier carrying one explicitly named unconfirmed claim, not rounded up to a
+> clean `Mixed` or smoothed into a vague general caveat. And unlike every
+> other researchable platform's example above, the tag list itself was
+> part of what got researched and drafted, not an afterthought — landing on
+> 3 tags instead of 4, or swapping one out, would have been a legitimate
+> outcome of this same research pass, not a failure of it.

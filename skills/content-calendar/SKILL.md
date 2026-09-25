@@ -49,14 +49,16 @@ Sending is `publish-pipeline`'s job, one approved row at a time.
      rules are per-subreddit, not platform-wide, and drafting one needs a
      live research pass per slot (see step 4), so budget more time for
      those slots than a LinkedIn/Twitter/newsletter slot. Same research
-     overhead applies to a Product Hunt, Hacker News, or Indie Hackers
-     slot; if any slot names "Indie Hackers," confirm it means
+     overhead applies to a Product Hunt, Hacker News, Indie Hackers, or
+     dev.to slot; if any slot names "Indie Hackers," confirm it means
      indiehackers.com and not r/indiehackers (a separate subreddit with
      the same casual name) before scoping it further. Hacker News in
      particular rarely belongs in a recurring cadence at all — a Show HN
      is closer to a one-time launch than something to batch weekly, so
      confirm that's really what's wanted before queuing one as a regular
-     slot. If any slot is Discord or Slack, get the exact server/workspace
+     slot. For a dev.to slot, get the tag(s) now (up to 4) and which
+     identity it posts under (personal account or a dev.to Organization) —
+     both affect the draft, not just the send. If any slot is Discord or Slack, get the exact server/workspace
      *and* channel, and ask for that channel's rules **now, in this
      scope-confirmation step** — `community-post-generator` can't look
      them up later the way it can for the other platforms, so those slots
@@ -91,18 +93,19 @@ Sending is `publish-pipeline`'s job, one approved row at a time.
      structure rules as `content-repurposer` (read
      `${CLAUDE_PLUGIN_ROOT}/skills/content-repurposer/SKILL.md` for the
      exact formatting rules rather than reinventing them here).
-   - Reddit / Product Hunt / Hacker News / Indie Hackers / Discord / Slack
-     / Telegram slots: hand off to
+   - Reddit / Product Hunt / Hacker News / Indie Hackers / dev.to / Discord
+     / Slack / Telegram slots: hand off to
      `${CLAUDE_PLUGIN_ROOT}/skills/community-post-generator/SKILL.md`
      for that slot instead of the above — it needs a live rules/norms
-     check against that specific subreddit, Product Hunt, Hacker News, or
-     Indie Hackers group before drafting (or, for Discord/Slack/a private
-     Telegram target, the rules gathered from the user back in step 3),
-     which is a genuine research step, not a template fill. A public
-     Telegram slot still gets a live research pass at draft time, same as
-     Reddit or Product Hunt, rather than needing everything pre-gathered
-     in step 3. If that research (or what the user supplied) comes back
-     No-Go, **don't draft a substitute post for the slot** — report the
+     check against that specific subreddit, Product Hunt, Hacker News,
+     Indie Hackers group, or dev.to tag(s) before drafting (or, for
+     Discord/Slack/a private Telegram target, the rules gathered from the
+     user back in step 3), which is a genuine research step, not a
+     template fill. A public Telegram slot still gets a live research pass
+     at draft time, same as Reddit or Product Hunt, rather than needing
+     everything pre-gathered in step 3. If that research (or what the user
+     supplied) comes back No-Go, **don't draft a substitute post for the
+     slot** — report the
      block in the Batch Summary and skip queuing that slot (or swap in a
      different platform/subreddit if the user redirects on the spot)
      rather than writing a row with no real content behind it.
@@ -153,14 +156,14 @@ Use this exact section order, as Markdown `##` headings:
 1. **Batch Summary** — date range, cadence, platforms, how many slots,
    and a one-line note on what (if anything) was skipped or varied — to
    avoid repeating a recent topic, or because a Reddit/Product Hunt/
-   Hacker News/Indie Hackers/Discord/Slack/Telegram slot came back No-Go
-   from `community-post-generator`'s research (or, for Discord/Slack/a
-   private Telegram target, from what the user supplied).
+   Hacker News/Indie Hackers/dev.to/Discord/Slack/Telegram slot came back
+   No-Go from `community-post-generator`'s research (or, for Discord/
+   Slack/a private Telegram target, from what the user supplied).
 2. **Queued Posts** — one `###` subsection per date, each containing the
    full drafted content for that slot (using that slot's normal output
    structure — `content-repurposer` for LinkedIn/Twitter/newsletter,
    `community-post-generator` for Reddit/Product Hunt/Hacker News/Indie
-   Hackers/Discord/Slack/Telegram, including its Community Research
+   Hackers/dev.to/Discord/Slack/Telegram, including its Community Research
    Summary and Go/No-Go).
 3. **Calendar File Update** — confirmation of how many rows were
    appended to `state/content-calendar.md` and their Status value.

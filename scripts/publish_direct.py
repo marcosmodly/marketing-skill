@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Scaffolding for posting text directly to LinkedIn, X, Meta (Facebook Page),
-Reddit, Discord, Slack, or Telegram - no n8n/Make in between.
+Reddit, Discord, Slack, Telegram, or dev.to - no n8n/Make in between.
 
 WARNING - read this before using it for anything real:
 
@@ -22,12 +22,18 @@ integration. Before relying on it:
     be created - see "slack" below, don't assume it's as simple as
     Discord. Telegram bot creation itself needs no approval either, but
     posting into a specific chat still needs that chat's own admin to add
-    the bot first - see "telegram" below.
+    the bot first - see "telegram" below. dev.to's write API needs no
+    approval process found in its docs at all - just an API key generated
+    from your own account settings - see "devto" below; that's about
+    access, though, not content - a Tag Moderator can still strip a tag
+    that doesn't fit it, or a post can still be reported through the
+    sitewide Code of Conduct.
   - Confirm the endpoint/version below is still current - check
     developers.linkedin.com, developer.x.com, developers.facebook.com,
     Reddit's own API docs, Discord's own API docs, Slack's own API docs,
-    and core.telegram.org/bots/api directly, since these APIs change and
-    this script cannot check for you.
+    core.telegram.org/bots/api, and developers.forem.com/api (dev.to's own
+    docs) directly, since these APIs change and this script cannot check
+    for you.
   - Run with --dry-run and compare the printed request against that
     platform's current docs before ever passing --confirmed.
   - Do one manual --confirmed test post yourself before wiring this into
@@ -47,6 +53,14 @@ integration. Before relying on it:
     current yourself before sending, same as you would before posting by
     hand. A *public* Telegram channel/group is the exception - see
     "telegram" below.
+  - For dev.to specifically: `community-post-generator`'s research could
+    not directly confirm the Code of Conduct's specific self-promotion/
+    spam wording (dev.to's own domain was unreachable during that
+    research). The #showdev tag and the Organizations feature both
+    suggest self-promotion is structurally welcome, but that's not the
+    same as a confirmed rule - a 2xx response here just means the API
+    accepted the article, not that a Tag Moderator won't strip a tag that
+    doesn't fit it afterward. See "devto" below.
 
 Text-only. None of these platforms' media-attachment flows are
 implemented here (Instagram in particular has no text-only post endpoint
@@ -148,12 +162,31 @@ NOTES = {
                 "the skill may have actually verified the rules directly "
                 "(via the public t.me/s/<username> preview), so check its "
                 "Source Confidence line rather than assuming User-Supplied.",
+    "devto": "Uses the Forem API (POST dev.to/api/articles). Needs an API "
+             "key from your dev.to account settings, sent as a custom "
+             "'api-key' header - no OAuth flow, no app review found in its "
+             "docs, the simplest credential model of any platform here. "
+             "Posts a full title+body article (body_markdown, standard "
+             "Markdown), not a short chat message - closer in shape to "
+             "Reddit's self-post than to Discord/Slack/Telegram. Up to 4 "
+             "tags via --tags (comma-separated; dev.to enforces this cap, "
+             "and so does this script, before sending). Optional --org-id "
+             "posts under a dev.to Organization/company page instead of "
+             "your personal account, if you're actually a member of one - "
+             "leave it unset for a personal-account post. No documented "
+             "hard character limit on articles, unlike the chat platforms "
+             "above - long-form is the point here. Publishes live "
+             "immediately (published: true) once --confirmed is passed; "
+             "there's no separate draft-save step exposed here even "
+             "though dev.to's API supports one. See the WARNING section "
+             "above on the Code of Conduct gap before trusting a 2xx "
+             "response as the same thing as 'this was welcome.'",
 }
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Post text directly to LinkedIn, X, Meta (Facebook Page), Reddit, Discord, Slack, or Telegram. "
+        description="Post text directly to LinkedIn, X, Meta (Facebook Page), Reddit, Discord, Slack, Telegram, or dev.to. "
                     "Scaffolding only - read the module docstring before using for real.",
         epilog=(
             "Required environment variables per platform:\n"
@@ -168,19 +201,23 @@ def parse_args():
             "  slack     SLACK_WEBHOOK_URL  (the full webhook URL - itself the credential)\n"
             "  telegram  TELEGRAM_BOT_TOKEN  (also requires --chat-id; --parse-mode optional,\n"
             "            defaults to HTML)\n"
+            "  devto     DEVTO_API_KEY  (also requires --title; --tags optional, comma-\n"
+            "            separated, max 4; --org-id optional)\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--platform", required=True,
-                         choices=["linkedin", "x", "meta", "reddit", "discord", "slack", "telegram"],
+                         choices=["linkedin", "x", "meta", "reddit", "discord", "slack", "telegram", "devto"],
                          help="Which platform to post to.")
     parser.add_argument("--text", help="Post text. Reads stdin if omitted.")
     parser.add_argument("--subreddit", help="Target subreddit, no 'r/' prefix. Required for --platform reddit.")
-    parser.add_argument("--title", help="Post title. Required for --platform reddit (the other platforms are body-only).")
+    parser.add_argument("--title", help="Post title. Required for --platform reddit and --platform devto (the chat platforms are body-only).")
     parser.add_argument("--flair-id", help="Optional flair template ID, --platform reddit only, if the subreddit requires one.")
     parser.add_argument("--chat-id", help="Target chat: a numeric ID, or '@channelusername' for a public channel. Required for --platform telegram.")
     parser.add_argument("--parse-mode", default="HTML", choices=["HTML", "MarkdownV2"],
                          help="Telegram formatting mode (default: HTML, simpler escaping than MarkdownV2). --platform telegram only.")
+    parser.add_argument("--tags", help="Comma-separated tags, max 4 (e.g. 'showdev,ai,opensource'). --platform devto only.")
+    parser.add_argument("--org-id", help="Post under this dev.to Organization ID instead of your personal account. --platform devto only, optional.")
     parser.add_argument("--timeout", type=float, default=15, help="Request timeout in seconds (default: 15).")
     parser.add_argument("--dry-run", action="store_true", help="Print the request instead of sending it.")
     parser.add_argument("--confirmed", action="store_true",
@@ -335,6 +372,34 @@ def build_telegram_request(text, chat_id, parse_mode):
     return url, headers, body, [env["TELEGRAM_BOT_TOKEN"]]
 
 
+def build_devto_request(text, title, tags, org_id):
+    env = require_env("DEVTO_API_KEY")
+    if tags and len(tags) > 4:
+        print(
+            f"{len(tags)} tags given; dev.to allows a maximum of 4 tags per "
+            "article. Trim the list before sending.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    url = "https://dev.to/api/articles"
+    headers = {
+        "api-key": env["DEVTO_API_KEY"],
+        "Content-Type": "application/json",
+    }
+    article = {
+        "title": title,
+        "body_markdown": text,
+        "published": True,
+        "tags": tags or [],
+    }
+    if org_id:
+        article["organization_id"] = org_id
+    body = json.dumps({"article": article}).encode("utf-8")
+    # A static API key in a custom header, not a URL - redact the key value
+    # itself, same pattern as LinkedIn/X's bearer tokens.
+    return url, headers, body, [env["DEVTO_API_KEY"]]
+
+
 BUILDERS = {
     "linkedin": build_linkedin_request,
     "x": build_x_request,
@@ -382,6 +447,16 @@ def main():
             )
             sys.exit(2)
         url, headers, body, secrets = build_telegram_request(text, args.chat_id, args.parse_mode)
+    elif args.platform == "devto":
+        if not args.title:
+            print(
+                "--platform devto requires --title (dev.to articles need one, "
+                "the same as Reddit self-posts).",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        tags = [t.strip() for t in args.tags.split(",") if t.strip()] if args.tags else []
+        url, headers, body, secrets = build_devto_request(text, args.title, tags, args.org_id)
     else:
         url, headers, body, secrets = BUILDERS[args.platform](text)
 

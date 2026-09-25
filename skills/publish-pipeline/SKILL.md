@@ -89,8 +89,8 @@ step 5) for users who've set up their own platform API credentials.
      Don't assume it's connected — check available tools first.
    - **Alternate path (optional, not the default): direct platform
      posting.** If the user wants to post straight to LinkedIn, X, Meta,
-     Reddit, Discord, Slack, or Telegram rather than handing off to their
-     own automation, see `${CLAUDE_PLUGIN_ROOT}/scripts/publish_direct.py
+     Reddit, Discord, Slack, Telegram, or dev.to rather than handing off to
+     their own automation, see `${CLAUDE_PLUGIN_ROOT}/scripts/publish_direct.py
      --help`. It only works if the user has already set up real API
      credentials for that platform (see the plugin README) — check with
      `--dry-run` first, same confirmation rules as above apply, and be
@@ -113,23 +113,31 @@ step 5) for users who've set up their own platform API credentials.
      self-serve the way Discord's is. For Telegram in particular, confirm
      the bot has actually been added to the target chat by one of its
      admins — creating the bot itself needs no approval from anyone, but
-     that's only the first of two gates, not the whole thing. **Product
-     Hunt, Hacker News, and Indie Hackers have no equivalent direct-send
-     path, for different reasons** (see README): Product Hunt's write API
-     requires special approval from Product Hunt itself; Hacker News's API
-     has no write/submit endpoint at all, for anyone; and Indie Hackers'
-     API situation is unverified rather than confirmed either way, so it's
+     that's only the first of two gates, not the whole thing. For dev.to in
+     particular, confirm the content came from a go too, and if
+     `community-post-generator`'s research couldn't confirm the Code of
+     Conduct's self-promotion wording directly, say so before sending — a
+     2xx from dev.to's API means the article was accepted, not that a Tag
+     Moderator won't strip a tag from it afterward. **Product Hunt, Hacker
+     News, and Indie Hackers have no equivalent direct-send path, for
+     different reasons** (see README): Product Hunt's write API requires
+     special approval from Product Hunt itself; Hacker News's API has no
+     write/submit endpoint at all, for anyone; and Indie Hackers' API
+     situation is unverified rather than confirmed either way, so it's
      treated as manual-only too — all three always go out by pasting the
      draft in manually (producthunt.com, news.ycombinator.com, or
      indiehackers.com), never through this script, and that's permanent
      for Hacker News, not a "not yet approved" situation. Discord, Slack,
-     and Telegram each have a real send path but don't share one friction
-     profile — Discord's webhook needs no approval step, Slack's app
-     often needs Workspace Owner/Admin approval before creation, and
-     Telegram's bot needs no approval to create but does need a chat
-     admin to add it before it can post — so don't lump any of the three
-     into "every non-Reddit platform here is manual-only," and don't lump
-     them into each other's ease either.
+     Telegram, and dev.to each have a real send path but don't share one
+     friction profile — Discord's webhook needs no approval step, Slack's
+     app often needs Workspace Owner/Admin approval before creation,
+     Telegram's bot needs no approval to create but does need a chat admin
+     to add it before it can post, and dev.to's API key needs no approval
+     process found in this skill's research at all (the simplest of the
+     four, though that's about access, not about whether a Tag Moderator
+     is happy with the result) — so don't lump any of the four into "every
+     non-Reddit platform here is manual-only," and don't lump them into
+     each other's ease either.
 
 6. **Report the result** plainly: exit code, HTTP status if a real send
    was made, and a one-line human-readable summary of what went where.
@@ -158,7 +166,8 @@ Trigger on requests like:
     "reddit_post": { "subreddit": "...", "title": "...", "body": "..." },
     "discord_message": "...",
     "slack_message": "...",
-    "telegram_message": "..."
+    "telegram_message": "...",
+    "devto_post": { "title": "...", "body": "...", "tags": ["...", "..."] }
   },
   "assets": [
     { "type": "image|video", "description": "...", "url": "...or null", "prompt_reference": "..." }
