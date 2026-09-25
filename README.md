@@ -128,3 +128,7 @@ references/
 scripts/
   publish_webhook.py     # stdlib-only webhook sender (see --help)
 ```
+
+## Contributors
+
+- [marcosmodly](https://github.com/marcosmodly)
