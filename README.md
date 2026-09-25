@@ -93,7 +93,10 @@ and formatting constraints, defined once and reused everywhere.
 `content-calendar` batch-generates posts and queues them in
 `state/content-calendar.md` — a plain Markdown table that's both the
 forward calendar and the permanent send history (rows accumulate; nothing
-gets cleared out). It's safe to hand-edit directly.
+gets cleared out). It's safe to hand-edit directly. The table itself is
+just an index: each row's Notes column points at the file under
+`state/posts/` that actually holds that post's full content —
+`publish-pipeline` reads the file, not the table, when it sends.
 
 The file enforces a separation of duties that every skill in this plugin
 respects: **generation and approval are always two different steps.**
@@ -194,7 +197,8 @@ commands/
 references/
   brand-voice.md         # shared config every skill reads (hand-edited)
 state/
-  content-calendar.md    # queued/sent posts (generated + appended to, hand-editable)
+  content-calendar.md    # calendar/history index (generated + appended to, hand-editable)
+  posts/                  # one file per queued post's full content, linked from the index above
 scripts/
   publish_webhook.py     # stdlib-only webhook sender (see --help)
   publish_direct.py      # stdlib-only direct-to-platform scaffold, needs your own API credentials (see --help)
