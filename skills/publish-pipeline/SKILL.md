@@ -99,10 +99,14 @@ step 5) for users who've set up their own platform API credentials.
      Reddit specifically, a successful API response doesn't guarantee the
      post survives that subreddit's AutoModerator — confirm the content
      actually came from a `community-post-generator` go (not a no-go)
-     before sending. **Product Hunt has no equivalent direct-send path**
-     — its write API requires special approval from Product Hunt itself
-     (see README), so a Product Hunt draft always goes out by pasting it
-     into producthunt.com manually, never through this script.
+     before sending. **Product Hunt and Hacker News have no equivalent
+     direct-send path, for different reasons** (see README): Product
+     Hunt's write API requires special approval from Product Hunt itself,
+     while Hacker News's API has no write/submit endpoint at all, for
+     anyone — so both always go out by pasting the draft in manually
+     (producthunt.com or news.ycombinator.com), never through this
+     script, and that's permanent for Hacker News, not a "not yet
+     approved" situation.
 
 6. **Report the result** plainly: exit code, HTTP status if a real send
    was made, and a one-line human-readable summary of what went where.

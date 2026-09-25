@@ -8,7 +8,7 @@
     {
       "name": "marketing-skill",
       "source": ".",
-      "description": "A suite of composable marketing skills: competitor research, batch content calendaring, multi-platform content repurposing, SEO briefs, ad copy, email sequences, visual generation briefs, rules-researched Reddit/Product Hunt posts, and a publishing pipeline with n8n/Make webhook handoff or optional direct platform posting."
+      "description": "A suite of composable marketing skills: competitor research, batch content calendaring, multi-platform content repurposing, SEO briefs, ad copy, email sequences, visual generation briefs, rules-researched Reddit/Product Hunt/Hacker News posts, and a publishing pipeline with n8n/Make webhook handoff or optional direct platform posting."
     }
   ]
 }
