@@ -28,8 +28,11 @@ step 5) for users who've set up their own platform API credentials.
 
 2. **Confirm scope.**
    - Which content pieces are ready to send (from `content-repurposer`,
-     `visual-brief-generator`, a row in `state/content-calendar.md`, or
-     pasted directly)?
+     `visual-brief-generator`, `community-post-generator`, a row in
+     `state/content-calendar.md`, or pasted directly)?
+   - If the source is `community-post-generator`, confirm its Go/No-Go
+     section actually said go — never send a draft that skill flagged as
+     blocked by the target community's own rules.
    - If the user is pointing at a calendar entry (e.g. "send the queued
      post for Tuesday"), read
      `${CLAUDE_PLUGIN_ROOT}/state/content-calendar.md`, find the matching
@@ -85,14 +88,21 @@ step 5) for users who've set up their own platform API credentials.
      directly instead of the webhook script, if the user prefers that.
      Don't assume it's connected — check available tools first.
    - **Alternate path (optional, not the default): direct platform
-     posting.** If the user wants to post straight to LinkedIn, X, or
-     Meta rather than handing off to their own automation, see
+     posting.** If the user wants to post straight to LinkedIn, X, Meta,
+     or Reddit rather than handing off to their own automation, see
      `${CLAUDE_PLUGIN_ROOT}/scripts/publish_direct.py --help`. It only
      works if the user has already set up real API credentials for that
      platform (see the plugin README) — check with `--dry-run` first,
      same confirmation rules as above apply, and be explicit that this
      path is less proven than the webhook path since it talks to live
-     platform APIs this plugin's author can't verify from here.
+     platform APIs this plugin's author can't verify from here. For
+     Reddit specifically, a successful API response doesn't guarantee the
+     post survives that subreddit's AutoModerator — confirm the content
+     actually came from a `community-post-generator` go (not a no-go)
+     before sending. **Product Hunt has no equivalent direct-send path**
+     — its write API requires special approval from Product Hunt itself
+     (see README), so a Product Hunt draft always goes out by pasting it
+     into producthunt.com manually, never through this script.
 
 6. **Report the result** plainly: exit code, HTTP status if a real send
    was made, and a one-line human-readable summary of what went where.
@@ -117,7 +127,8 @@ Trigger on requests like:
   "content": {
     "linkedin_post": "...",
     "twitter_thread": ["...", "..."],
-    "newsletter_blurb": "..."
+    "newsletter_blurb": "...",
+    "reddit_post": { "subreddit": "...", "title": "...", "body": "..." }
   },
   "assets": [
     { "type": "image|video", "description": "...", "url": "...or null", "prompt_reference": "..." }

@@ -44,7 +44,12 @@ Sending is `publish-pipeline`'s job, one approved row at a time.
      for a month"). Default to the next 7 days, one slot/day, if the user
      doesn't specify.
    - Which platform(s) per slot — default to whatever
-     `references/brand-voice.md` implies, or ask if genuinely unclear.
+     `references/brand-voice.md` implies, or ask if genuinely unclear. If
+     any slot is Reddit or Product Hunt, get the exact subreddit (never
+     just "Reddit") — rules are per-subreddit, not platform-wide, and
+     drafting one needs a live research pass per slot (see step 4), so
+     budget more time for those slots than a LinkedIn/Twitter/newsletter
+     slot.
    - Content type per slot — text/social post, short-form video, long-form
      video, or image — default to whatever `references/brand-voice.md`'s
      Content Types preference indicates, or ask if genuinely unclear.
@@ -59,12 +64,23 @@ Sending is `publish-pipeline`'s job, one approved row at a time.
      here.
 
 4. **Draft each slot.** For each date/platform pair, produce the actual
-   post content using the same per-platform structure rules as
-   `content-repurposer` (read
-   `${CLAUDE_PLUGIN_ROOT}/skills/content-repurposer/SKILL.md` for the
-   exact LinkedIn/Twitter-X/newsletter formatting rules rather than
-   reinventing them here) — don't invent a fact, statistic, or quote not
-   present in the source material for that slot.
+   post content:
+   - LinkedIn / Twitter-X / newsletter slots: use the same per-platform
+     structure rules as `content-repurposer` (read
+     `${CLAUDE_PLUGIN_ROOT}/skills/content-repurposer/SKILL.md` for the
+     exact formatting rules rather than reinventing them here).
+   - Reddit / Product Hunt slots: hand off to
+     `${CLAUDE_PLUGIN_ROOT}/skills/community-post-generator/SKILL.md` for
+     that slot instead of the above — it needs a live rules/norms check
+     against that specific subreddit (or Product Hunt) before drafting,
+     which is a genuine research step, not a template fill. If that
+     research comes back No-Go, **don't draft a substitute post for the
+     slot** — report the block in the Batch Summary and skip queuing that
+     slot (or swap in a different platform/subreddit if the user redirects
+     on the spot) rather than writing a row with no real content behind
+     it.
+   - Never invent a fact, statistic, or quote not present in the source
+     material for that slot, regardless of platform.
 
 5. **Write each post's full content to its own file first.** For each
    slot, write the complete drafted content (everything shown to the user
@@ -108,11 +124,14 @@ Trigger on requests like:
 Use this exact section order, as Markdown `##` headings:
 
 1. **Batch Summary** — date range, cadence, platforms, how many slots,
-   and a one-line note on what (if anything) was skipped or varied to
-   avoid repeating a recent topic.
+   and a one-line note on what (if anything) was skipped or varied — to
+   avoid repeating a recent topic, or because a Reddit/Product Hunt slot
+   came back No-Go from `community-post-generator`'s research.
 2. **Queued Posts** — one `###` subsection per date, each containing the
-   full drafted content for that slot (using that platform's normal
-   output structure from `content-repurposer`).
+   full drafted content for that slot (using that slot's normal output
+   structure — `content-repurposer` for LinkedIn/Twitter/newsletter,
+   `community-post-generator` for Reddit/Product Hunt, including its
+   Community Research Summary and Go/No-Go).
 3. **Calendar File Update** — confirmation of how many rows were
    appended to `state/content-calendar.md` and their Status value.
 4. **Next Step** — one line: how to approve and send (via

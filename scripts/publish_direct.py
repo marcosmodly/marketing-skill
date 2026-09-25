@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Scaffolding for posting text directly to LinkedIn, X, or Meta (Facebook
-Page) - no n8n/Make in between.
+Scaffolding for posting text directly to LinkedIn, X, Meta (Facebook Page),
+or Reddit - no n8n/Make in between.
 
 WARNING - read this before using it for anything real:
 
@@ -12,20 +12,28 @@ each platform's last publicly documented stable API, not a verified
 integration. Before relying on it:
 
   - Confirm you actually have the right kind of API access first. Each
-    platform gates posting behind its own developer-app review, and X
-    additionally requires a paid API tier for write access.
+    platform gates posting behind its own developer-app review, X
+    additionally requires a paid API tier for write access, and Reddit
+    closed instant self-service app registration in late 2025 in favor of
+    a manual approval queue - see the "reddit" note below.
   - Confirm the endpoint/version below is still current - check
-    developers.linkedin.com, developer.x.com, and developers.facebook.com
-    directly, since these APIs change and this script cannot check for
-    you.
+    developers.linkedin.com, developer.x.com, developers.facebook.com, and
+    Reddit's own API docs directly, since these APIs change and this
+    script cannot check for you.
   - Run with --dry-run and compare the printed request against that
     platform's current docs before ever passing --confirmed.
   - Do one manual --confirmed test post yourself before wiring this into
     anything scheduled or unattended.
+  - For Reddit specifically: a 2xx response here only means the API
+    accepted the submission - a subreddit's AutoModerator can still remove
+    it silently seconds later for violating that subreddit's own rules
+    (missing flair, self-promo policy, karma/age minimums, banned
+    domains). Run the `community-post-generator` skill against the target
+    subreddit first and resolve everything it flags before sending.
 
-Text-only. None of the three platforms' media-attachment flows are
+Text-only. None of these platforms' media-attachment flows are
 implemented here (Instagram in particular has no text-only post endpoint
-at all - see NOTES below).
+at all - see NOTES below - and isn't supported here at all).
 
 Same safety pattern as publish_webhook.py: refuses to send unless you
 pass --dry-run or --confirmed explicitly, and never sends without one.
@@ -53,12 +61,25 @@ NOTES = {
     "meta": "Facebook Page text posts only. Instagram has no text-only "
             "post endpoint - it requires an image/video container plus a "
             "separate publish call, not implemented here.",
+    "reddit": "Requires an OAuth2 access token with 'submit' scope, from "
+              "your own registered Reddit app (reddit.com/prefs/apps). As "
+              "of late 2025 Reddit closed instant self-service app "
+              "registration - new apps go through a manual approval queue "
+              "(reportedly weeks), though already-approved credentials "
+              "keep working; confirm your current registration status "
+              "before assuming this just works. Also requires a "
+              "descriptive User-Agent identifying your app (Reddit rate- "
+              "limits or blocks generic ones). Submits a text (self) post "
+              "only - no link/image/video posts. A 2xx response does not "
+              "guarantee the post survives AutoModerator; run "
+              "community-post-generator against the target subreddit "
+              "first.",
 }
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Post text directly to LinkedIn, X, or Meta (Facebook Page). "
+        description="Post text directly to LinkedIn, X, Meta (Facebook Page), or Reddit. "
                     "Scaffolding only - read the module docstring before using for real.",
         epilog=(
             "Required environment variables per platform:\n"
@@ -67,12 +88,17 @@ def parse_args():
             "  meta      META_PAGE_ACCESS_TOKEN, META_PAGE_ID\n"
             "            (optional: META_GRAPH_API_VERSION, defaults to "
             f"{META_GRAPH_API_VERSION})\n"
+            "  reddit    REDDIT_ACCESS_TOKEN, REDDIT_USER_AGENT\n"
+            "            (also requires --subreddit and --title; --flair-id optional)\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--platform", required=True, choices=["linkedin", "x", "meta"],
+    parser.add_argument("--platform", required=True, choices=["linkedin", "x", "meta", "reddit"],
                          help="Which platform to post to.")
     parser.add_argument("--text", help="Post text. Reads stdin if omitted.")
+    parser.add_argument("--subreddit", help="Target subreddit, no 'r/' prefix. Required for --platform reddit.")
+    parser.add_argument("--title", help="Post title. Required for --platform reddit (the other platforms are body-only).")
+    parser.add_argument("--flair-id", help="Optional flair template ID, --platform reddit only, if the subreddit requires one.")
     parser.add_argument("--timeout", type=float, default=15, help="Request timeout in seconds (default: 15).")
     parser.add_argument("--dry-run", action="store_true", help="Print the request instead of sending it.")
     parser.add_argument("--confirmed", action="store_true",
@@ -142,6 +168,27 @@ def build_meta_request(text):
     return url, headers, body, [env["META_PAGE_ACCESS_TOKEN"]]
 
 
+def build_reddit_request(text, subreddit, title, flair_id):
+    env = require_env("REDDIT_ACCESS_TOKEN", "REDDIT_USER_AGENT")
+    url = "https://oauth.reddit.com/api/submit"
+    headers = {
+        "Authorization": f"Bearer {env['REDDIT_ACCESS_TOKEN']}",
+        "User-Agent": env["REDDIT_USER_AGENT"],
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+    fields = {
+        "sr": subreddit,
+        "kind": "self",
+        "title": title,
+        "text": text,
+        "api_type": "json",
+    }
+    if flair_id:
+        fields["flair_id"] = flair_id
+    body = urllib.parse.urlencode(fields).encode("utf-8")
+    return url, headers, body, [env["REDDIT_ACCESS_TOKEN"]]
+
+
 BUILDERS = {
     "linkedin": build_linkedin_request,
     "x": build_x_request,
@@ -168,7 +215,18 @@ def main():
         sys.exit(2)
 
     text = load_text(args.text)
-    url, headers, body, secrets = BUILDERS[args.platform](text)
+
+    if args.platform == "reddit":
+        if not args.subreddit or not args.title:
+            print(
+                "--platform reddit requires both --subreddit and --title "
+                "(Reddit self-posts need a title; the other platforms are body-only).",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        url, headers, body, secrets = build_reddit_request(text, args.subreddit, args.title, args.flair_id)
+    else:
+        url, headers, body, secrets = BUILDERS[args.platform](text)
 
     if args.dry_run:
         print("=== DRY RUN: no request sent ===")
