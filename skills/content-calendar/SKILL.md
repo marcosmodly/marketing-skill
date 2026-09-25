@@ -73,7 +73,12 @@ Sending is `publish-pipeline`'s job, one approved row at a time.
      asked for now, same reason and same timing as Discord/Slack; also
      confirm channel vs. group, since a channel the user doesn't admin
      changes the slot into pitch text for its admin rather than a message
-     the user sends themselves.
+     the user sends themselves. If any slot is GitHub Discussions, get the
+     exact repository (`owner/repo`) and confirm now whether it's the
+     user's own or someone else's — a bigger factor in this slot's risk
+     profile than public-vs-private is — plus whether Discussions is even
+     enabled there at all, since a slot targeting a repository without it
+     turned on has nothing to draft or research either way.
    - Content type per slot — text/social post, short-form video, long-form
      video, or image — default to whatever `references/brand-voice.md`'s
      Content Types preference indicates, or ask if genuinely unclear.
@@ -93,18 +98,20 @@ Sending is `publish-pipeline`'s job, one approved row at a time.
      structure rules as `content-repurposer` (read
      `${CLAUDE_PLUGIN_ROOT}/skills/content-repurposer/SKILL.md` for the
      exact formatting rules rather than reinventing them here).
-   - Reddit / Product Hunt / Hacker News / Indie Hackers / dev.to / Discord
-     / Slack / Telegram slots: hand off to
+   - Reddit / Product Hunt / Hacker News / Indie Hackers / dev.to /
+     GitHub Discussions / Discord / Slack / Telegram slots: hand off to
      `${CLAUDE_PLUGIN_ROOT}/skills/community-post-generator/SKILL.md`
      for that slot instead of the above — it needs a live rules/norms
      check against that specific subreddit, Product Hunt, Hacker News,
-     Indie Hackers group, or dev.to tag(s) before drafting (or, for
-     Discord/Slack/a private Telegram target, the rules gathered from the
+     Indie Hackers group, dev.to tag(s), or GitHub repository's
+     Discussions before drafting (or, for Discord/Slack/a private
+     Telegram target/a private repository, the rules gathered from the
      user back in step 3), which is a genuine research step, not a
-     template fill. A public Telegram slot still gets a live research pass
-     at draft time, same as Reddit or Product Hunt, rather than needing
-     everything pre-gathered in step 3. If that research (or what the user
-     supplied) comes back No-Go, **don't draft a substitute post for the
+     template fill. A public Telegram slot or a public-repository GitHub
+     Discussions slot still gets a live research pass at draft time, same
+     as Reddit or Product Hunt, rather than needing everything
+     pre-gathered in step 3. If that research (or what the user supplied)
+     comes back No-Go, **don't draft a substitute post for the
      slot** — report the
      block in the Batch Summary and skip queuing that slot (or swap in a
      different platform/subreddit if the user redirects on the spot)
@@ -156,15 +163,16 @@ Use this exact section order, as Markdown `##` headings:
 1. **Batch Summary** — date range, cadence, platforms, how many slots,
    and a one-line note on what (if anything) was skipped or varied — to
    avoid repeating a recent topic, or because a Reddit/Product Hunt/
-   Hacker News/Indie Hackers/dev.to/Discord/Slack/Telegram slot came back
-   No-Go from `community-post-generator`'s research (or, for Discord/
-   Slack/a private Telegram target, from what the user supplied).
+   Hacker News/Indie Hackers/dev.to/GitHub Discussions/Discord/Slack/
+   Telegram slot came back No-Go from `community-post-generator`'s
+   research (or, for Discord/Slack/a private Telegram target/a private
+   repository, from what the user supplied).
 2. **Queued Posts** — one `###` subsection per date, each containing the
    full drafted content for that slot (using that slot's normal output
    structure — `content-repurposer` for LinkedIn/Twitter/newsletter,
    `community-post-generator` for Reddit/Product Hunt/Hacker News/Indie
-   Hackers/dev.to/Discord/Slack/Telegram, including its Community Research
-   Summary and Go/No-Go).
+   Hackers/dev.to/GitHub Discussions/Discord/Slack/Telegram, including its
+   Community Research Summary and Go/No-Go).
 3. **Calendar File Update** — confirmation of how many rows were
    appended to `state/content-calendar.md` and their Status value.
 4. **Next Step** — one line: how to approve and send (via

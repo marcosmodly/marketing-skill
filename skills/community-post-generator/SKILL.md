@@ -1,6 +1,6 @@
 ---
 name: community-post-generator
-description: Researches a specific subreddit's, Product Hunt's, Hacker News's, Indie Hackers', or dev.to's actual rules and typical post style live before drafting — never a generic templated post, verifying each source is actually about the named target before trusting it, and writes it to read like a person wrote it. For Discord and Slack, where servers/workspaces have no public page to research at all, it asks the user (an actual member) for the rules instead of pretending to fetch them, and for Slack specifically drafts in Slack's own mrkdwn syntax rather than standard Markdown. Telegram is bimodal: a public channel/group can actually be previewed live (t.me/s/<username>), a private one can't, so which research path applies is determined per-target rather than fixed platform-wide, and drafts default to Telegram's HTML formatting tags. Use when the user wants to post in a specific subreddit, on Product Hunt, on Hacker News (including Show HN), on Indie Hackers (including Show IH), on dev.to (including the #showdev tag), in a specific Discord server, Slack workspace, or Telegram channel/group, or any other rules-driven community/forum.
+description: Researches a specific subreddit's, Product Hunt's, Hacker News's, Indie Hackers', dev.to's, or a GitHub repository's Discussions rules and typical post style live before drafting — never a generic templated post, verifying each source is actually about the named target before trusting it, and writes it to read like a person wrote it. For Discord and Slack, where servers/workspaces have no public page to research at all, it asks the user (an actual member) for the rules instead of pretending to fetch them, and for Slack specifically drafts in Slack's own mrkdwn syntax rather than standard Markdown. Telegram is bimodal: a public channel/group can actually be previewed live (t.me/s/<username>), a private one can't, so which research path applies is determined per-target rather than fixed platform-wide, and drafts default to Telegram's HTML formatting tags. GitHub Discussions is bimodal too, plus a whose-repository-is-it branch that decides almost everything else. Use when the user wants to post in a specific subreddit, on Product Hunt, on Hacker News (including Show HN), on Indie Hackers (including Show IH), on dev.to (including the #showdev tag), in a specific Discord server, Slack workspace, or Telegram channel/group, or in a specific GitHub repository's Discussions, or any other rules-driven community/forum.
 allowed-tools: Read, Grep, Glob, Write, WebSearch, WebFetch
 ---
 
@@ -75,6 +75,27 @@ for the latter; for a channel, the realistic ask is usually pitching the
 content to whoever runs it, a different deliverable than a chat message.
 Drafts default to Telegram's HTML formatting tags rather than its stricter
 MarkdownV2 mode (see step 5).
+
+GitHub Discussions adds a gate none of the other platforms need: whether
+the surface exists at all. Most repositories never turn Discussions on —
+confirmed by testing against this very plugin's own repository, which
+doesn't have it enabled — so step 2 has to check that before anything
+else, not assume it the way a subreddit or a dev.to tag is simply always
+there. For a public repository with Discussions enabled, research is
+fully on the table, the same Primary/Secondary/Mixed spectrum as Reddit;
+for a private one, it collapses to asking the user, same as Discord/
+Slack/a private Telegram target. But the single biggest question for this
+platform isn't public-vs-private, it's whose repository it is: announcing
+your own project's own update in your own repository's own Discussions is
+close to routine maintainer communication, while posting about your
+product into someone else's repository is governed by GitHub's sitewide
+Community Guidelines and is a real self-promotion judgment call, closer
+in spirit to Reddit or Hacker News than to anything "your own space"
+implies. Step 2 asks which case this is before step 3 researches
+anything. One more layer Reddit and dev.to don't have: some categories
+(commonly Announcement-style ones) restrict who can even start a new
+discussion to the repository's own maintainers, regardless of whether the
+repository itself is open to the public.
 
 The copy itself also has to survive first contact: something that reads
 as obviously AI-polished marketing text gets the same skeptical reaction
@@ -185,6 +206,28 @@ written to read like an actual person wrote them.
        access) before drafting — being able to preview a channel from
        outside doesn't mean this skill or the user can verify current,
        non-public norms the same way.
+   - For GitHub Discussions: get the exact repository (`owner/repo`,
+     never just "GitHub" or "the project" — this skill needs to know
+     precisely which repo's board, the same discipline as naming a
+     subreddit). Then establish, in order:
+     - **Whose repository is it?** The user's own project, or someone
+       else's? This is the single biggest branch for this platform — an
+       update to your own project's own Discussions is close to routine
+       maintainer communication; a post about your product in someone
+       else's repository is a real self-promotion judgment call governed
+       by GitHub's sitewide rules, not a given just because the API would
+       accept it.
+     - **Is Discussions actually enabled for this repository?** Most
+       repos don't have it turned on — confirm before doing anything
+       else, don't assume it exists the way a subreddit always exists. If
+       it's the user's own repo and it's off, that's an actionable fix
+       (they can enable it themselves); if it's someone else's and it's
+       off, that's a hard stop with no workaround.
+     - **Which category**, and does that category even allow a new
+       discussion to be started by someone who isn't a maintainer? Some
+       categories (commonly Announcement-style ones) restrict who can
+       open a new discussion in them, separate from whether the
+       repository itself is public.
    - The underlying content/offer/topic, and any link or CTA (paste, file,
      URL, or "our product" — check `README*`, `CHANGELOG*`, `docs/**/*.md`,
      and `package.json`/`pyproject.toml` at the project root first if so,
@@ -350,14 +393,48 @@ written to read like an actual person wrote them.
      Either way, also note from step 2 whether it's a channel or a group —
      a channel where the user isn't an admin changes what gets drafted in
      step 5, regardless of which research path applied.
+   - **GitHub Discussions.** Whether research is even possible was mostly
+     settled in step 2 (public vs. private repository, Discussions on or
+     off) — this step executes it:
+     - **Public repository, Discussions enabled:** try fetching the
+       actual target directly — `github.com/<owner>/<repo>/discussions`
+       and, once the target category is known,
+       `github.com/<owner>/<repo>/discussions/categories/<category-slug>`
+       — github.com itself may well be reachable even in runtimes where
+       other community platforms are blocked (confirmed in one session:
+       the main site loaded directly while `docs.github.com` did not), so
+       attempt the direct fetch before falling back to WebSearch, not
+       after. Sample recent discussions in the target category for
+       tone/pattern, same spirit as sampling a subreddit's top posts — and
+       specifically check whether the category already has a pinned
+       megathread for exactly this purpose (a real, confirmed pattern:
+       large projects sometimes route "show off what you built" through
+       one pinned thread instead of individual posts, the same shape as a
+       subreddit's designated self-promo thread) rather than opening a
+       new discussion redundantly.
+     - **Private repository:** no public surface exists — **ask the user
+       directly**, same pattern as Discord/Slack/a private Telegram
+       target.
+     Either way, also check GitHub's own sitewide Community Guidelines and
+     Acceptable Use Policies (`docs.github.com/en/site-policy/...` if
+     reachable, WebSearch fallback otherwise) — these apply across all of
+     GitHub, not just this one repository, and are explicit that content
+     shouldn't primarily be advertising and that links need real
+     explanation, not just traffic-driving. If step 2 found this is
+     someone else's repository, weigh this layer heavily; if it's the
+     user's own, it matters far less.
    - Cite what was actually found — link the rules page or search result
      checked, note it was checked just now. Never assert a community's
      norms from training knowledge alone; subreddit rules change, and a
      stale assumption is exactly how a post gets removed.
    - **Track source tier as you go, not just the content.** WebFetch to
      reddit.com, producthunt.com, news.ycombinator.com, indiehackers.com,
-     or dev.to can fail outright depending on the runtime's
-     network policy — when this happens, falling back to WebSearch still
+     dev.to, or github.com can fail outright depending on the runtime's
+     network policy (though note github.com in particular has been
+     reachable in at least one session even when other platforms' domains
+     weren't, while a subdomain like docs.github.com was still blocked —
+     don't assume a whole-domain block the way it's been for every other
+     platform here) — when a fetch does fail, falling back to WebSearch still
      produces useful signal, but not all of it is equally trustworthy,
      and collapsing it into one undifferentiated "secondary" bucket hides
      a real difference. When a direct fetch fails, look at what the
@@ -396,7 +473,15 @@ written to read like an actual person wrote them.
      land on `Primary`, either `Secondary`, or `Mixed` exactly like Reddit
      or Product Hunt can, while a private one collapses to `User-Supplied`
      only, exactly like Slack. Report whichever one actually applied to
-     this target, not a platform-wide default.
+     this target, not a platform-wide default. For GitHub Discussions, the
+     same conditional logic applies, for a related but not identical
+     reason: a public repository with Discussions enabled can reach
+     `Primary`, either `Secondary`, or `Mixed`, while a private repository
+     collapses to `User-Supplied`. Unlike Telegram, though, a *public*
+     repository with Discussions turned *off* isn't a research-tier
+     question at all — it's a hard stop before step 4, the same category
+     as a banned or quarantined subreddit, not a confidence level to
+     report.
 
 4. **Decide go/no-go before drafting anything.** If research turns up a
    hard block — self-promotion banned outright, the subreddit is
@@ -454,6 +539,21 @@ written to read like an actual person wrote them.
      Conduct gap from step 3 if it applies: if its self-promotion wording
      couldn't be directly confirmed this run, say that in the Go line
      itself, the same as any other non-`Primary` hedge.
+   - **For GitHub Discussions, two things decide the verdict before any
+     tier hedging: whether Discussions is even enabled, and whose
+     repository it is.** If Discussions isn't enabled, that's not a No-Go
+     from rules being unwelcoming — say so plainly as "there's nothing to
+     post to yet," and if it's the user's own repository, name enabling it
+     as the actual next step rather than a dead end; if it's someone
+     else's repository, that's a genuine hard stop with no workaround.
+     Once the surface is confirmed to exist, a Go for the user's own
+     repository can be stated plainly, the same low-hedge confidence as a
+     `Primary`-tier Reddit go, since there's no independent-community-
+     rules question to weigh — it's their own project. A Go for someone
+     else's repository needs the normal tier hedging (`Primary`/
+     `Secondary`/`Mixed`/`User-Supplied`) plus an explicit note that this
+     is a judgment call under GitHub's sitewide Community Guidelines, not
+     a guarantee just because the API would accept the request.
 
 5. **Draft the post** — shape depends on the platform (see Output
    structure below) — matching the specific community's researched format
@@ -506,6 +606,18 @@ written to read like an actual person wrote them.
      `#showdev` actually works (see step 3). Include the finalized tag list
      (up to 4) as part of the draft, not as an afterthought — which tags
      make the final cut affects who actually sees the post.
+   - **For GitHub Discussions specifically, draft a title-plus-body post
+     in standard Markdown** — closer to dev.to's or Reddit's shape than to
+     the chat platforms, and not forced into Show HN's three-piece split
+     or Show IH's founder-story/stage/questions structure either. If step
+     3 found an existing pinned megathread for this exact purpose, draft a
+     reply to that thread instead of a new discussion, and say so plainly
+     rather than defaulting to opening a new one. If step 2 found this is
+     the user's own repository, match the tone of their own past
+     Announcements/Show-and-tell posts if any exist, rather than the
+     generic community-forum voice this step otherwise defaults to — it's
+     their own project talking to their own users, not a pitch to a
+     stranger's community.
    - **Write it to read like an actual person typed it, not AI-polished
      marketing copy** — these communities react to that almost as badly
      as they react to overt promotion, since it's a strong tell for
@@ -545,7 +657,13 @@ written to read like an actual person wrote them.
    Slack's ~4,000 threshold. For dev.to specifically, confirm the tag list
    is 4 or fewer (the API rejects more) and that a title is actually
    present — no character-limit check applies here, unlike the four chat
-   platforms above, since dev.to articles are long-form by design.
+   platforms above, since dev.to articles are long-form by design. For
+   GitHub Discussions specifically, treat 65536 characters as a likely but
+   *unconfirmed* ceiling — that figure is confirmed for GitHub Issues/PR
+   comments, which share infrastructure with Discussions, but wasn't
+   independently verified for Discussions itself — flag a draft
+   approaching it as a risk to sanity-check, not a hard rule to enforce
+   the confident way Discord's or Telegram's limit is.
 
 ## When to use this skill
 
@@ -563,6 +681,8 @@ Trigger on requests like:
   channel in [workspace]'s Slack"
 - "Post this in [Telegram channel/group]" / "Write a message for our
   Telegram group"
+- "Post an update to our GitHub Discussions" / "Write a Show and Tell post
+  for [owner/repo]"
 - "What's the best way to post this in [subreddit]?"
 
 If the request just says "Indie Hackers" with no other context, confirm
@@ -585,8 +705,11 @@ Use this exact section order, as Markdown `##` headings:
    discarded before confidence was even assessed. Exactly one of:
    - `Primary` — fetched directly from the platform's own rules/about/
      guidelines page (reddit.com, producthunt.com, news.ycombinator.com,
-     indiehackers.com, or dev.to — its sitewide Code of Conduct and/or the
-     specific tag's own sidebar guidelines) in this run.
+     indiehackers.com, dev.to — its sitewide Code of Conduct and/or the
+     specific tag's own sidebar guidelines — or, for a public repository
+     with Discussions enabled, github.com itself — the actual discussion/
+     category page and/or GitHub's own sitewide Community Guidelines) in
+     this run.
    - `Secondary (official)` — a direct fetch failed, but the WebSearch
      snippets used are visibly quoting the platform's own official pages
      (help center articles, named guideline pages, the platform's own
@@ -599,22 +722,25 @@ Use this exact section order, as Markdown `##` headings:
      (and possibly wrong or stale) upstream source.
    - `Mixed` — say which specific claims came from which of the tiers
      above, rather than blending them into one undifferentiated summary.
-   - `User-Supplied` (Discord and Slack always; Telegram when the target is
-     private) — the rules came from the user describing their own server,
-     workspace, or private channel/group, not from anything this skill
-     fetched or searched. Not a reliability ranking alongside the others
-     (it isn't "worse than Secondary" or "better than" it) — it's a
-     different kind of claim, self-reported by the requester rather than
-     independently checked at all, and has to be labeled as exactly that.
-     For Slack, this is the *only* tier that can ever apply — there's no
-     research exception the way Discord has one. For Telegram, it's
-     conditional rather than fixed: a **private** channel/group has no
-     research exception either, same as Slack, but a **public** one (an
-     `@username` target, previewable at `t.me/s/<username>`) can land on
-     any of the tiers above instead, exactly like Reddit or Product Hunt —
-     which case applies was already decided in step 2, and the tier
-     reported here has to match it, not default to `User-Supplied` out of
-     habit because Discord/Slack trained that reflex.
+   - `User-Supplied` (Discord and Slack always; Telegram or GitHub
+     Discussions when the target is private) — the rules came from the
+     user describing their own server, workspace, private channel/group,
+     or private repository, not from anything this skill fetched or
+     searched. Not a reliability ranking alongside the others (it isn't
+     "worse than Secondary" or "better than" it) — it's a different kind
+     of claim, self-reported by the requester rather than independently
+     checked at all, and has to be labeled as exactly that. For Slack,
+     this is the *only* tier that can ever apply — there's no research
+     exception the way Discord has one. For Telegram and GitHub
+     Discussions, it's conditional rather than fixed: a **private**
+     channel/group or repository has no research exception either, same
+     as Slack, but a **public** one (an `@username` target for Telegram,
+     previewable at `t.me/s/<username>`; a public repository for GitHub
+     Discussions, fetchable directly at github.com) can land on any of the
+     tiers above instead, exactly like Reddit or Product Hunt — which case
+     applies was already decided in step 2, and the tier reported here has
+     to match it, not default to `User-Supplied` out of habit because
+     Discord/Slack trained that reflex.
    Follow with what was actually found: self-promo policy,
    account-age/karma minimums if any, flair/title requirements, the
    typical post pattern observed, and the source(s) checked (links,
@@ -651,6 +777,17 @@ Use this exact section order, as Markdown `##` headings:
      `#showdev` is one of the tags, no fixed narrative shape required
      beyond that. No character-limit note needed here, unlike the four
      chat-message platforms below.
+   - GitHub Discussions: title + body in standard Markdown, same general
+     shape as dev.to and Reddit — not Show HN's three-piece split, not
+     Show IH's founder-story/stage/questions structure. Label its Source
+     Confidence per-target, not a blanket tier: a public repository draft
+     can carry `Primary`/`Secondary`/`Mixed`, a private one carries
+     `User-Supplied`, and either way, a draft for the user's own
+     repository gets a plainer Go statement than one for someone else's
+     (see step 4). If step 3 found a pinned megathread for this purpose,
+     label the output as a reply to that thread, not a new discussion.
+     Flag length against the unconfirmed ~65536-character figure (see
+     step 6) as a risk, not a hard violation.
    - Discord: a single chat message, no separate title field at all —
      Discord posts don't have one, so don't invent one. Under 2000
      characters (see step 6). Label it clearly as built from the rules
@@ -696,16 +833,23 @@ Use this exact section order, as Markdown `##` headings:
    User-Supplied cases; for dev.to specifically, that its Code of Conduct's
    self-promotion wording is actually acceptable, if this run couldn't
    confirm it directly — this skill's research had that gap, and a 2xx
-   from the API is not the same thing as a moderator agreeing the tags fit).
+   from the API is not the same thing as a moderator agreeing the tags fit;
+   for GitHub Discussions specifically, that Discussions is actually still
+   enabled and the target category still allows the account posting to
+   start a new discussion in it — permissions and settings a repository
+   owner can change at any time, which this skill has no way to monitor
+   between research and send).
 5. **Next Step** — the primary path is pasting it in manually; note that
    `publish-pipeline`'s optional direct-post path can send a Reddit
-   self-post, a Discord message, a Slack message, a Telegram message, or a
-   dev.to article programmatically if the user already has the right
-   credentials (a Reddit API app, a webhook URL for that Discord channel or
-   Slack channel, a bot token plus that chat's ID for Telegram, or a dev.to
-   API key for dev.to; see that skill and the plugin README) — but these
-   don't share one friction profile, so don't present any of them with
-   borrowed confidence from another:
+   self-post, a Discord message, a Slack message, a Telegram message, a
+   dev.to article, or a GitHub Discussion programmatically if the user
+   already has the right credentials (a Reddit API app, a webhook URL for
+   that Discord channel or Slack channel, a bot token plus that chat's ID
+   for Telegram, a dev.to API key, or a GitHub Personal Access Token plus
+   the target repository's and category's GraphQL node IDs; see that
+   skill and the plugin README) — but these don't share one friction
+   profile, so don't present any of them with borrowed confidence from
+   another:
    - Discord: sending is unambiguously the easy part — a webhook is close
      to always available to any channel member, no approval step.
    - Slack: closer to Discord than to the platforms below, but not the
@@ -725,6 +869,13 @@ Use this exact section order, as Markdown `##` headings:
      it says nothing about whether a Tag Moderator strips a tag afterward,
      which is a separate, later check this skill can't make on the user's
      behalf.
+   - GitHub Discussions: access itself is close to dev.to's ease — a
+     Personal Access Token from account settings, no approval queue — but
+     whether there's anywhere to send *to* is a separate, real question
+     none of the other platforms have: most repositories don't have
+     Discussions enabled at all, and some categories restrict who can
+     start a new discussion regardless of token validity. A working token
+     guarantees nothing about either.
    Product Hunt and Hacker News have no equivalent send path here, for two
    different reasons worth naming rather than lumping together: Product
    Hunt's write API exists but needs Product Hunt's own special approval;
@@ -735,7 +886,7 @@ Use this exact section order, as Markdown `##` headings:
    asks whether IH has a developer API at all) — don't round that
    uncertainty off to a confident yes or no, say plainly it's unverified
    and treat it as manual-only until proven otherwise. Say which of the
-   four send-path profiles above actually applies to this specific user
+   five send-path profiles above actually applies to this specific user
    and target rather than defaulting to any one of them by habit.
 
 ## Formatting rules
@@ -744,10 +895,12 @@ Use this exact section order, as Markdown `##` headings:
   specific community in this run — no generic, reusable Reddit, Product
   Hunt, Hacker News, Indie Hackers, or dev.to template. (Discord and Slack get the
   user-supplied equivalent — asking counts as "completing" the step,
-  skipping the ask doesn't. Telegram gets whichever applies: a real
-  research attempt for a public target, the user-supplied equivalent for a
-  private one — but the public/private determination itself has to happen
-  first, not be skipped.)
+  skipping the ask doesn't. Telegram and GitHub Discussions each get
+  whichever applies: a real research attempt for a public target, the
+  user-supplied equivalent for a private one — but the public/private
+  determination itself has to happen first, not be skipped, and for
+  GitHub Discussions, confirming the surface is even enabled comes before
+  that.)
 - Never treat a source as evidence about a target before confirming it's
   actually about that target, not a similarly-named different platform
   or community — this check happens before Source Confidence is assessed
@@ -766,9 +919,12 @@ Use this exact section order, as Markdown `##` headings:
   every draft, but override its tone/formatting defaults toward the
   target community's own norm when they conflict, and say so explicitly.
 - If WebFetch to the platform's own domain (reddit.com, producthunt.com,
-  news.ycombinator.com, indiehackers.com, or dev.to) is unreachable in this
-  runtime, fall back to WebSearch and say so — never silently substitute
-  general knowledge for a live check.
+  news.ycombinator.com, indiehackers.com, dev.to, or github.com) is
+  unreachable in this runtime, fall back to WebSearch and say so — never
+  silently substitute general knowledge for a live check. Try github.com
+  itself before assuming it's blocked the way other platforms' domains
+  have been — it's been reachable in sessions where community platforms
+  otherwise weren't, even when a subdomain like docs.github.com wasn't.
 - Never use an em dash in drafted post copy, and never let a draft carry
   other common AI-writing tells (triadic padding, throat-clearing
   openers, uniformly clean sentence rhythm) — see step 5's list. This
@@ -796,6 +952,18 @@ Use this exact section order, as Markdown `##` headings:
   possible outcome this skill can't prevent or predict with certainty, not
   a failure mode to paper over as equivalent to a subreddit's clean
   remove-or-keep decision.
+- On GitHub Discussions specifically: never assume Discussions is enabled
+  for a repository without checking — most aren't, confirmed by this very
+  plugin's own repository returning a 404 on its own `/discussions` path.
+  Never treat "the API will accept this" as the same question as "whose
+  repository is this and does that make it welcome" — the own-repo/other-
+  repo determination from step 2 has to carry into the Go/No-Go line
+  every time, not just be established once and forgotten. Never claim the
+  65536-character figure as a confirmed Discussions limit — it's
+  confirmed for Issues/PRs only, carried over here as a likely estimate,
+  not verified fact. Never present a draft for a category that restricts
+  new-discussion creation to maintainers without saying so, if the
+  posting account isn't one.
 - On Discord specifically: never draft a post for a server the user isn't
   a member of, and never draft one on a guess when the user says they
   don't know or haven't checked the server's rules — ask them to check
@@ -827,10 +995,10 @@ Use this exact section order, as Markdown `##` headings:
 - Always open the Community Research Summary with an explicit Source
   Confidence line — `Primary`, `Secondary (official)`,
   `Secondary (third-party)`, `Mixed`, or (Discord and Slack always;
-  Telegram when the target is private) `User-Supplied` — and always carry a
-  non-`Primary` confidence, naming its tier, into the Go/No-Go line itself
-  when the verdict is a go — this is a required field, not an optional
-  caveat to remember on a case-by-case basis.
+  Telegram or GitHub Discussions when the target is private) `User-Supplied`
+  — and always carry a non-`Primary` confidence, naming its tier, into the
+  Go/No-Go line itself when the verdict is a go — this is a required
+  field, not an optional caveat to remember on a case-by-case basis.
 - Don't collapse `Secondary (official)` and `Secondary (third-party)`
   into one undifferentiated "secondary" note — a WebSearch snippet
   quoting the platform's own help-center page is not the same reliability
@@ -858,7 +1026,7 @@ Use this exact section order, as Markdown `##` headings:
   Slack's app-approval gate, its formatting is HTML tags rather than
   near-standard Markdown or mrkdwn, and its character limit (4096) rejects
   outright like Discord's rather than truncating like Slack's. Same
-  research-and-draft pattern as all seven other platforms, genuinely
+  research-and-draft pattern as all eight other platforms, genuinely
   different mechanics in every category above.
 - Don't treat dev.to as a reskinned Reddit, Hacker News, or Indie Hackers
   either, despite surface similarities to each — it isn't one
@@ -866,10 +1034,22 @@ Use this exact section order, as Markdown `##` headings:
   the tag (stripping it) rather than only the whole post the way
   Reddit's/HN's/IH's does, its show-your-project convention (`#showdev`)
   has neither Show HN's three-piece split nor Show IH's required
-  founder-story/stage/questions shape, and it's the only one of the four
-  researchable platforms with a sanctioned company-page feature
+  founder-story/stage/questions shape, and it's the only one of the
+  researchable platforms so far with a sanctioned company-page feature
   (Organizations) and an apparently approval-free write API. Same
   research-and-draft pattern, genuinely different mechanics.
+- Don't treat GitHub Discussions as a clone of Telegram just because both
+  are bimodal on public/private, or of dev.to just because both have a
+  self-serve write API — it adds a gate neither has: whether the surface
+  exists at all (most repositories never enable Discussions, unlike a
+  Telegram channel that either exists publicly or doesn't, or dev.to's
+  tags which are always there), and a branch neither has either: whose
+  repository it is, which changes the entire risk calculus in a way
+  public/private access or tag choice never does for the other two. Some
+  categories restrict who can start a new discussion independent of the
+  repository's own visibility, a permission layer none of the other eight
+  platforms have. Same research-and-draft pattern, genuinely different
+  mechanics.
 
 ## Example output
 
@@ -1241,3 +1421,114 @@ two options above you want, and this skill will draft that version next.
 > part of what got researched and drafted, not an afterthought — landing on
 > 3 tags instead of 4, or swapping one out, would have been a legitimate
 > outcome of this same research pass, not a failure of it.
+
+> **A real research run, GitHub Discussions — the "surface doesn't exist"
+> case** (from an actual test run against this plugin itself, same pattern
+> as the Hacker News example above): checking whether this plugin's own
+> repository has Discussions enabled at all, before anything else:
+>
+> ```markdown
+> ## Community Research Summary
+> **Source Confidence: Primary** — fetched
+> `github.com/marcosmodly/marketing-skill/discussions` directly just now;
+> the request itself succeeded (github.com is reachable this session) and
+> returned HTTP 404, confirming Discussions isn't enabled for this
+> repository, not that research was blocked.
+>
+> Target: `marcosmodly/marketing-skill`, the requester's own repository.
+> No category research was possible because the surface doesn't exist yet.
+>
+> ## Go / No-Go
+> No-go, but not from unwelcoming rules — there's nothing to post to.
+> Since this is the requester's own repository, the actual next step is
+> enabling Discussions themselves (repository Settings → Features →
+> Discussions), not finding a workaround or a different platform.
+>
+> ## Compliance Checklist
+> - Confirm the requester actually has admin access on this repository
+>   before assuming they can enable Discussions themselves.
+>
+> ## Next Step
+> Nothing drafted this run. If the requester enables Discussions and
+> picks (or creates) a category, re-run this skill against the same
+> target — research and draft can happen in the same pass once the
+> surface exists.
+> ```
+>
+> Notice this run reached `Primary`, not a hedge — the *absence* of
+> Discussions was itself directly confirmed, not inferred from a blocked
+> fetch. A No-Go here isn't a rules judgment the way the fictional
+> `r/exampleSaaS` example at the top of this section is; it's a structural
+> fact about the target, confirmed the same way a banned or quarantined
+> subreddit would be.
+
+> **What a Go for someone else's repository looks like, grounded in a
+> real Show and Tell category.** The category itself and its real post
+> titles were fetched directly this session; the drafted post below is
+> illustrative, not something actually submitted:
+>
+> ```markdown
+> ## Community Research Summary
+> **Source Confidence: Primary** — fetched
+> `github.com/vercel/next.js/discussions/categories/show-and-tell`
+> directly just now. Real posts currently in the category include
+> third-party project announcements ("ZapyNext — 120+ Privacy-First
+> Developer Tools," "VisitorPing: live website activity and iPhone
+> alerts," "NextBlock CMS") — none built by the Next.js team, all outside
+> developers showing what they built with Next.js. A pinned megathread
+> ("Companies / Sites using Next.js") also exists for lighter mentions,
+> separate from full Show and Tell posts.
+>
+> Target: `vercel/next.js`, **not** the requester's own repository —
+> someone else's, so GitHub's sitewide Community Guidelines on
+> self-promotion apply in full (content shouldn't primarily be
+> advertising; links need real explanation, not just traffic-driving).
+> The category itself is open to any account with read access to start a
+> new discussion, not maintainer-restricted.
+>
+> ## Go / No-Go
+> Go — the target repository's own Show and Tell category actively hosts
+> exactly this kind of third-party project announcement, confirmed by
+> sampling its real current content, not assumed. Still someone else's
+> repository, though, so this rests on the content actually being
+> relevant to Next.js specifically, not a generic pitch with "built with
+> Next.js" bolted on.
+>
+> ## Drafted Post
+> **Title:** Built a Claude Code plugin that checks a repo's actual
+> posting norms before drafting anything, including this category's
+>
+> This started from being annoyed at how many "AI marketing automation"
+> tools just assume it's fine to post on your behalf. marketing-skill is
+> a Claude Code plugin that researches a specific subreddit, forum, or
+> repository's own current rules live before drafting anything, and only
+> drafts if that research says the post is actually welcome.
+>
+> For GitHub Discussions specifically, it checks whether Discussions is
+> even enabled, whose repository it is, and whether the target category
+> restricts who can start a new discussion, before writing a single word.
+> This post exists because that research came back clear for Next.js's
+> own Show and Tell category, sampled directly rather than assumed.
+>
+> Nothing about it sends on its own. Every draft needs a real human reply
+> in the same conversation before anything actually goes out.
+>
+> ## Compliance Checklist
+> - Confirm the account posting actually has read access to this
+>   repository (default for any public one, but worth stating).
+> - Confirm this doesn't duplicate an existing entry in the pinned
+>   "Companies / Sites using Next.js" thread already.
+>
+> ## Next Step
+> Nothing sent. If the requester has a GitHub Personal Access Token with
+> `public_repo` scope, `publish-pipeline`'s direct-post path can send this
+> via the GraphQL API — but that needs the repository's and category's
+> GraphQL node IDs first, which this script doesn't resolve automatically.
+> ```
+>
+> Same `Primary` tier as the first example, but a completely different
+> verdict shape — a real Go instead of a structural No-Go — because the
+> underlying fact being confirmed was different: there, whether the
+> surface exists at all; here, whether a real, sampled category actually
+> welcomes exactly this kind of post. Both are `Primary` because both were
+> fetched directly, not because both point the same direction.

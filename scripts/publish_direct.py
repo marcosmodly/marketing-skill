@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Scaffolding for posting text directly to LinkedIn, X, Meta (Facebook Page),
-Reddit, Discord, Slack, Telegram, or dev.to - no n8n/Make in between.
+Reddit, Discord, Slack, Telegram, dev.to, or GitHub Discussions - no
+n8n/Make in between.
 
 WARNING - read this before using it for anything real:
 
@@ -27,13 +28,19 @@ integration. Before relying on it:
     from your own account settings - see "devto" below; that's about
     access, though, not content - a Tag Moderator can still strip a tag
     that doesn't fit it, or a post can still be reported through the
-    sitewide Code of Conduct.
+    sitewide Code of Conduct. GitHub Discussions is similar to dev.to on
+    access - a Personal Access Token from your own account, no app review
+    - but most repos don't even have Discussions turned on, and some
+    categories restrict who's allowed to start a new discussion at all,
+    separate from the access-token question - see "github_discussions"
+    below.
   - Confirm the endpoint/version below is still current - check
     developers.linkedin.com, developer.x.com, developers.facebook.com,
     Reddit's own API docs, Discord's own API docs, Slack's own API docs,
-    core.telegram.org/bots/api, and developers.forem.com/api (dev.to's own
-    docs) directly, since these APIs change and this script cannot check
-    for you.
+    core.telegram.org/bots/api, developers.forem.com/api (dev.to's own
+    docs), and docs.github.com/en/graphql (GitHub's GraphQL API reference)
+    directly, since these APIs change and this script cannot check for
+    you.
   - Run with --dry-run and compare the printed request against that
     platform's current docs before ever passing --confirmed.
   - Do one manual --confirmed test post yourself before wiring this into
@@ -61,6 +68,16 @@ integration. Before relying on it:
     same as a confirmed rule - a 2xx response here just means the API
     accepted the article, not that a Tag Moderator won't strip a tag that
     doesn't fit it afterward. See "devto" below.
+  - For GitHub Discussions specifically: whether this is even a reasonable
+    thing to do depends heavily on whose repo it is. Posting an update to
+    your *own* project's own Discussions is normal maintainer
+    communication. Posting about your product into *someone else's* repo
+    is governed by GitHub's sitewide Community Guidelines, which are
+    explicit that content shouldn't primarily be advertising and that
+    links need real explanation, not just traffic-driving - confirm
+    `community-post-generator`'s research actually established this was
+    the right repo and category for that, not just that the API call will
+    succeed. See "github_discussions" below.
 
 Text-only. None of these platforms' media-attachment flows are
 implemented here (Instagram in particular has no text-only post endpoint
@@ -181,12 +198,44 @@ NOTES = {
              "though dev.to's API supports one. See the WARNING section "
              "above on the Code of Conduct gap before trusting a 2xx "
              "response as the same thing as 'this was welcome.'",
+    "github_discussions": "Uses the GraphQL API's createDiscussion mutation "
+             "(POST api.github.com/graphql) - GitHub Discussions has no REST "
+             "write endpoint. Needs a Personal Access Token (classic or "
+             "fine-grained) with 'public_repo' scope for a public target "
+             "repo, 'repo' scope for a private one - generated in your own "
+             "GitHub account settings, no app-review queue. Deliberately "
+             "reads from GITHUB_DISCUSSIONS_TOKEN, not the more common "
+             "GITHUB_TOKEN name, since the latter is often already set for "
+             "other tools (gh CLI, CI) with scopes you may not want used "
+             "here. Requires the repository's and category's GraphQL node "
+             "IDs via --repo-id/--category-id, not 'owner/repo' or a "
+             "category name - this script doesn't resolve those for you; "
+             "look them up first with a read-only "
+             "repository(owner:...,name:...){id, "
+             "discussionCategories(first:25){nodes{id,name}}} query against "
+             "the same API. Most repositories don't have Discussions turned "
+             "on at all - confirmed by testing against this very plugin's "
+             "own repo, which doesn't have it enabled - so a 404 there "
+             "means the feature is off, not that credentials are wrong. "
+             "Some categories (commonly Announcement-style ones) restrict "
+             "who can start a *new* discussion to maintainers/admins even "
+             "though anyone with read access can usually comment - confirm "
+             "the target category actually allows the token's account to "
+             "create one, separate from whether the token itself is valid. "
+             "No character limit confirmed specifically for Discussions - "
+             "GitHub's Issues/PR comments cap at 65536 characters and "
+             "Discussions likely shares that infrastructure, but this "
+             "wasn't independently verified, so this script doesn't "
+             "hard-block on it the way it does for Discord/Telegram. "
+             "Whether this post even belongs here depends on whose repo it "
+             "is - see the WARNING section above.",
 }
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Post text directly to LinkedIn, X, Meta (Facebook Page), Reddit, Discord, Slack, Telegram, or dev.to. "
+        description="Post text directly to LinkedIn, X, Meta (Facebook Page), Reddit, Discord, Slack, Telegram, "
+                    "dev.to, or GitHub Discussions. "
                     "Scaffolding only - read the module docstring before using for real.",
         epilog=(
             "Required environment variables per platform:\n"
@@ -203,21 +252,26 @@ def parse_args():
             "            defaults to HTML)\n"
             "  devto     DEVTO_API_KEY  (also requires --title; --tags optional, comma-\n"
             "            separated, max 4; --org-id optional)\n"
+            "  github_discussions  GITHUB_DISCUSSIONS_TOKEN  (also requires --title,\n"
+            "            --repo-id, and --category-id - GraphQL node IDs, not 'owner/repo')\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--platform", required=True,
-                         choices=["linkedin", "x", "meta", "reddit", "discord", "slack", "telegram", "devto"],
+                         choices=["linkedin", "x", "meta", "reddit", "discord", "slack", "telegram", "devto",
+                                  "github_discussions"],
                          help="Which platform to post to.")
     parser.add_argument("--text", help="Post text. Reads stdin if omitted.")
     parser.add_argument("--subreddit", help="Target subreddit, no 'r/' prefix. Required for --platform reddit.")
-    parser.add_argument("--title", help="Post title. Required for --platform reddit and --platform devto (the chat platforms are body-only).")
+    parser.add_argument("--title", help="Post title. Required for --platform reddit, devto, and github_discussions (the chat platforms are body-only).")
     parser.add_argument("--flair-id", help="Optional flair template ID, --platform reddit only, if the subreddit requires one.")
     parser.add_argument("--chat-id", help="Target chat: a numeric ID, or '@channelusername' for a public channel. Required for --platform telegram.")
     parser.add_argument("--parse-mode", default="HTML", choices=["HTML", "MarkdownV2"],
                          help="Telegram formatting mode (default: HTML, simpler escaping than MarkdownV2). --platform telegram only.")
     parser.add_argument("--tags", help="Comma-separated tags, max 4 (e.g. 'showdev,ai,opensource'). --platform devto only.")
     parser.add_argument("--org-id", help="Post under this dev.to Organization ID instead of your personal account. --platform devto only, optional.")
+    parser.add_argument("--repo-id", help="Target repository's GraphQL node ID (not 'owner/repo'). Required for --platform github_discussions.")
+    parser.add_argument("--category-id", help="Target discussion category's GraphQL node ID. Required for --platform github_discussions.")
     parser.add_argument("--timeout", type=float, default=15, help="Request timeout in seconds (default: 15).")
     parser.add_argument("--dry-run", action="store_true", help="Print the request instead of sending it.")
     parser.add_argument("--confirmed", action="store_true",
@@ -400,6 +454,32 @@ def build_devto_request(text, title, tags, org_id):
     return url, headers, body, [env["DEVTO_API_KEY"]]
 
 
+def build_github_discussions_request(text, title, repo_id, category_id):
+    env = require_env("GITHUB_DISCUSSIONS_TOKEN")
+    url = "https://api.github.com/graphql"
+    headers = {
+        "Authorization": f"Bearer {env['GITHUB_DISCUSSIONS_TOKEN']}",
+        "Content-Type": "application/json",
+        "Accept": "application/vnd.github+json",
+    }
+    query = (
+        "mutation($repositoryId: ID!, $categoryId: ID!, $title: String!, $body: String!) { "
+        "createDiscussion(input: {repositoryId: $repositoryId, categoryId: $categoryId, "
+        "title: $title, body: $body}) { discussion { id url } } }"
+    )
+    body = json.dumps({
+        "query": query,
+        "variables": {
+            "repositoryId": repo_id,
+            "categoryId": category_id,
+            "title": title,
+            "body": text,
+        },
+    }).encode("utf-8")
+    # A bearer token in a header, same redaction pattern as LinkedIn/X/devto.
+    return url, headers, body, [env["GITHUB_DISCUSSIONS_TOKEN"]]
+
+
 BUILDERS = {
     "linkedin": build_linkedin_request,
     "x": build_x_request,
@@ -457,6 +537,17 @@ def main():
             sys.exit(2)
         tags = [t.strip() for t in args.tags.split(",") if t.strip()] if args.tags else []
         url, headers, body, secrets = build_devto_request(text, args.title, tags, args.org_id)
+    elif args.platform == "github_discussions":
+        if not args.title or not args.repo_id or not args.category_id:
+            print(
+                "--platform github_discussions requires --title, --repo-id, and "
+                "--category-id (GraphQL node IDs, not 'owner/repo' or a category name).",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        url, headers, body, secrets = build_github_discussions_request(
+            text, args.title, args.repo_id, args.category_id
+        )
     else:
         url, headers, body, secrets = BUILDERS[args.platform](text)
 

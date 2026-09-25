@@ -4,12 +4,13 @@ A Claude Code plugin that packages a marketing workflow as ten composable
 skills: research a competitor, batch-plan a content calendar, repurpose
 findings across channels (including SEO, paid ads, and email), brief out
 a visual asset, research a specific subreddit's, Product Hunt's, Hacker
-News's, Indie Hackers', dev.to's, Discord server's, Slack workspace's, or
-Telegram channel's/group's own rules before drafting a post for it (asking
-you directly for Discord, Slack, and any private Telegram target, since
-those have no public page to check), and hand the finished content off to
-your own automation — or, with real credentials you provide, straight to
-a platform API — for publishing.
+News's, Indie Hackers', dev.to's, Discord server's, Slack workspace's,
+Telegram channel's/group's, or a GitHub repository's Discussions rules
+before drafting a post for it (asking you directly for Discord, Slack,
+and any private Telegram target or repository, since those have no
+public page to check), and hand the finished content off to your own
+automation — or, with real credentials you provide, straight to a
+platform API — for publishing.
 
 **[See a full worked run →](EXAMPLE.md)** — one continuous
 `full-pipeline` call from research to the approval checkpoint before
@@ -26,7 +27,7 @@ anything actually publishes.
 | `ad-copy-generator` | "ad copy," "Meta/Google/LinkedIn ad variants," "A/B test copy" | Multiple ad variants per platform, each a distinct hook angle, sized to that platform's character limits |
 | `email-sequence` | "email sequence," "drip campaign," "welcome series" | A multi-email sequence with send timing, subject lines, and a real narrative arc across emails |
 | `visual-brief-generator` | "visual brief," "video brief," "shot list," "image prompts for X" | A structured shot list, per-scene prompts, aspect ratios, and style guide; generates the actual asset only if a visual-gen tool is connected |
-| `community-post-generator` | "post this to r/[subreddit]," "help me post on Product Hunt," "write a Show HN/Show IH for this," "post this on dev.to," "post this in our Discord/Slack/Telegram" | Live-researches that specific subreddit's, Product Hunt's, Hacker News's, Indie Hackers', dev.to's, or a public Telegram channel's/group's actual rules and typical post style first (verifying each source is actually about that target, not a similarly-named one); for Discord, Slack, and private Telegram targets, asks you for the rules instead, since it can't research those. Gives a plain Go/No-Go either way, and only drafts a post (shaped for that platform — title+body, title+URL+first comment for Show HN, dev.to's title+body+tags, or a single chat message in Discord's, Slack's, or Telegram's own formatting for the chat platforms) if it's actually welcome there, written to read like a person wrote it |
+| `community-post-generator` | "post this to r/[subreddit]," "help me post on Product Hunt," "write a Show HN/Show IH for this," "post this on dev.to," "post an update to our GitHub Discussions," "post this in our Discord/Slack/Telegram" | Live-researches that specific subreddit's, Product Hunt's, Hacker News's, Indie Hackers', dev.to's, a public Telegram channel's/group's, or a public GitHub repository's Discussions actual rules and typical post style first (verifying each source is actually about that target, not a similarly-named one); for Discord, Slack, and private Telegram targets or repositories, asks you for the rules instead, since it can't research those. Gives a plain Go/No-Go either way — for GitHub Discussions specifically, whether Discussions is even enabled and whose repository it is matter as much as any rule — and only drafts a post (shaped for that platform — title+body, title+URL+first comment for Show HN, dev.to's/GitHub's title+body+tags-or-category, or a single chat message in Discord's, Slack's, or Telegram's own formatting for the chat platforms) if it's actually welcome there, written to read like a person wrote it |
 | `publish-pipeline` | "publish this," "send to n8n/Make," "fire the webhook," "send the queued post for [date]" | Packages finished content/assets into JSON and hands off to your automation via webhook (or, optionally, straight to a platform API) after showing you the exact payload |
 | `full-pipeline` | "run the full pipeline," "research X and publish it," "do the whole thing end to end" | Chains research, repurposing, visual brief, and publish into one run, with a mandatory pause before anything actually publishes |
 
@@ -149,37 +150,41 @@ send.
 ### Posting directly to a platform (optional, needs your own credentials)
 
 `scripts/publish_direct.py` posts straight to LinkedIn, X, Meta (Facebook
-Page), Reddit, Discord, Slack, Telegram, or dev.to instead of going
-through your own automation — `python3 scripts/publish_direct.py --help`
-lists what each platform needs. **Read the script's module docstring
-before using it.** It was written without a connected account or live
-credentials for any of these platforms to test against, so it's
-best-effort against each platform's last publicly documented API, not a
-verified integration — confirm the endpoint is still current against that
-platform's own developer docs (developers.linkedin.com, developer.x.com,
-developers.facebook.com, Reddit's own API docs, Discord's own API docs,
-Slack's own API docs, Telegram's own Bot API docs at
-core.telegram.org/bots/api, and developers.forem.com/api for dev.to),
-confirm you actually have write-access API scope (X in particular gates
-this behind a paid tier, Reddit closed instant self-service app
-registration in late 2025 for a manual approval queue — existing approved
-apps still work, and Slack may need a Workspace Owner/Admin to approve the
-app a webhook requires — see below), and do one manual `--confirmed` test
-post yourself before trusting it in anything automated. It's text-only —
-no media attachments, and Instagram isn't supported at all since it has no
-text-only post endpoint. Same `--dry-run`/`--confirmed` safety pattern as
-the webhook script, including credential redaction in `--dry-run` output —
-for Discord and Slack specifically, the webhook URL itself is the
-credential (there's no separate token), so that whole URL gets redacted,
-not just a header; for Telegram, only the bot token embedded in the URL
-path gets redacted, since the rest of the URL is just the API endpoint
-shape, not a secret; for dev.to, the API key is a static value in a custom
-`api-key` header, redacted the same simple way a bearer token would be —
-no OAuth flow, no webhook URL, the simplest credential shape of the eight.
-For Reddit, a successful response doesn't guarantee the post survives that
-subreddit's AutoModerator — see "Posting to Reddit, Product Hunt, Hacker
-News, Indie Hackers, dev.to, Discord, Slack & Telegram" below before
-sending anything for real.
+Page), Reddit, Discord, Slack, Telegram, dev.to, or GitHub Discussions
+instead of going through your own automation — `python3
+scripts/publish_direct.py --help` lists what each platform needs. **Read
+the script's module docstring before using it.** It was written without a
+connected account or live credentials for any of these platforms to test
+against, so it's best-effort against each platform's last publicly
+documented API, not a verified integration — confirm the endpoint is
+still current against that platform's own developer docs
+(developers.linkedin.com, developer.x.com, developers.facebook.com,
+Reddit's own API docs, Discord's own API docs, Slack's own API docs,
+Telegram's own Bot API docs at core.telegram.org/bots/api,
+developers.forem.com/api for dev.to, and docs.github.com/en/graphql for
+GitHub Discussions), confirm you actually have write-access API scope (X
+in particular gates this behind a paid tier, Reddit closed instant
+self-service app registration in late 2025 for a manual approval queue —
+existing approved apps still work, and Slack may need a Workspace
+Owner/Admin to approve the app a webhook requires — see below), and do one
+manual `--confirmed` test post yourself before trusting it in anything
+automated. It's text-only — no media attachments, and Instagram isn't
+supported at all since it has no text-only post endpoint. Same
+`--dry-run`/`--confirmed` safety pattern as the webhook script, including
+credential redaction in `--dry-run` output — for Discord and Slack
+specifically, the webhook URL itself is the credential (there's no
+separate token), so that whole URL gets redacted, not just a header; for
+Telegram, only the bot token embedded in the URL path gets redacted, since
+the rest of the URL is just the API endpoint shape, not a secret; for
+dev.to, the API key is a static value in a custom `api-key` header; for
+GitHub Discussions, a Personal Access Token sits in a standard
+`Authorization: Bearer` header — both dev.to and GitHub Discussions
+redact the same simple way, no OAuth flow needed to obtain either
+credential in the first place. For Reddit, a successful response doesn't
+guarantee the post survives that subreddit's AutoModerator — see "Posting
+to Reddit, Product Hunt, Hacker News, Indie Hackers, dev.to, GitHub
+Discussions, Discord, Slack & Telegram" below before sending anything for
+real.
 
 **Discord is one of the easiest to actually set up** — a webhook needs no
 OAuth app review at all, just `MANAGE_WEBHOOKS` permission on the channel
@@ -188,8 +193,9 @@ place this script is easier than the platform it's replacing, not harder:
 `community-post-generator` can't independently verify a Discord server's
 rules the way it can for the researchable five (see below), so the actual
 bottleneck for Discord is research, not access. It's not the unconditional
-floor, though — see dev.to below for the one platform here whose access
-doesn't depend on any permission over the specific target at all.
+floor, though — see dev.to and GitHub Discussions below for credentials
+that need no target-specific permission to be valid, even though only one
+of the two guarantees there's somewhere to actually use it.
 
 **Slack looks similar to Discord but isn't as simple, and the difference
 matters.** The direct-webhook-URL path is legacy; creating one now means
@@ -220,30 +226,48 @@ formatting; `community-post-generator` drafts in HTML for the same
 reason. Character limit is a flat 4096, rejected outright like Discord's
 limit, not truncated like Slack's.
 
-**dev.to has the simplest access story of the eight — not just easy, but
-unconditionally easy.** An API key comes from your own account settings,
-full stop; no approval process was found in this skill's research, and
-unlike every other platform above, access doesn't depend on any
-permission over the specific target either — Discord's webhook still
-needs `MANAGE_WEBHOOKS` on that channel, Telegram's bot still needs a chat
-admin to add it, but a dev.to API key works under whatever tags your
-account can post to, which is all of them. That ease is about access,
-though, not content: a Tag Moderator can still strip a tag from the
-result afterward, and this skill's research couldn't confirm the Code of
-Conduct's specific self-promotion wording (dev.to's own domain was
-unreachable during that research) — a 2xx response means the article was
-accepted, not that it was welcomed. Posts as a full title+body Markdown
-article with up to 4 tags (`--tags`), not a short message, and optionally
-under a dev.to Organization (`--org-id`) instead of your personal account.
-No documented character limit, unlike the four chat platforms above.
+**dev.to has the simplest access story among the platforms above it — not
+just easy, but unconditionally easy.** An API key comes from your own
+account settings, full stop; no approval process was found in this
+skill's research, and access doesn't depend on any permission over the
+specific target either — Discord's webhook still needs `MANAGE_WEBHOOKS`
+on that channel, Telegram's bot still needs a chat admin to add it, but a
+dev.to API key works under whatever tags your account can post to, which
+is all of them. That ease is about access, though, not content: a Tag
+Moderator can still strip a tag from the result afterward, and this
+skill's research couldn't confirm the Code of Conduct's specific
+self-promotion wording (dev.to's own domain was unreachable during that
+research) — a 2xx response means the article was accepted, not that it
+was welcomed. Posts as a full title+body Markdown article with up to 4
+tags (`--tags`), not a short message, and optionally under a dev.to
+Organization (`--org-id`) instead of your personal account. No documented
+character limit, unlike the four chat platforms above.
+
+**GitHub Discussions' access is just as easy as dev.to's, but easy access
+turns out to be the smaller of its two questions.** A Personal Access
+Token, generated in your own GitHub account settings with `public_repo`
+scope for a public target, needs no app review either — on the
+credentials-alone axis, it ties dev.to for the least friction here. What
+it doesn't share with dev.to is any guarantee there's somewhere to send
+*to*: most repositories never turn Discussions on at all (confirmed by
+testing against this very plugin's own repository, which doesn't have it
+enabled), and some categories restrict who can start a new discussion to
+the repository's own maintainers regardless of the token's validity.
+Needs the target repository's and category's GraphQL node IDs
+(`--repo-id`/`--category-id`), not `owner/repo` or a category name — this
+script doesn't resolve those for you. No character limit confirmed
+specifically for Discussions — GitHub's Issues/PR comments cap at 65,536
+characters and Discussions likely shares that infrastructure, but this
+wasn't independently verified, so treat it as a risk to watch, not a rule
+this script enforces.
 
 **Product Hunt, Hacker News, and Indie Hackers all have no direct-send
 path here, for different reasons.** Product Hunt's write API
 (`createPost`, etc.) requires special approval from Product Hunt itself —
 the free/default API tier is explicitly read-only, non-commercial (see
-below) — so unlike LinkedIn/X/Meta/Reddit/Discord/Slack/Telegram/dev.to,
-there's no "just bring your own API credentials" option to script
-against, though that approval process at least exists. Hacker News has no write API to even
+below) — so unlike LinkedIn/X/Meta/Reddit/Discord/Slack/Telegram/dev.to/
+GitHub Discussions, there's no "just bring your own API credentials"
+option to script against, though that approval process at least exists. Hacker News has no write API to even
 apply for — its official API is read-only by design, full stop, so this
 isn't a "not yet approved" situation, it's "nothing to approve." Indie
 Hackers is genuinely unverified rather than confirmed either way — some
@@ -273,16 +297,18 @@ way to do that, on the theory that a live company account posting
 unsupervised is a decision only you should make explicitly, not one a
 scheduling tool should make for you by default.
 
-## Posting to Reddit, Product Hunt, Hacker News, Indie Hackers, dev.to, Discord, Slack & Telegram
+## Posting to Reddit, Product Hunt, Hacker News, Indie Hackers, dev.to, GitHub Discussions, Discord, Slack & Telegram
 
-`community-post-generator` treats these eight differently from the
+`community-post-generator` treats these nine differently from the
 broadcast platforms above: instead of a fixed post template, it does a
 live research pass — the target subreddit's actual rules, a sample of
 what's currently working there, Product Hunt's own guidelines, HN's
 guidelines and Show HN norms, Indie Hackers' group-specific posting
-guidelines, or dev.to's sitewide Code of Conduct plus its target tag's own
-guidelines — before drafting anything, and it will tell you plainly (a
-"No-Go") when a community's rules would just get the post removed,
+guidelines, dev.to's sitewide Code of Conduct plus its target tag's own
+guidelines, or a GitHub repository's own Discussions category plus
+GitHub's sitewide Community Guidelines — before drafting anything, and it
+will tell you plainly (a "No-Go") when a community's rules would just get
+the post removed,
 rather than drafting something that reads fine but breaks a rule you
 didn't know about. It also writes the draft itself to read like an
 actual person wrote it — no em dashes, no AI-polish tells — since these
@@ -343,6 +369,25 @@ added to the specific chat by one of its admins before it can post there
 — easier than Slack's app-approval gate to start, but not the
 single-step ease of a Discord webhook either.
 
+**GitHub Discussions adds a gate none of the other eight need: whether the
+surface exists at all.** Most repositories never turn Discussions on —
+confirmed by testing against this very plugin's own repository, which
+doesn't have it enabled — so that has to be checked before anything else,
+not assumed the way a subreddit or a dev.to tag is simply always there.
+For a public repository with Discussions enabled, research is fully on
+the table, the same spectrum as Reddit; for a private one, it collapses
+to asking you directly, same as Discord/Slack/a private Telegram target.
+But the single biggest question here isn't public-vs-private, it's whose
+repository it is: announcing your own project's own update in your own
+repository's own Discussions is close to routine maintainer
+communication, while posting about your product into someone else's
+repository is governed by GitHub's sitewide Community Guidelines and is a
+real self-promotion judgment call, closer in spirit to Reddit or Hacker
+News than to anything "your own space" implies. One more layer Reddit and
+dev.to don't have: some categories (commonly Announcement-style ones)
+restrict who can even start a new discussion to the repository's own
+maintainers, regardless of whether the repository itself is public.
+
 A few things worth knowing going in:
 - **Similarly-named platforms are a real trap, not a hypothetical one.**
   Researching Indie Hackers, one source turned out to be describing
@@ -371,23 +416,28 @@ A few things worth knowing going in:
   either. Telegram varies the same way by channel/group, on top of the
   public/private split itself — a public one might have a pinned
   self-promo rule to actually check, a private one you just have to ask
-  about, same as Discord/Slack. None of this is something the skill can
+  about, same as Discord/Slack. GitHub Discussions folds in yet another
+  layer on top of its own public/private split: GitHub's sitewide
+  Community Guidelines apply everywhere, but how heavily they bite depends
+  on whose repository it is — light for your own, real judgment-call
+  weight for someone else's. None of this is something the skill can
   audit against your actual account history or standing — double-check
   that yourself wherever a minimum or a pattern is at stake.
 - **Don't batch-blast the same pitch across subreddits, groups, servers,
-  workspaces, or forums.** Each community gets its own research pass (or,
-  for Discord/Slack/a private Telegram target, its own ask) and its own
-  angle; reusing one pitch verbatim across several is against most
-  communities' rules and a fast way to get an account banned.
+  workspaces, repositories, or forums.** Each community gets its own
+  research pass (or, for Discord/Slack/a private Telegram target/a private
+  repository, its own ask) and its own angle; reusing one pitch verbatim
+  across several is against most communities' rules and a fast way to get
+  an account banned.
 - **API access to actually post varies a lot by platform, and Discord,
-  Slack, Telegram, and dev.to land in four different places, not one.**
-  Reddit closed instant self-service app registration in late 2025 in
-  favor of a manual approval queue (see "Posting directly to a platform"
-  above) — you can still get `submit`-scope access, it just isn't
-  instant. Product Hunt's write API requires Product Hunt's own special
-  approval and isn't meant for individual developers at all. Hacker
-  News's official API has **no write/submit endpoint whatsoever** — not
-  gated, not approval-only, simply doesn't exist for anyone. Indie
+  Slack, Telegram, dev.to, and GitHub Discussions land in five different
+  places, not one.** Reddit closed instant self-service app registration
+  in late 2025 in favor of a manual approval queue (see "Posting directly
+  to a platform" above) — you can still get `submit`-scope access, it
+  just isn't instant. Product Hunt's write API requires Product Hunt's own
+  special approval and isn't meant for individual developers at all.
+  Hacker News's official API has **no write/submit endpoint whatsoever** —
+  not gated, not approval-only, simply doesn't exist for anyone. Indie
   Hackers' API situation is genuinely unclear — some sources mention one,
   but it appears scoped to read-only product/revenue data, and there's no
   confirmed way to submit a post through it, so it's treated as
@@ -403,39 +453,49 @@ A few things worth knowing going in:
   has to be added to the specific target chat by one of its admins before
   it can post there — a real second gate Discord doesn't have, and not
   quite the same gate as Slack's either (Slack blocks creating the app at
-  all; Telegram blocks where an already-created bot can post). **dev.to is
-  the one platform here whose access doesn't depend on the target at
-  all** — an API key from your own account settings works under any tag
-  your account can post to, no approval process found and no permission
-  check tied to the specific destination, unlike Discord's or Telegram's.
-  For Discord the hard part is research, not access; for Slack, both
-  research and access can be real friction; for Telegram, research depends
-  on public/private status and access has its own two-stage shape; for
-  dev.to, access is close to frictionless but content moderation happens
-  after the fact, separate from the API call itself; for the other three
-  with no send path at all, it's the reverse of Discord entirely. Either
-  way, the drafted post stands on its own — paste it in manually if you'd
-  rather not set up API access.
+  all; Telegram blocks where an already-created bot can post). **dev.to's
+  access doesn't depend on the target at all** — an API key from your own
+  account settings works under any tag your account can post to, no
+  approval process found and no permission check tied to the specific
+  destination, unlike Discord's or Telegram's. **GitHub Discussions ties
+  dev.to on credential ease** (a Personal Access Token, no app review) but
+  diverges on the same axis dev.to doesn't have to worry about: whether
+  there's anywhere to send *to* — most repositories never enable
+  Discussions, and some categories restrict who can start a new discussion
+  regardless of the token's validity, a target-dependent gate dev.to's
+  tags simply don't have. For Discord the hard part is research, not
+  access; for Slack, both research and access can be real friction; for
+  Telegram, research depends on public/private status and access has its
+  own two-stage shape; for dev.to, access is close to frictionless but
+  content moderation happens after the fact, separate from the API call
+  itself; for GitHub Discussions, access is just as frictionless as
+  dev.to's but whether the destination exists at all is a real, separate
+  question; for the other three with no send path at all, it's the
+  reverse of Discord entirely. Either way, the drafted post stands on its
+  own — paste it in manually if you'd rather not set up API access.
 - **A "Go" from this skill isn't a guarantee.** It's reading the same
   public rules a human would (or, for Discord/Slack/a private Telegram
-  target, taking your word for them); a subreddit can still remove a post
-  for a reason its rules page doesn't spell out, AutoModerator can act on
-  something the skill couldn't see (an exact karma threshold, a banned
-  domain list), HN or Indie Hackers can flag a post for reasons tied to
-  your account's history the skill simply can't see, a dev.to Tag
-  Moderator can strip a tag over something this skill's research couldn't
-  fully confirm (the Code of Conduct's self-promotion wording, in
-  particular), and a Discord server's, Slack workspace's, or Telegram
-  channel's/group's actual current rules might differ from what you
-  remembered (or what a public preview showed) when asked.
+  target/a private repository, taking your word for them); a subreddit
+  can still remove a post for a reason its rules page doesn't spell out,
+  AutoModerator can act on something the skill couldn't see (an exact
+  karma threshold, a banned domain list), HN or Indie Hackers can flag a
+  post for reasons tied to your account's history the skill simply can't
+  see, a dev.to Tag Moderator can strip a tag over something this skill's
+  research couldn't fully confirm (the Code of Conduct's self-promotion
+  wording, in particular), a GitHub repository's owner can disable
+  Discussions or change a category's permissions between research and
+  send with no notice to this skill, and a Discord server's, Slack
+  workspace's, or Telegram channel's/group's actual current rules might
+  differ from what you remembered (or what a public preview showed) when
+  asked.
 - **No dedicated Reddit, Product Hunt, Hacker News, Indie Hackers, dev.to,
-  Discord, Slack, or Telegram connector exists to plug in here** (checked
-  against Claude's connector directory as of this writing) —
-  `community-post-generator` does its research with plain
+  GitHub Discussions, Discord, Slack, or Telegram connector exists to plug
+  in here** (checked against Claude's connector directory as of this
+  writing) — `community-post-generator` does its research with plain
   WebFetch/WebSearch against each site's own public pages (or, for
-  Discord/Slack/a private Telegram target, by asking you), not a
-  purpose-built API client. If that changes, connecting one wouldn't need
-  a code change here, just point the skill at it.
+  Discord/Slack/a private Telegram target/a private repository, by asking
+  you), not a purpose-built API client. If that changes, connecting one
+  wouldn't need a code change here, just point the skill at it.
 
 ## Connecting a visual-generation tool
 
@@ -464,7 +524,7 @@ state/
   posts/                  # one file per queued post's full content, linked from the index above
 scripts/
   publish_webhook.py     # stdlib-only webhook sender (see --help)
-  publish_direct.py      # stdlib-only direct-to-platform scaffold (LinkedIn/X/Meta/Reddit/Discord/Slack/Telegram/dev.to), needs your own API credentials (see --help)
+  publish_direct.py      # stdlib-only direct-to-platform scaffold (LinkedIn/X/Meta/Reddit/Discord/Slack/Telegram/dev.to/GitHub Discussions), needs your own API credentials (see --help)
 ```
 
 ## Contributors
