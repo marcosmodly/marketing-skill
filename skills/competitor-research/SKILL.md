@@ -22,7 +22,17 @@ Trigger on requests like:
 
 ## Step-by-step process
 
-1. **Confirm scope.** Identify:
+1. **Check onboarding status.** Read
+   `${CLAUDE_PLUGIN_ROOT}/references/brand-voice.md`. If it doesn't exist,
+   or its first line is `<!-- MARKETING-SKILL:UNCONFIGURED -->`, pause and
+   ask the user this plugin's 3 setup questions (priority task; target
+   audience + tone; default output format — same as
+   `/marketing-skill:marketing-setup`) before continuing, then save the
+   answers into that file and flip the marker to `CONFIGURED` with today's
+   date. Otherwise, read it for terminology/tone consistency when drafting
+   the brief below.
+
+2. **Confirm scope.** Identify:
    - Competitor name and website/domain.
    - Our own product or company name, for comparison context (proceed with
      a generic "us" framing if the user doesn't provide this).
@@ -30,7 +40,7 @@ Trigger on requests like:
    - Any specific focus areas the user mentions (pricing, product, GTM,
      hiring, funding). If none are given, cover all of them.
 
-2. **Research.**
+3. **Research.**
    - Read the competitor's homepage, pricing page, and product pages to
      capture positioning and messaging in their own words.
    - Search for recent news, press releases, blog posts, changelog/release
@@ -40,17 +50,17 @@ Trigger on requests like:
      wins or losses.
    - Record the publish date and source URL for every claim as you go.
 
-3. **Verify before writing.**
+4. **Verify before writing.**
    - State something as fact only if a dated, named source confirms it.
    - Label inferences clearly (e.g., "Appears to..." / "Likely...").
    - Never fabricate metrics, quotes, or dates. If information isn't
      publicly available, write "Not publicly available" rather than
      guessing.
 
-4. **Draft the brief** using the exact section structure and formatting
+5. **Draft the brief** using the exact section structure and formatting
    rules below.
 
-5. **Close with recommendations**, each one tied to a specific finding
+6. **Close with recommendations**, each one tied to a specific finding
    earlier in the brief — not generic advice.
 
 ## Output structure (required)

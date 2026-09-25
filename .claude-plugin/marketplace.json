@@ -1,0 +1,14 @@
+{
+  "name": "marketing-skill",
+  "description": "Marketplace for the marketing-skill plugin: composable marketing automation skills for Claude Code.",
+  "owner": {
+    "name": "marcosmodly"
+  },
+  "plugins": [
+    {
+      "name": "marketing-skill",
+      "source": ".",
+      "description": "A suite of composable marketing skills: competitor research, multi-platform content repurposing, visual generation briefs, and an automated publishing pipeline with n8n/Make webhook handoff."
+    }
+  ]
+}

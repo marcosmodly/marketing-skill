@@ -1,0 +1,124 @@
+---
+name: content-repurposer
+description: Reformats source content into a LinkedIn post, a Twitter/X thread, and a newsletter blurb in one pass. Use when the user asks to repurpose or adapt content for multiple channels.
+allowed-tools: Read, WebFetch, Write
+---
+
+# Multi-Platform Content Repurposer
+
+## Purpose
+
+Take one piece of source content — a research brief, article, blog post,
+or raw notes — and reformat it into three channel-native outputs in a
+single pass: a LinkedIn post, a Twitter/X thread, and a newsletter blurb.
+All three stay factually identical to the source and consistent with the
+shared brand voice; only the format changes per channel.
+
+## Step-by-step process
+
+1. **Check onboarding status.** Read
+   `${CLAUDE_PLUGIN_ROOT}/references/brand-voice.md`. If it doesn't exist,
+   or its first line is `<!-- MARKETING-SKILL:UNCONFIGURED -->`, pause and
+   ask the user this plugin's 3 setup questions (priority task; target
+   audience + tone; default output format — same as
+   `/marketing-skill:marketing-setup`) before continuing, then save the
+   answers into that file and flip the marker to `CONFIGURED` with today's
+   date. Otherwise, read it for tone, audience, banned words, and
+   formatting constraints to apply below.
+
+2. **Confirm scope.**
+   - What's the source? Pasted text, a file, a URL, or the output of
+     another skill (e.g. a `competitor-research` brief)?
+   - Which formats are wanted — default to all three (LinkedIn, Twitter/X
+     thread, newsletter blurb) unless the user asks for only one.
+   - Is there a CTA or link that should appear in every format?
+
+3. **Extract the core material.** Identify the source's central thesis and
+   any facts, stats, or quotes worth carrying forward. Carry these forward
+   exactly — never invent a claim, statistic, or quote that isn't in the
+   source.
+
+4. **Draft each requested format** using the exact structures in "Output
+   structure" below, applying the brand voice, audience, and banned-words
+   list from `references/brand-voice.md`.
+
+5. **Self-check before finalizing**: scan all drafts against the
+   banned-words list and formatting constraints, and confirm the CTA/link
+   (if any) is present and identical across formats.
+
+## When to use this skill
+
+Trigger on requests like:
+- "Repurpose this for social media"
+- "Turn this into a LinkedIn post / Twitter thread / newsletter"
+- "Adapt this [article/brief/research] for multiple channels"
+
+## Output structure (required)
+
+Use this exact section order, as Markdown `##` headings, for whichever
+formats were requested:
+
+### LinkedIn Post
+- First line is the hook — must work standalone in a feed preview.
+- Short paragraphs or single lines separated by blank lines (no dense
+  blocks).
+- One idea per paragraph.
+- A soft CTA near the end (a question, an invitation to comment, or a
+  link if one was given).
+- 3–5 relevant hashtags on the final line, no more.
+
+### Twitter/X Thread
+- Numbered tweets (`1/`, `2/`, `3/`, …).
+- The first tweet must stand alone as a hook — assume it's the only one
+  some readers see.
+- Each tweet under 280 characters.
+- Final tweet carries the CTA/link.
+
+### Newsletter Blurb
+- A suggested subject line.
+- A 1–2 sentence intro.
+- 3–5 bullet takeaways.
+- One CTA link at the end.
+
+## Formatting rules
+
+- Never introduce a fact, number, or quote absent from the source.
+- Keep the CTA/link identical across every format produced, if one was
+  given.
+- Apply `references/brand-voice.md`: tone, audience framing, and the
+  banned-words list all carry over into every format.
+- No format should just be a truncated copy of another — each must be
+  restructured for how that platform is actually read.
+
+## Example output
+
+> Fictional source: a blog post announcing a new "one-click export"
+> feature. Shown for LinkedIn and a short newsletter blurb (Twitter/X
+> thread omitted here for brevity — it follows the same numbered-tweet
+> structure above).
+
+```markdown
+## LinkedIn Post
+Most teams lose an afternoon every month just exporting reports by hand.
+
+We just shipped one-click export: pick a report, pick a format, done.
+No templates to rebuild, no copy-pasting between tools.
+
+It's live for all customers today — no setup required.
+
+What's still eating your afternoons? Curious what to automate next.
+
+#ProductUpdate #Automation #B2BSaaS
+
+## Newsletter Blurb
+**Subject line:** One click. No more manual exports.
+
+Manual reporting exports have quietly cost teams hours every month — so
+we removed the manual part.
+
+- One-click export, live today for all customers
+- Supports every report type, no template rebuilding
+- Zero setup — nothing to turn on
+
+[See it in your dashboard →]
+```
