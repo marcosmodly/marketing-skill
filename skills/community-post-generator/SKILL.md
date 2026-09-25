@@ -35,6 +35,14 @@ them.
    but see step 5 on tone, which usually does *not* carry over as-is here.
 
 2. **Confirm scope.**
+   - **Out of scope, redirect instead of forcing it:** LinkedIn, Twitter/X,
+     Meta/Instagram, or any other broadcast platform with one global set
+     of terms rather than per-community moderated rules. Those don't have
+     a subreddit-style rules page to research or a meaningful Go/No-Go to
+     make, so don't invent one — point to `content-repurposer` (drafting)
+     and `publish_direct.py`/`ad-copy-generator` (sending or ads) instead.
+     This skill is only for platforms where the *specific community*, not
+     just the platform, sets its own rules.
    - The exact target — a specific subreddit (e.g. `r/SaaS`), never just
      "Reddit": rules are set per-subreddit, not platform-wide, so a
      subreddit name is required before any research can happen. If the
@@ -217,6 +225,11 @@ Trigger on requests like:
 - "Draft a Product Hunt Discussions post / launch description"
 - "Write a Show HN for this" / "Should I post this on Hacker News?"
 - "What's the best way to post this in [subreddit]?"
+
+**Do not** trigger on "post this to LinkedIn/Twitter/X/Instagram/
+Facebook" — those are `content-repurposer`'s job (drafting) and
+`publish_direct.py`/`ad-copy-generator`'s (sending or ads); see the
+Out-of-scope note in step 2.
 
 ## Output structure (required)
 
