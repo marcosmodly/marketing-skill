@@ -22,11 +22,11 @@ anything actually publishes.
 |---|---|---|
 | `competitor-research` | "research a competitor," "analyze a rival," "build a battlecard" | Full analytical competitor brief: overview, recent moves, messaging analysis, SWOT, recommendations, sources |
 | `content-calendar` | "content calendar," "a week of posts," "plan a month of content" | Batch-generates several dated, platform-tagged posts in one pass, checked against `state/content-calendar.md` so it doesn't repeat a recent topic; queues everything for approval, never sends |
-| `content-repurposer` | "repurpose this," "turn this into a LinkedIn post/thread/newsletter" | One source → a LinkedIn post, a Twitter/X thread, and a newsletter blurb, in one pass |
+| `content-repurposer` | "repurpose this," "turn this into a LinkedIn post/thread/newsletter/YouTube title/TikTok caption/Instagram caption" | One source → a LinkedIn post, a Twitter/X thread, a newsletter blurb, YouTube title+description+tags, a TikTok caption, and an Instagram caption, in one pass |
 | `seo-brief` | "SEO brief," "keyword research," "optimize this for search" | Target/secondary keywords, search intent, suggested outline, meta title/description — never fabricates search-volume numbers |
-| `ad-copy-generator` | "ad copy," "Meta/Google/LinkedIn ad variants," "A/B test copy" | Multiple ad variants per platform, each a distinct hook angle, sized to that platform's character limits |
+| `ad-copy-generator` | "ad copy," "Meta/Google/LinkedIn/YouTube/TikTok ad variants," "A/B test copy" | Multiple ad variants per platform, each a distinct hook angle, sized to that platform's character limits |
 | `email-sequence` | "email sequence," "drip campaign," "welcome series" | A multi-email sequence with send timing, subject lines, and a real narrative arc across emails |
-| `visual-brief-generator` | "visual brief," "video brief," "shot list," "image prompts for X" | A structured shot list, per-scene prompts, aspect ratios, and style guide; generates the actual asset only if a visual-gen tool is connected |
+| `visual-brief-generator` | "visual brief," "video brief," "shot list," "image prompts for X" | A structured shot list, per-scene prompts, aspect ratios, and style guide, with platform-specific format conventions (short-form scroll-past hook timing for TikTok/Reels/Shorts vs. long-form/feed pacing); generates the actual asset only if a visual-gen tool is connected |
 | `community-post-generator` | "post this to r/[subreddit]," "help me post on Product Hunt," "write a Show HN/Show IH for this," "post this on dev.to," "post an update to our GitHub Discussions," "post this in our Discord/Slack/Telegram" | Live-researches that specific subreddit's, Product Hunt's, Hacker News's, Indie Hackers', dev.to's, a public Telegram channel's/group's, or a public GitHub repository's Discussions actual rules and typical post style first (verifying each source is actually about that target, not a similarly-named one); for Discord, Slack, and private Telegram targets or repositories, asks you for the rules instead, since it can't research those. Gives a plain Go/No-Go either way — for GitHub Discussions specifically, whether Discussions is even enabled and whose repository it is matter as much as any rule — and only drafts a post (shaped for that platform — title+body, title+URL+first comment for Show HN, dev.to's/GitHub's title+body+tags-or-category, or a single chat message in Discord's, Slack's, or Telegram's own formatting for the chat platforms) if it's actually welcome there, written to read like a person wrote it |
 | `publish-pipeline` | "publish this," "send to n8n/Make," "fire the webhook," "send the queued post for [date]" | Packages finished content/assets into JSON and hands off to your automation via webhook (or, optionally, straight to a platform API) after showing you the exact payload |
 | `full-pipeline` | "run the full pipeline," "research X and publish it," "do the whole thing end to end" | Chains research, repurposing, visual brief, and publish into one run, with a mandatory pause before anything actually publishes |
@@ -150,10 +150,11 @@ send.
 ### Posting directly to a platform (optional, needs your own credentials)
 
 `scripts/publish_direct.py` posts straight to LinkedIn, X, Meta (Facebook
-Page), Reddit, Discord, Slack, Telegram, dev.to, or GitHub Discussions
-instead of going through your own automation — `python3
-scripts/publish_direct.py --help` lists what each platform needs. **Read
-the script's module docstring before using it.** It was written without a
+Page), Reddit, Discord, Slack, Telegram, dev.to, GitHub Discussions,
+TikTok, or Instagram instead of going through your own automation —
+`python3 scripts/publish_direct.py --help` lists what each platform
+needs. YouTube is deliberately not included (see below). **Read the
+script's module docstring before using it.** It was written without a
 connected account or live credentials for any of these platforms to test
 against, so it's best-effort against each platform's last publicly
 documented API, not a verified integration — confirm the endpoint is
@@ -161,30 +162,36 @@ still current against that platform's own developer docs
 (developers.linkedin.com, developer.x.com, developers.facebook.com,
 Reddit's own API docs, Discord's own API docs, Slack's own API docs,
 Telegram's own Bot API docs at core.telegram.org/bots/api,
-developers.forem.com/api for dev.to, and docs.github.com/en/graphql for
-GitHub Discussions), confirm you actually have write-access API scope (X
-in particular gates this behind a paid tier, Reddit closed instant
-self-service app registration in late 2025 for a manual approval queue —
-existing approved apps still work, and Slack may need a Workspace
-Owner/Admin to approve the app a webhook requires — see below), and do one
-manual `--confirmed` test post yourself before trusting it in anything
-automated. It's text-only — no media attachments, and Instagram isn't
-supported at all since it has no text-only post endpoint. Same
-`--dry-run`/`--confirmed` safety pattern as the webhook script, including
-credential redaction in `--dry-run` output — for Discord and Slack
-specifically, the webhook URL itself is the credential (there's no
+developers.forem.com/api for dev.to, docs.github.com/en/graphql for
+GitHub Discussions, developers.tiktok.com for TikTok, and
+developers.facebook.com/docs/instagram-platform for Instagram), confirm
+you actually have write-access API scope (X in particular gates this
+behind a paid tier, Reddit closed instant self-service app registration
+in late 2025 for a manual approval queue — existing approved apps still
+work, and Slack may need a Workspace Owner/Admin to approve the app a
+webhook requires — see below), and do one manual `--confirmed` test post
+yourself before trusting it in anything automated.
+
+Every platform except two is text-only — a single request, no media
+involved. TikTok and Instagram are different: both need an image or video
+that's *already hosted at a public URL* you provide, since neither
+platform's write API accepts raw file upload from a script like this one
+— get the asset hosted somewhere public first (your own site, a CDN,
+cloud storage), then point these two at that URL. Same
+`--dry-run`/`--confirmed` safety pattern as the webhook script either way,
+including credential redaction in `--dry-run` output — for Discord and
+Slack specifically, the webhook URL itself is the credential (there's no
 separate token), so that whole URL gets redacted, not just a header; for
 Telegram, only the bot token embedded in the URL path gets redacted, since
 the rest of the URL is just the API endpoint shape, not a secret; for
-dev.to, the API key is a static value in a custom `api-key` header; for
-GitHub Discussions, a Personal Access Token sits in a standard
-`Authorization: Bearer` header — both dev.to and GitHub Discussions
-redact the same simple way, no OAuth flow needed to obtain either
-credential in the first place. For Reddit, a successful response doesn't
-guarantee the post survives that subreddit's AutoModerator — see "Posting
-to Reddit, Product Hunt, Hacker News, Indie Hackers, dev.to, GitHub
-Discussions, Discord, Slack & Telegram" below before sending anything for
-real.
+dev.to, GitHub Discussions, TikTok, and Instagram, the credential is a
+static API key or access token in a header (`api-key` for dev.to,
+`Authorization: Bearer` for the other three), all redacted the same
+simple way, no OAuth flow needed to obtain any of the four in the first
+place. For Reddit, a successful response doesn't guarantee the post
+survives that subreddit's AutoModerator — see "Posting to Reddit, Product
+Hunt, Hacker News, Indie Hackers, dev.to, GitHub Discussions, Discord,
+Slack & Telegram" below before sending anything for real.
 
 **Discord is one of the easiest to actually set up** — a webhook needs no
 OAuth app review at all, just `MANAGE_WEBHOOKS` permission on the channel
@@ -261,13 +268,52 @@ characters and Discussions likely shares that infrastructure, but this
 wasn't independently verified, so treat it as a risk to watch, not a rule
 this script enforces.
 
+**TikTok's access is easy the same way dev.to's and GitHub Discussions'
+are, but what you actually get for it is smaller than either.** A TikTok
+for Developers access token needs no app review to start using. The catch
+is real, though: an unaudited app can only post at `SELF_ONLY` privacy —
+visible to nobody but the posting account — permanently, even after a
+later audit passes; going through TikTok's own audit process is the only
+way to actually reach public posting, and nothing this script does
+substitutes for that. Posts via the Content Posting API's `PULL_FROM_URL`
+mode: provide a public video URL (`--video-url`), TikTok's servers fetch
+it themselves, no binary upload from this script.
+
+**Instagram is the one platform here with a genuinely different shape,
+not just different friction.** Every other builder here is one request;
+Instagram's Graph API is two — create a media container from an image or
+video URL (`--media-url`), then publish that container's `creation_id` in
+a second invocation (`--publish-container-id`). For video specifically,
+the container needs to finish processing before publishing will succeed,
+and this script doesn't poll for that status itself — check it yourself
+(a plain GET against the same API, documented in the script's NOTES) in
+between. Needs an Instagram Business or Creator account linked to a
+Facebook Page, and its own credential pair
+(`INSTAGRAM_ACCESS_TOKEN`/`INSTAGRAM_USER_ID`) distinct from the `meta`
+platform's Facebook Page token above, even though both ride the same
+Graph API family.
+
+**YouTube is the one platform in this whole list without a builder, on
+purpose.** Community posts have no public write API at all — confirmed:
+the endpoint that used to support this (`activities.insert`) was
+deprecated in 2020, and Community posts remain Studio-only today. Real
+video upload needs a fundamentally different kind of tool than this
+script is — a full interactive OAuth 2.0 consent flow just to get a
+usable credential in the first place (not a token you generate once and
+paste in, the way every other platform here works), resumable/chunked
+upload of the actual video bytes, and a verified Google Cloud project
+before public videos are even allowed. `content-repurposer` still drafts
+YouTube title/description/tags text; there's just nowhere for this script
+to send it.
+
 **Product Hunt, Hacker News, and Indie Hackers all have no direct-send
 path here, for different reasons.** Product Hunt's write API
 (`createPost`, etc.) requires special approval from Product Hunt itself —
 the free/default API tier is explicitly read-only, non-commercial (see
 below) — so unlike LinkedIn/X/Meta/Reddit/Discord/Slack/Telegram/dev.to/
-GitHub Discussions, there's no "just bring your own API credentials"
-option to script against, though that approval process at least exists. Hacker News has no write API to even
+GitHub Discussions/TikTok/Instagram, there's no "just bring your own API
+credentials" option to script against, though that approval process at
+least exists. Hacker News has no write API to even
 apply for — its official API is read-only by design, full stop, so this
 isn't a "not yet approved" situation, it's "nothing to approve." Indie
 Hackers is genuinely unverified rather than confirmed either way — some
@@ -524,7 +570,7 @@ state/
   posts/                  # one file per queued post's full content, linked from the index above
 scripts/
   publish_webhook.py     # stdlib-only webhook sender (see --help)
-  publish_direct.py      # stdlib-only direct-to-platform scaffold (LinkedIn/X/Meta/Reddit/Discord/Slack/Telegram/dev.to/GitHub Discussions), needs your own API credentials (see --help)
+  publish_direct.py      # stdlib-only direct-to-platform scaffold (LinkedIn/X/Meta/Reddit/Discord/Slack/Telegram/dev.to/GitHub Discussions/TikTok/Instagram; YouTube deliberately excluded), needs your own API credentials (see --help)
 ```
 
 ## Contributors

@@ -1,6 +1,6 @@
 ---
 name: ad-copy-generator
-description: Generates multiple paid-ad copy variants for Meta, Google Search, or LinkedIn Ads from one offer, each testing a different hook, for A/B testing. Use when the user asks for ad copy, ad variants, or A/B test copy for a paid channel.
+description: Generates multiple paid-ad copy variants for Meta, Google Search, LinkedIn Ads, YouTube (in-feed/discovery), or TikTok Ads from one offer, each testing a different hook, for A/B testing. Use when the user asks for ad copy, ad variants, or A/B test copy for a paid channel.
 allowed-tools: Read, Grep, Glob, Write
 ---
 
@@ -30,8 +30,13 @@ character constraints.
      product" — check `README*`/`package.json`/`pyproject.toml` at the
      project root first if so, same as `content-repurposer`).
    - Which platform(s): Meta (Facebook/Instagram), Google Search (RSA),
-     LinkedIn Ads — default to asking rather than guessing, since limits
-     and tone differ a lot by platform.
+     LinkedIn Ads, YouTube (in-feed/discovery ads), or TikTok Ads —
+     default to asking rather than guessing, since limits and tone differ
+     a lot by platform. For YouTube specifically, confirm the ad format:
+     this skill drafts headline+description text for in-feed/discovery
+     ads, not a script for a skippable/non-skippable in-stream or bumper
+     video ad — those are video-script territory, not ad copy, and belong
+     with `visual-brief-generator` instead.
    - The landing page URL and CTA, if any — kept identical across
      variants unless the user wants CTA itself tested as a variable.
    - How many variants per platform (default: 3, each a different hook
@@ -58,6 +63,8 @@ Trigger on requests like:
 - "Give me Meta ad variants for..."
 - "Google ad headlines for..."
 - "A/B test copy for our LinkedIn ad"
+- "YouTube discovery ad headlines for..."
+- "TikTok ad copy for..."
 
 ## Platform constraints
 
@@ -74,6 +81,9 @@ Trigger on requests like:
 | Meta (Facebook/Instagram) | Headline | ~27–40 characters before truncation |
 | LinkedIn Ads | Intro text | ~150 characters before truncation on most placements |
 | LinkedIn Ads | Headline | ~70 characters before truncation |
+| YouTube (in-feed/discovery) | Headline | ~100 characters, commonly shown as two ~40-character lines |
+| YouTube (in-feed/discovery) | Description | ~2 lines, ~35 characters each |
+| TikTok Ads (in-feed) | Ad text | ~100 characters recommended before truncation risk on most placements |
 
 ## Output structure (required)
 
@@ -97,10 +107,19 @@ with one line per variant naming why that angle was chosen.
   each platform's norms (e.g. LinkedIn skews more formal than Meta).
 - Keep the CTA/link identical across variants unless the user explicitly
   wants CTA tested as its own variable.
+- For YouTube specifically, only draft headline+description text for
+  in-feed/discovery-style ads — never present this as a script for a
+  skippable, non-skippable, or bumper video ad; those need an actual
+  video, which is `visual-brief-generator`'s job, not this skill's.
+- For TikTok Ads specifically, the CTA is a fixed button chosen from
+  TikTok's own preset list (e.g. "Shop Now," "Learn More," "Download"),
+  not free text — don't invent custom CTA copy the platform wouldn't
+  actually let you set.
 
 ## Example output
 
-> Fictional example: 2 Meta variants for "one-click export."
+> Fictional example: 2 Meta variants for "one-click export," plus a
+> TikTok variant showing the fixed-CTA-button difference.
 
 ```markdown
 ### Meta (Facebook/Instagram)
@@ -114,4 +133,14 @@ with one line per variant naming why that angle was chosen.
   export as wasted time).
 - Variant B leads with the mechanism itself as the selling point (how
   fast and simple it now is).
+
+### TikTok Ads (in-feed)
+
+| Variant | Hook Angle | Ad Text (chars) | CTA |
+|---|---|---|---|
+| A | Concrete benefit | "One click. Pick a report, pick a format, done. No templates, no copy-pasting." (79) | Learn More |
+
+- Variant A leans on the same mechanism-as-selling-point angle as Meta
+  Variant B, adapted to TikTok's shorter, more casual ad-text convention.
+  CTA is the platform's own preset button, not custom copy.
 ```

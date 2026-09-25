@@ -38,8 +38,18 @@ available at runtime instead of hardcoding a tool name.
      describe it. Only check documentation-oriented files this way, not
      arbitrary source code. If nothing relevant turns up, ask directly.
    - Deliverable type: video, image, or both.
-   - Target platform(s) — this determines aspect ratio (e.g. Reels/TikTok
-     9:16, LinkedIn 1:1 or 16:9, YouTube 16:9).
+   - Target platform(s) — this determines more than aspect ratio. TikTok,
+     Instagram Reels, and YouTube Shorts (all 9:16, short-form,
+     algorithmically distributed rather than only shown to existing
+     followers) need the hook in roughly the first 1–3 seconds or viewers
+     scroll past — the opening shot carries real weight, not just the
+     opening line of copy. YouTube long-form (16:9) and Instagram feed
+     posts (1:1 or 4:5) work differently: a viewer already clicked in or
+     is scrolling a slower feed, so the intro can build rather than
+     needing an instant hook, and for YouTube long-form the thumbnail and
+     title (not the video's first second) do most of the actual
+     click-through work. Ask which shape this is rather than defaulting
+     to short-form conventions for every platform.
    - Roughly how many scenes/shots, and total duration if video.
    - Any existing brand assets, colors, or style references to match.
 
@@ -75,6 +85,9 @@ Goal, source reference, target platform(s), total duration or frame count.
 
 ### Shot List
 A table: `Shot # | Description | Duration/Frames | Camera/Framing notes`.
+For a short-form scroll-past platform (TikTok, Reels, Shorts), call out
+Shot 1 specifically as the hook, distinct from the rest of the list —
+don't bury it as just the first row with no special note.
 
 ### Per-Scene Prompts
 One block per shot. Each prompt must be self-contained (no dangling
@@ -85,7 +98,10 @@ pronouns like "it" referring to a previous scene) and include:
 - Style/mood keywords.
 
 ### Aspect Ratio & Format per Platform
-A table: `Platform | Aspect Ratio | File Type`.
+A table: `Platform | Aspect Ratio | File Type | Notes`, where Notes
+carries the platform-specific format conventions from step 2 (hook
+timing, typical duration range, thumbnail/title's role for YouTube
+long-form) rather than leaving the table as aspect-ratio-only.
 
 ### Style & Mood Guide
 Color palette, tone, pacing, and sound/music direction (if video).
@@ -102,6 +118,10 @@ plugin's README) or how to paste these prompts into a tool manually.
 - Respect brand-voice constraints (including any banned words/imagery).
 - Never fabricate an asset URL or claim generation succeeded when it
   didn't.
+- Never apply short-form scroll-past pacing (instant hook, sub-3-second
+  opening) to a platform that doesn't work that way — a YouTube long-form
+  video or an Instagram feed post gets a slower build, not a copy-pasted
+  TikTok structure with the aspect ratio swapped.
 
 ## Example output
 
@@ -118,7 +138,7 @@ Total duration: 15 seconds (3 scenes, 5s each).
 ## Shot List
 | Shot # | Description | Duration | Camera/Framing notes |
 |---|---|---|---|
-| 1 | Cluttered desktop, multiple export windows open, looking chaotic | 5s | Close-up, slight overhead angle |
+| 1 (hook) | Cluttered desktop, multiple export windows open, looking chaotic | 5s | Close-up, slight overhead angle — has to land the problem instantly, Reels gets scrolled past fast |
 | 2 | Cursor clicks a single "Export" button | 5s | Screen-capture style, centered on the button |
 | 3 | Clean report appears instantly, checkmark animation | 5s | Full-screen, centered |
 
@@ -138,9 +158,9 @@ animation, bright and clean, full-screen." Negative prompt: "no clutter."
 Aspect ratio: 9:16. Style/mood: bright, resolved, confident.
 
 ## Aspect Ratio & Format per Platform
-| Platform | Aspect Ratio | File Type |
-|---|---|---|
-| Instagram Reels | 9:16 | MP4 |
+| Platform | Aspect Ratio | File Type | Notes |
+|---|---|---|---|
+| Instagram Reels | 9:16 | MP4 | Algorithmic discovery, not just followers — hook has to land in the first 1–3 seconds or viewers scroll past. |
 
 ## Style & Mood Guide
 Color: cool blues and whites, one warm accent in scene 1 for contrast.

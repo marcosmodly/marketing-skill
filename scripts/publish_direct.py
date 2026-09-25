@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
 Scaffolding for posting text directly to LinkedIn, X, Meta (Facebook Page),
-Reddit, Discord, Slack, Telegram, dev.to, or GitHub Discussions - no
-n8n/Make in between.
+Reddit, Discord, Slack, Telegram, dev.to, GitHub Discussions, TikTok, or
+Instagram - no n8n/Make in between. YouTube is deliberately NOT included -
+see the note near the bottom of this docstring for why.
 
 WARNING - read this before using it for anything real:
 
@@ -33,14 +34,23 @@ integration. Before relying on it:
     - but most repos don't even have Discussions turned on, and some
     categories restrict who's allowed to start a new discussion at all,
     separate from the access-token question - see "github_discussions"
-    below.
+    below. TikTok's Content Posting API needs no approval to start using
+    either, but an unaudited app is restricted to posting SELF_ONLY
+    (private, visible only to the poster) permanently - going through
+    TikTok's own audit process is the only way to actually reach public
+    posting, not something this script can do for you - see "tiktok"
+    below. Instagram's Graph API needs a Business or Creator account
+    linked to a Facebook Page, with instagram_content_publish permission
+    on the access token - see "instagram" below.
   - Confirm the endpoint/version below is still current - check
     developers.linkedin.com, developer.x.com, developers.facebook.com,
     Reddit's own API docs, Discord's own API docs, Slack's own API docs,
     core.telegram.org/bots/api, developers.forem.com/api (dev.to's own
-    docs), and docs.github.com/en/graphql (GitHub's GraphQL API reference)
-    directly, since these APIs change and this script cannot check for
-    you.
+    docs), docs.github.com/en/graphql (GitHub's GraphQL API reference),
+    developers.tiktok.com (TikTok's Content Posting API docs), and
+    developers.facebook.com/docs/instagram-platform (Instagram's Graph API
+    docs) directly, since these APIs change and this script cannot check
+    for you.
   - Run with --dry-run and compare the printed request against that
     platform's current docs before ever passing --confirmed.
   - Do one manual --confirmed test post yourself before wiring this into
@@ -78,10 +88,40 @@ integration. Before relying on it:
     `community-post-generator`'s research actually established this was
     the right repo and category for that, not just that the API call will
     succeed. See "github_discussions" below.
+  - For TikTok specifically: check the actual privacy level your app is
+    allowed to post at before assuming --confirmed will do anything
+    public. An unaudited app gets silently downgraded to SELF_ONLY by
+    TikTok's own API regardless of what --privacy-level asks for - that
+    isn't a bug in this script, it's the platform enforcing its own audit
+    gate. See "tiktok" below.
+  - For Instagram specifically: this is a genuinely two-step flow, not a
+    single request like every other platform here - creating a media
+    container is step one, publishing it is step two, and for video the
+    container needs to finish processing (poll it yourself; this script
+    doesn't) before step two will succeed. See "instagram" below.
 
-Text-only. None of these platforms' media-attachment flows are
-implemented here (Instagram in particular has no text-only post endpoint
-at all - see NOTES below - and isn't supported here at all).
+Every other builder here is text-only - a single request, no media
+involved. TikTok and Instagram break that pattern: both require an
+already-existing image or video at a public URL you provide
+(--video-url / --media-url), since neither platform's API accepts direct
+binary upload from a lightweight script like this one, and this script
+doesn't implement any media hosting or upload logic of its own - get the
+asset hosted somewhere public first (your own site, a CDN, cloud storage),
+then point these builders at that URL.
+
+YouTube is deliberately NOT included, for two separate, both-disqualifying
+reasons: Community posts have no public write API at all (confirmed -
+the API that used to support this, activities.insert, was deprecated in
+2020 with no replacement; Community posts remain Studio-only), and actual
+video upload (videos.insert) requires a full interactive OAuth 2.0 consent
+flow to even get a usable token in the first place - not a static
+credential you generate once and paste in the way every other platform
+here works - plus resumable/chunked upload of the real video bytes, plus
+a verified Google Cloud project before public videos are even allowed.
+That's a fundamentally different kind of tool than this script was built
+to be, not a missing builder function - adding one honestly would mean
+building OAuth flow handling and chunked upload logic this script
+deliberately doesn't have for anything else here.
 
 Same safety pattern as publish_webhook.py: refuses to send unless you
 pass --dry-run or --confirmed explicitly, and never sends without one.
@@ -229,13 +269,57 @@ NOTES = {
              "hard-block on it the way it does for Discord/Telegram. "
              "Whether this post even belongs here depends on whose repo it "
              "is - see the WARNING section above.",
+    "tiktok": "Uses the Content Posting API's Direct Post init endpoint "
+              "(POST open.tiktokapis.com/v2/post/publish/video/init/) with "
+              "source=PULL_FROM_URL - TikTok's servers fetch the video "
+              "themselves from --video-url, so this script never handles "
+              "video bytes directly. Needs a TikTok for Developers access "
+              "token with video.publish scope. The one thing that actually "
+              "matters before using this for real: an unaudited API client "
+              "can only post at privacy_level SELF_ONLY (visible only to "
+              "the posting account), permanently - TikTok enforces this "
+              "server-side regardless of --privacy-level, and posts made "
+              "while unaudited stay private even after a later audit "
+              "passes. Going through TikTok's own app audit is the only "
+              "way to actually reach public posting; this script can't do "
+              "that for you. --text becomes the caption (post_info.title); "
+              "no character limit hard-blocked here since TikTok's own "
+              "guidance on this varies by surface - keep it well under "
+              "150 characters as a practical target.",
+    "instagram": "Uses the Instagram Graph API's two-step container flow "
+                 "(graph.facebook.com), not a single request like every "
+                 "other platform here. Step one - the default, when "
+                 "--publish-container-id is NOT given - creates a media "
+                 "container from --media-url (an image or video already "
+                 "hosted at a public URL; this script does not upload "
+                 "media itself) plus --text as the caption, via POST "
+                 "/{IG_USER_ID}/media. Step two - pass the creation_id "
+                 "step one's response returns, as --publish-container-id, "
+                 "in a second invocation - publishes it via POST "
+                 "/{IG_USER_ID}/media_publish. For a video container, "
+                 "check its processing status yourself between the two "
+                 "steps (GET /{container-id}?fields=status_code&"
+                 "access_token=... against the same API) and wait for "
+                 "status_code to read FINISHED before publishing - this "
+                 "script does not poll for you, and publishing too early "
+                 "will fail. An unpublished container expires after 24 "
+                 "hours. Needs an Instagram Business or Creator account "
+                 "linked to a Facebook Page, and an access token with the "
+                 "instagram_content_publish permission - a different "
+                 "credential shape from the 'meta' platform's Facebook Page "
+                 "token above even though both go through the same Graph "
+                 "API family, so this uses its own INSTAGRAM_ACCESS_TOKEN "
+                 "and INSTAGRAM_USER_ID rather than reusing META_PAGE_*. "
+                 "Instagram enforces a 100-post-per-24-hours limit on the "
+                 "publish call.",
 }
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Post text directly to LinkedIn, X, Meta (Facebook Page), Reddit, Discord, Slack, Telegram, "
-                    "dev.to, or GitHub Discussions. "
+                    "dev.to, GitHub Discussions, TikTok, or Instagram. YouTube is deliberately not included - "
+                    "see the module docstring. "
                     "Scaffolding only - read the module docstring before using for real.",
         epilog=(
             "Required environment variables per platform:\n"
@@ -254,14 +338,20 @@ def parse_args():
             "            separated, max 4; --org-id optional)\n"
             "  github_discussions  GITHUB_DISCUSSIONS_TOKEN  (also requires --title,\n"
             "            --repo-id, and --category-id - GraphQL node IDs, not 'owner/repo')\n"
+            "  tiktok    TIKTOK_ACCESS_TOKEN  (also requires --video-url; --privacy-level\n"
+            "            optional, defaults to SELF_ONLY - the only level an unaudited\n"
+            "            app can actually use)\n"
+            "  instagram  INSTAGRAM_ACCESS_TOKEN, INSTAGRAM_USER_ID  (also requires\n"
+            "            --media-url for step one, or --publish-container-id for step\n"
+            "            two - see the module docstring, this is a two-step flow)\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--platform", required=True,
                          choices=["linkedin", "x", "meta", "reddit", "discord", "slack", "telegram", "devto",
-                                  "github_discussions"],
-                         help="Which platform to post to.")
-    parser.add_argument("--text", help="Post text. Reads stdin if omitted.")
+                                  "github_discussions", "tiktok", "instagram"],
+                         help="Which platform to post to. YouTube is not offered here - see the module docstring.")
+    parser.add_argument("--text", help="Post text. Reads stdin if omitted. Optional for --platform instagram when --publish-container-id is given (step two needs no caption).")
     parser.add_argument("--subreddit", help="Target subreddit, no 'r/' prefix. Required for --platform reddit.")
     parser.add_argument("--title", help="Post title. Required for --platform reddit, devto, and github_discussions (the chat platforms are body-only).")
     parser.add_argument("--flair-id", help="Optional flair template ID, --platform reddit only, if the subreddit requires one.")
@@ -272,6 +362,14 @@ def parse_args():
     parser.add_argument("--org-id", help="Post under this dev.to Organization ID instead of your personal account. --platform devto only, optional.")
     parser.add_argument("--repo-id", help="Target repository's GraphQL node ID (not 'owner/repo'). Required for --platform github_discussions.")
     parser.add_argument("--category-id", help="Target discussion category's GraphQL node ID. Required for --platform github_discussions.")
+    parser.add_argument("--video-url", help="Public URL of an already-hosted video for TikTok to pull (source=PULL_FROM_URL). Required for --platform tiktok.")
+    parser.add_argument("--privacy-level", default="SELF_ONLY",
+                         choices=["SELF_ONLY", "PUBLIC_TO_EVERYONE", "MUTUAL_FOLLOW_FRIENDS", "FOLLOWER_OF_CREATOR"],
+                         help="TikTok privacy level (default: SELF_ONLY - the only one an unaudited app can actually reach; others are silently downgraded server-side). --platform tiktok only.")
+    parser.add_argument("--media-url", help="Public URL of an already-hosted image or video for Instagram to fetch. Required for --platform instagram step one (creating a container), unless --publish-container-id is given instead.")
+    parser.add_argument("--media-type", default="image", choices=["image", "video"],
+                         help="Whether --media-url points at an image or a video (default: image). --platform instagram step one only.")
+    parser.add_argument("--publish-container-id", help="An existing container's creation_id, to publish it (step two). --platform instagram only; when given, --media-url/--media-type/--text are ignored.")
     parser.add_argument("--timeout", type=float, default=15, help="Request timeout in seconds (default: 15).")
     parser.add_argument("--dry-run", action="store_true", help="Print the request instead of sending it.")
     parser.add_argument("--confirmed", action="store_true",
@@ -480,6 +578,54 @@ def build_github_discussions_request(text, title, repo_id, category_id):
     return url, headers, body, [env["GITHUB_DISCUSSIONS_TOKEN"]]
 
 
+def build_tiktok_request(text, video_url, privacy_level):
+    env = require_env("TIKTOK_ACCESS_TOKEN")
+    url = "https://open.tiktokapis.com/v2/post/publish/video/init/"
+    headers = {
+        "Authorization": f"Bearer {env['TIKTOK_ACCESS_TOKEN']}",
+        "Content-Type": "application/json",
+    }
+    body = json.dumps({
+        "post_info": {
+            "title": text,
+            "privacy_level": privacy_level,
+        },
+        "source_info": {
+            "source": "PULL_FROM_URL",
+            "video_url": video_url,
+        },
+    }).encode("utf-8")
+    # A bearer token in a header, same redaction pattern as LinkedIn/X/devto.
+    return url, headers, body, [env["TIKTOK_ACCESS_TOKEN"]]
+
+
+def build_instagram_request(text, media_url, media_type, container_id):
+    env = require_env("INSTAGRAM_ACCESS_TOKEN", "INSTAGRAM_USER_ID")
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    if container_id:
+        # Step two: publish an already-created, already-finished container.
+        url = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{env['INSTAGRAM_USER_ID']}/media_publish"
+        fields = {
+            "creation_id": container_id,
+            "access_token": env["INSTAGRAM_ACCESS_TOKEN"],
+        }
+    else:
+        # Step one: create the container. Meta fetches the media FROM media_url -
+        # this script never touches the image/video bytes themselves.
+        url = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{env['INSTAGRAM_USER_ID']}/media"
+        fields = {
+            "caption": text or "",
+            "access_token": env["INSTAGRAM_ACCESS_TOKEN"],
+        }
+        if media_type == "video":
+            fields["video_url"] = media_url
+            fields["media_type"] = "REELS"
+        else:
+            fields["image_url"] = media_url
+    body = urllib.parse.urlencode(fields).encode("utf-8")
+    return url, headers, body, [env["INSTAGRAM_ACCESS_TOKEN"]]
+
+
 BUILDERS = {
     "linkedin": build_linkedin_request,
     "x": build_x_request,
@@ -507,7 +653,12 @@ def main():
         )
         sys.exit(2)
 
-    text = load_text(args.text)
+    if args.platform == "instagram" and args.publish_container_id:
+        # Step two (publish an existing container) needs no caption - it was
+        # already set on the container in step one. Don't force one here.
+        text = (args.text or "").strip()
+    else:
+        text = load_text(args.text)
 
     if args.platform == "reddit":
         if not args.subreddit or not args.title:
@@ -547,6 +698,29 @@ def main():
             sys.exit(2)
         url, headers, body, secrets = build_github_discussions_request(
             text, args.title, args.repo_id, args.category_id
+        )
+    elif args.platform == "tiktok":
+        if not args.video_url:
+            print(
+                "--platform tiktok requires --video-url (a public URL TikTok's "
+                "servers can fetch the video from - this script doesn't upload "
+                "video bytes directly).",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        url, headers, body, secrets = build_tiktok_request(text, args.video_url, args.privacy_level)
+    elif args.platform == "instagram":
+        if not args.publish_container_id and not args.media_url:
+            print(
+                "--platform instagram requires either --media-url (step one: create "
+                "a container) or --publish-container-id (step two: publish an "
+                "existing container). See the module docstring - this is a two-step "
+                "flow, not a single request.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        url, headers, body, secrets = build_instagram_request(
+            text, args.media_url, args.media_type, args.publish_container_id
         )
     else:
         url, headers, body, secrets = BUILDERS[args.platform](text)
