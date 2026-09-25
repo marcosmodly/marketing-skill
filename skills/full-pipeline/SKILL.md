@@ -17,19 +17,21 @@ want the whole thing done in one shot rather than one skill at a time.
 1. **Check onboarding status (once, up front).** Read
    `${CLAUDE_PLUGIN_ROOT}/references/brand-voice.md`. If it doesn't exist,
    or its first line is `<!-- MARKETING-SKILL:UNCONFIGURED -->`, ask the
-   user this plugin's 3 setup questions (priority task; target audience +
-   tone; default output format — same as `/marketing-skill:marketing-setup`)
-   before continuing, then save the answers and flip the marker to
-   `CONFIGURED` with today's date. Because this happens before Stage 1,
-   none of the individual stages below will re-trigger their own
-   onboarding check in the same run.
+   user this plugin's 4 setup questions (priority task; content types to
+   produce; target audience + tone; default output format — same as
+   `/marketing-skill:marketing-setup`) before continuing, then save the
+   answers and flip the marker to `CONFIGURED` with today's date. Because
+   this happens before Stage 1, none of the individual stages below will
+   re-trigger their own onboarding check in the same run.
 
 2. **Confirm scope for all stages up front**, to avoid repeated
    back-and-forth mid-chain:
    - Competitor or topic to research.
    - Which repurposed formats are wanted (LinkedIn / Twitter thread /
      newsletter — default: all three).
-   - Whether a visual brief is wanted, and for which platform(s).
+   - Whether a visual brief is wanted, and for which platform(s) — default
+     to yes when `references/brand-voice.md`'s Content Types preference
+     calls for video or image content.
    - Publish destination (webhook URL, or confirm `MARKETING_WEBHOOK_URL`
      is set) — but do not send anything yet.
 

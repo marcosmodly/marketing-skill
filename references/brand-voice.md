@@ -16,6 +16,15 @@ Not yet configured — run `/marketing-skill:marketing-setup` or edit this
 directly. (This is the marketing task you want automated first: e.g.
 weekly newsletters, competitor research, blog-to-social repurposing.)
 
+## Content Types
+Not yet configured. Placeholder default: "whatever content type fits the
+skill in use (text/social posts, short-form video scripts, long-form
+video scripts, email, images); ask if unclear which one to prioritize."
+(This is the medium you actually want produced — e.g. short-form video
+scripts for Reels/TikTok/Shorts, long-form video scripts, text/social
+posts, email, images, or a mix — as distinct from the *structure* set
+under "Default Output Format" below.)
+
 ## Target Audience
 Not yet configured. Placeholder default: "general B2B software buyers."
 

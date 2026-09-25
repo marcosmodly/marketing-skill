@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Scaffolding for posting text directly to LinkedIn, X, or Meta (Facebook
-Page) - no n8n/Make in between.
+Scaffolding for posting text directly to LinkedIn, X, Meta (Facebook Page),
+Reddit, Discord, Slack, Telegram, or dev.to - no n8n/Make in between.
 
 WARNING - read this before using it for anything real:
 
@@ -12,20 +12,59 @@ each platform's last publicly documented stable API, not a verified
 integration. Before relying on it:
 
   - Confirm you actually have the right kind of API access first. Each
-    platform gates posting behind its own developer-app review, and X
-    additionally requires a paid API tier for write access.
+    platform gates posting behind its own developer-app review, X
+    additionally requires a paid API tier for write access, and Reddit
+    closed instant self-service app registration in late 2025 in favor of
+    a manual approval queue - see the "reddit" note below. Discord needs
+    no app review at all - see "discord" below. Slack sits in between:
+    no OAuth review from Slack itself, but many workspaces require a
+    Workspace Owner/Admin to approve new apps before a webhook can even
+    be created - see "slack" below, don't assume it's as simple as
+    Discord. Telegram bot creation itself needs no approval either, but
+    posting into a specific chat still needs that chat's own admin to add
+    the bot first - see "telegram" below. dev.to's write API needs no
+    approval process found in its docs at all - just an API key generated
+    from your own account settings - see "devto" below; that's about
+    access, though, not content - a Tag Moderator can still strip a tag
+    that doesn't fit it, or a post can still be reported through the
+    sitewide Code of Conduct.
   - Confirm the endpoint/version below is still current - check
-    developers.linkedin.com, developer.x.com, and developers.facebook.com
-    directly, since these APIs change and this script cannot check for
-    you.
+    developers.linkedin.com, developer.x.com, developers.facebook.com,
+    Reddit's own API docs, Discord's own API docs, Slack's own API docs,
+    core.telegram.org/bots/api, and developers.forem.com/api (dev.to's own
+    docs) directly, since these APIs change and this script cannot check
+    for you.
   - Run with --dry-run and compare the printed request against that
     platform's current docs before ever passing --confirmed.
   - Do one manual --confirmed test post yourself before wiring this into
     anything scheduled or unattended.
+  - For Reddit specifically: a 2xx response here only means the API
+    accepted the submission - a subreddit's AutoModerator can still remove
+    it silently seconds later for violating that subreddit's own rules
+    (missing flair, self-promo policy, karma/age minimums, banned
+    domains). Run the `community-post-generator` skill against the target
+    subreddit first and resolve everything it flags before sending.
+  - For Discord and Slack specifically, and for a *private* Telegram
+    group/channel: `community-post-generator` can't independently verify
+    that target's rules the way it can for Reddit/Product Hunt/Hacker
+    News/Indie Hackers, since most private servers, workspaces, and
+    groups have no public page to check at all - it works from whatever
+    rules you (as an actual member) supply it. Confirm that's still
+    current yourself before sending, same as you would before posting by
+    hand. A *public* Telegram channel/group is the exception - see
+    "telegram" below.
+  - For dev.to specifically: `community-post-generator`'s research could
+    not directly confirm the Code of Conduct's specific self-promotion/
+    spam wording (dev.to's own domain was unreachable during that
+    research). The #showdev tag and the Organizations feature both
+    suggest self-promotion is structurally welcome, but that's not the
+    same as a confirmed rule - a 2xx response here just means the API
+    accepted the article, not that a Tag Moderator won't strip a tag that
+    doesn't fit it afterward. See "devto" below.
 
-Text-only. None of the three platforms' media-attachment flows are
+Text-only. None of these platforms' media-attachment flows are
 implemented here (Instagram in particular has no text-only post endpoint
-at all - see NOTES below).
+at all - see NOTES below - and isn't supported here at all).
 
 Same safety pattern as publish_webhook.py: refuses to send unless you
 pass --dry-run or --confirmed explicitly, and never sends without one.
@@ -53,12 +92,101 @@ NOTES = {
     "meta": "Facebook Page text posts only. Instagram has no text-only "
             "post endpoint - it requires an image/video container plus a "
             "separate publish call, not implemented here.",
+    "reddit": "Requires an OAuth2 access token with 'submit' scope, from "
+              "your own registered Reddit app (reddit.com/prefs/apps). As "
+              "of late 2025 Reddit closed instant self-service app "
+              "registration - new apps go through a manual approval queue "
+              "(reportedly weeks), though already-approved credentials "
+              "keep working; confirm your current registration status "
+              "before assuming this just works. Also requires a "
+              "descriptive User-Agent identifying your app (Reddit rate- "
+              "limits or blocks generic ones). Submits a text (self) post "
+              "only - no link/image/video posts. A 2xx response does not "
+              "guarantee the post survives AutoModerator; run "
+              "community-post-generator against the target subreddit "
+              "first.",
+    "discord": "One of the easiest to set up: a webhook needs no OAuth "
+               "app review, just MANAGE_WEBHOOKS permission on the target "
+               "channel to create one (Channel Settings > Integrations > "
+               "Webhooks). The webhook URL itself is the credential - "
+               "anyone with it can post, so treat it like a password "
+               "(this script redacts it in --dry-run output, same as "
+               "other platforms' tokens). Sends a plain chat message "
+               "(2000-character limit; longer text is rejected outright, "
+               "not truncated, by Discord's API) - no title field exists, "
+               "this isn't a self-post the way Reddit is. Unlike the "
+               "other platforms, community-post-generator did not "
+               "independently verify the target server's rules for this "
+               "draft - it worked from what you supplied - so recheck the "
+               "server's own rules channel yourself before sending.",
+    "slack": "Not as simple as Discord, despite looking similar: the "
+             "direct-webhook-URL path is legacy, and creating a webhook "
+             "now means creating a Slack App, which many workspaces "
+             "require a Workspace Owner/Admin to approve before it can "
+             "even be installed - confirm your workspace's app-approval "
+             "setting before assuming self-serve setup. The webhook URL "
+             "itself is the credential, same as Discord (redacted in "
+             "--dry-run output). Sends plain text - format it in Slack's "
+             "own 'mrkdwn' syntax, not standard Markdown: a single "
+             "asterisk (*bold*) is bold in Slack, not italic, the "
+             "opposite of standard Markdown - community-post-generator "
+             "drafts in mrkdwn for this platform for exactly that reason. "
+             "Hard-capped at 40000 characters (rejected, not truncated, "
+             "past that by this script; Slack itself recommends staying "
+             "under 4000 for how the message actually displays - this "
+             "script only warns, doesn't block, between 4000 and 40000). "
+             "Same as Discord: this skill worked from whatever rules you "
+             "supplied, not independent verification, so recheck the "
+             "workspace's actual rules yourself before sending.",
+    "telegram": "Bot creation itself needs no approval - message @BotFather, "
+                "get a token in seconds - but that only creates the bot; "
+                "posting into a *specific* chat still requires that chat's "
+                "own admin to add the bot to it first, so a working token "
+                "doesn't mean you can post anywhere yet. Uses the Bot API's "
+                "sendMessage (api.telegram.org/bot<TOKEN>/sendMessage) - the "
+                "token is embedded in the URL itself, same credential-in-URL "
+                "pattern as Discord/Slack (redacted in --dry-run output). "
+                "Defaults to HTML parse_mode over Telegram's MarkdownV2 on "
+                "purpose: MarkdownV2 requires escaping a long list of "
+                "special characters anywhere they appear as literal text, "
+                "and getting it wrong fails the whole send with a parse "
+                "error, not just a rendering glitch - HTML only needs "
+                "'<', '>', and '&' escaped. Pass --parse-mode MarkdownV2 to "
+                "override, at your own risk. Hard-capped at 4096 characters "
+                "(rejected outright, not truncated - Telegram's API returns "
+                "'message is too long' and sends nothing). For a *private* "
+                "group/channel, community-post-generator worked from "
+                "whatever rules you supplied, same as Discord/Slack - "
+                "recheck them yourself before sending. A *public* channel "
+                "(has an @username) is the one case among these six where "
+                "the skill may have actually verified the rules directly "
+                "(via the public t.me/s/<username> preview), so check its "
+                "Source Confidence line rather than assuming User-Supplied.",
+    "devto": "Uses the Forem API (POST dev.to/api/articles). Needs an API "
+             "key from your dev.to account settings, sent as a custom "
+             "'api-key' header - no OAuth flow, no app review found in its "
+             "docs, the simplest credential model of any platform here. "
+             "Posts a full title+body article (body_markdown, standard "
+             "Markdown), not a short chat message - closer in shape to "
+             "Reddit's self-post than to Discord/Slack/Telegram. Up to 4 "
+             "tags via --tags (comma-separated; dev.to enforces this cap, "
+             "and so does this script, before sending). Optional --org-id "
+             "posts under a dev.to Organization/company page instead of "
+             "your personal account, if you're actually a member of one - "
+             "leave it unset for a personal-account post. No documented "
+             "hard character limit on articles, unlike the chat platforms "
+             "above - long-form is the point here. Publishes live "
+             "immediately (published: true) once --confirmed is passed; "
+             "there's no separate draft-save step exposed here even "
+             "though dev.to's API supports one. See the WARNING section "
+             "above on the Code of Conduct gap before trusting a 2xx "
+             "response as the same thing as 'this was welcome.'",
 }
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Post text directly to LinkedIn, X, or Meta (Facebook Page). "
+        description="Post text directly to LinkedIn, X, Meta (Facebook Page), Reddit, Discord, Slack, Telegram, or dev.to. "
                     "Scaffolding only - read the module docstring before using for real.",
         epilog=(
             "Required environment variables per platform:\n"
@@ -67,12 +195,29 @@ def parse_args():
             "  meta      META_PAGE_ACCESS_TOKEN, META_PAGE_ID\n"
             "            (optional: META_GRAPH_API_VERSION, defaults to "
             f"{META_GRAPH_API_VERSION})\n"
+            "  reddit    REDDIT_ACCESS_TOKEN, REDDIT_USER_AGENT\n"
+            "            (also requires --subreddit and --title; --flair-id optional)\n"
+            "  discord   DISCORD_WEBHOOK_URL  (the full webhook URL - itself the credential)\n"
+            "  slack     SLACK_WEBHOOK_URL  (the full webhook URL - itself the credential)\n"
+            "  telegram  TELEGRAM_BOT_TOKEN  (also requires --chat-id; --parse-mode optional,\n"
+            "            defaults to HTML)\n"
+            "  devto     DEVTO_API_KEY  (also requires --title; --tags optional, comma-\n"
+            "            separated, max 4; --org-id optional)\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--platform", required=True, choices=["linkedin", "x", "meta"],
+    parser.add_argument("--platform", required=True,
+                         choices=["linkedin", "x", "meta", "reddit", "discord", "slack", "telegram", "devto"],
                          help="Which platform to post to.")
     parser.add_argument("--text", help="Post text. Reads stdin if omitted.")
+    parser.add_argument("--subreddit", help="Target subreddit, no 'r/' prefix. Required for --platform reddit.")
+    parser.add_argument("--title", help="Post title. Required for --platform reddit and --platform devto (the chat platforms are body-only).")
+    parser.add_argument("--flair-id", help="Optional flair template ID, --platform reddit only, if the subreddit requires one.")
+    parser.add_argument("--chat-id", help="Target chat: a numeric ID, or '@channelusername' for a public channel. Required for --platform telegram.")
+    parser.add_argument("--parse-mode", default="HTML", choices=["HTML", "MarkdownV2"],
+                         help="Telegram formatting mode (default: HTML, simpler escaping than MarkdownV2). --platform telegram only.")
+    parser.add_argument("--tags", help="Comma-separated tags, max 4 (e.g. 'showdev,ai,opensource'). --platform devto only.")
+    parser.add_argument("--org-id", help="Post under this dev.to Organization ID instead of your personal account. --platform devto only, optional.")
     parser.add_argument("--timeout", type=float, default=15, help="Request timeout in seconds (default: 15).")
     parser.add_argument("--dry-run", action="store_true", help="Print the request instead of sending it.")
     parser.add_argument("--confirmed", action="store_true",
@@ -142,10 +287,125 @@ def build_meta_request(text):
     return url, headers, body, [env["META_PAGE_ACCESS_TOKEN"]]
 
 
+def build_reddit_request(text, subreddit, title, flair_id):
+    env = require_env("REDDIT_ACCESS_TOKEN", "REDDIT_USER_AGENT")
+    url = "https://oauth.reddit.com/api/submit"
+    headers = {
+        "Authorization": f"Bearer {env['REDDIT_ACCESS_TOKEN']}",
+        "User-Agent": env["REDDIT_USER_AGENT"],
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+    fields = {
+        "sr": subreddit,
+        "kind": "self",
+        "title": title,
+        "text": text,
+        "api_type": "json",
+    }
+    if flair_id:
+        fields["flair_id"] = flair_id
+    body = urllib.parse.urlencode(fields).encode("utf-8")
+    return url, headers, body, [env["REDDIT_ACCESS_TOKEN"]]
+
+
+def build_discord_request(text):
+    env = require_env("DISCORD_WEBHOOK_URL")
+    url = env["DISCORD_WEBHOOK_URL"]
+    if len(text) > 2000:
+        print(
+            f"Message is {len(text)} characters; Discord rejects messages over 2000 "
+            "characters outright rather than truncating them. Shorten it before sending.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    headers = {"Content-Type": "application/json"}
+    body = json.dumps({"content": text}).encode("utf-8")
+    # The webhook URL itself is the credential (no separate token/header) - redact the
+    # whole thing, not just a header value, or --dry-run would print it in the clear.
+    return url, headers, body, [url]
+
+
+def build_slack_request(text):
+    env = require_env("SLACK_WEBHOOK_URL")
+    url = env["SLACK_WEBHOOK_URL"]
+    if len(text) > 40000:
+        print(
+            f"Message is {len(text)} characters; Slack rejects messages over 40000 "
+            "characters outright. Shorten it before sending.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    if len(text) > 4000:
+        print(
+            f"Warning: message is {len(text)} characters. Slack technically allows up to "
+            "40000, but recommends staying under 4000 for how the message actually "
+            "displays (longer messages get collapsed behind a 'see more' link). Not "
+            "blocking the send, just flagging it - not the same as Discord, which draws "
+            "the line at a hard 2000-character cutoff.",
+            file=sys.stderr,
+        )
+    headers = {"Content-Type": "application/json"}
+    body = json.dumps({"text": text}).encode("utf-8")
+    # The webhook URL itself is the credential, same as Discord - redact the whole thing.
+    return url, headers, body, [url]
+
+
+def build_telegram_request(text, chat_id, parse_mode):
+    env = require_env("TELEGRAM_BOT_TOKEN")
+    if len(text) > 4096:
+        print(
+            f"Message is {len(text)} characters; Telegram rejects messages over 4096 "
+            "characters outright ('message is too long') rather than truncating them. "
+            "Shorten it before sending.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    url = f"https://api.telegram.org/bot{env['TELEGRAM_BOT_TOKEN']}/sendMessage"
+    headers = {"Content-Type": "application/json"}
+    body = json.dumps({
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": parse_mode,
+    }).encode("utf-8")
+    # The bot token is embedded in the URL path itself, not a header - redact the
+    # token value so it doesn't leak in --dry-run output (URL structure stays visible).
+    return url, headers, body, [env["TELEGRAM_BOT_TOKEN"]]
+
+
+def build_devto_request(text, title, tags, org_id):
+    env = require_env("DEVTO_API_KEY")
+    if tags and len(tags) > 4:
+        print(
+            f"{len(tags)} tags given; dev.to allows a maximum of 4 tags per "
+            "article. Trim the list before sending.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    url = "https://dev.to/api/articles"
+    headers = {
+        "api-key": env["DEVTO_API_KEY"],
+        "Content-Type": "application/json",
+    }
+    article = {
+        "title": title,
+        "body_markdown": text,
+        "published": True,
+        "tags": tags or [],
+    }
+    if org_id:
+        article["organization_id"] = org_id
+    body = json.dumps({"article": article}).encode("utf-8")
+    # A static API key in a custom header, not a URL - redact the key value
+    # itself, same pattern as LinkedIn/X's bearer tokens.
+    return url, headers, body, [env["DEVTO_API_KEY"]]
+
+
 BUILDERS = {
     "linkedin": build_linkedin_request,
     "x": build_x_request,
     "meta": build_meta_request,
+    "discord": build_discord_request,
+    "slack": build_slack_request,
 }
 
 
@@ -168,14 +428,46 @@ def main():
         sys.exit(2)
 
     text = load_text(args.text)
-    url, headers, body, secrets = BUILDERS[args.platform](text)
+
+    if args.platform == "reddit":
+        if not args.subreddit or not args.title:
+            print(
+                "--platform reddit requires both --subreddit and --title "
+                "(Reddit self-posts need a title; the other platforms are body-only).",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        url, headers, body, secrets = build_reddit_request(text, args.subreddit, args.title, args.flair_id)
+    elif args.platform == "telegram":
+        if not args.chat_id:
+            print(
+                "--platform telegram requires --chat-id (a numeric chat ID, or "
+                "'@channelusername' for a public channel).",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        url, headers, body, secrets = build_telegram_request(text, args.chat_id, args.parse_mode)
+    elif args.platform == "devto":
+        if not args.title:
+            print(
+                "--platform devto requires --title (dev.to articles need one, "
+                "the same as Reddit self-posts).",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        tags = [t.strip() for t in args.tags.split(",") if t.strip()] if args.tags else []
+        url, headers, body, secrets = build_devto_request(text, args.title, tags, args.org_id)
+    else:
+        url, headers, body, secrets = BUILDERS[args.platform](text)
 
     if args.dry_run:
         print("=== DRY RUN: no request sent ===")
         print(f"Platform: {args.platform}")
         print(f"Note: {NOTES[args.platform]}")
         print("Method: POST")
-        print(f"URL: {url}")
+        # redact the URL itself, not just headers/body - Discord's webhook URL IS the
+        # credential, so printing it unredacted here would defeat the point of --dry-run.
+        print(f"URL: {redact(url, secrets)}")
         print("Headers:")
         for name, value in headers.items():
             print(f"  {name}: {redact(value, secrets)}")

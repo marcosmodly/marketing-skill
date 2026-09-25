@@ -20,9 +20,9 @@ search-volume or difficulty numbers.
 1. **Check onboarding status.** Read
    `${CLAUDE_PLUGIN_ROOT}/references/brand-voice.md`. If it doesn't exist,
    or its first line is `<!-- MARKETING-SKILL:UNCONFIGURED -->`, pause and
-   ask the user this plugin's 3 setup questions (priority task; target
-   audience + tone; default output format — same as
-   `/marketing-skill:marketing-setup`) before continuing, then save the
+   ask the user this plugin's 4 setup questions (priority task; content
+   types to produce; target audience + tone; default output format — same
+   as `/marketing-skill:marketing-setup`) before continuing, then save the
    answers into that file and flip the marker to `CONFIGURED` with today's
    date. Otherwise, read it for tone/audience consistency below.
 

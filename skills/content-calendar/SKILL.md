@@ -20,9 +20,9 @@ Sending is `publish-pipeline`'s job, one approved row at a time.
 1. **Check onboarding status.** Read
    `${CLAUDE_PLUGIN_ROOT}/references/brand-voice.md`. If it doesn't exist,
    or its first line is `<!-- MARKETING-SKILL:UNCONFIGURED -->`, pause and
-   ask the user this plugin's 3 setup questions (priority task; target
-   audience + tone; default output format — same as
-   `/marketing-skill:marketing-setup`) before continuing, then save the
+   ask the user this plugin's 4 setup questions (priority task; content
+   types to produce; target audience + tone; default output format — same
+   as `/marketing-skill:marketing-setup`) before continuing, then save the
    answers into that file and flip the marker to `CONFIGURED` with today's
    date. Otherwise, read it for tone, audience, banned words, and
    formatting constraints to apply below.
@@ -44,23 +44,73 @@ Sending is `publish-pipeline`'s job, one approved row at a time.
      for a month"). Default to the next 7 days, one slot/day, if the user
      doesn't specify.
    - Which platform(s) per slot — default to whatever
-     `references/brand-voice.md` implies, or ask if genuinely unclear.
+     `references/brand-voice.md` implies, or ask if genuinely unclear. If
+     any slot is Reddit, get the exact subreddit (never just "Reddit") —
+     rules are per-subreddit, not platform-wide, and drafting one needs a
+     live research pass per slot (see step 4), so budget more time for
+     those slots than a LinkedIn/Twitter/newsletter slot. Same research
+     overhead applies to a Product Hunt, Hacker News, Indie Hackers, or
+     dev.to slot; if any slot names "Indie Hackers," confirm it means
+     indiehackers.com and not r/indiehackers (a separate subreddit with
+     the same casual name) before scoping it further. Hacker News in
+     particular rarely belongs in a recurring cadence at all — a Show HN
+     is closer to a one-time launch than something to batch weekly, so
+     confirm that's really what's wanted before queuing one as a regular
+     slot. For a dev.to slot, get the tag(s) now (up to 4) and which
+     identity it posts under (personal account or a dev.to Organization) —
+     both affect the draft, not just the send. If any slot is Discord or Slack, get the exact server/workspace
+     *and* channel, and ask for that channel's rules **now, in this
+     scope-confirmation step** — `community-post-generator` can't look
+     them up later the way it can for the other platforms, so those slots
+     can't be silently deferred to draft time the way the others can. For
+     a Slack slot specifically, also ask whether sending it later will
+     need workspace admin approval for a webhook — that's not guaranteed
+     the way it is for Discord, and is worth knowing before the slot gets
+     queued, not after. If any slot is Telegram, get the exact channel or
+     group, and determine now whether it's public (has an `@username`) or
+     private — a public target can still be researched at draft time the
+     way Reddit or Product Hunt can, but a private one needs its rules
+     asked for now, same reason and same timing as Discord/Slack; also
+     confirm channel vs. group, since a channel the user doesn't admin
+     changes the slot into pitch text for its admin rather than a message
+     the user sends themselves.
+   - Content type per slot — text/social post, short-form video, long-form
+     video, or image — default to whatever `references/brand-voice.md`'s
+     Content Types preference indicates, or ask if genuinely unclear.
    - Source material: one topic list from the user, a rotation of themes,
      or "pull from our own project" (same project-content search as
      `content-repurposer` — Glob for `README*`, `CHANGELOG*`,
      `docs/**/*.md` at the project root before asking the user to supply
      topics themselves).
-   - Whether visual briefs are wanted per slot (if so, hand off to
+   - Whether visual briefs are wanted per slot — default to yes when the
+     slot's content type is video or image; if so, hand off to
      `visual-brief-generator` per slot rather than duplicating its logic
-     here).
+     here.
 
 4. **Draft each slot.** For each date/platform pair, produce the actual
-   post content using the same per-platform structure rules as
-   `content-repurposer` (read
-   `${CLAUDE_PLUGIN_ROOT}/skills/content-repurposer/SKILL.md` for the
-   exact LinkedIn/Twitter-X/newsletter formatting rules rather than
-   reinventing them here) — don't invent a fact, statistic, or quote not
-   present in the source material for that slot.
+   post content:
+   - LinkedIn / Twitter-X / newsletter slots: use the same per-platform
+     structure rules as `content-repurposer` (read
+     `${CLAUDE_PLUGIN_ROOT}/skills/content-repurposer/SKILL.md` for the
+     exact formatting rules rather than reinventing them here).
+   - Reddit / Product Hunt / Hacker News / Indie Hackers / dev.to / Discord
+     / Slack / Telegram slots: hand off to
+     `${CLAUDE_PLUGIN_ROOT}/skills/community-post-generator/SKILL.md`
+     for that slot instead of the above — it needs a live rules/norms
+     check against that specific subreddit, Product Hunt, Hacker News,
+     Indie Hackers group, or dev.to tag(s) before drafting (or, for
+     Discord/Slack/a private Telegram target, the rules gathered from the
+     user back in step 3), which is a genuine research step, not a
+     template fill. A public Telegram slot still gets a live research pass
+     at draft time, same as Reddit or Product Hunt, rather than needing
+     everything pre-gathered in step 3. If that research (or what the user
+     supplied) comes back No-Go, **don't draft a substitute post for the
+     slot** — report the
+     block in the Batch Summary and skip queuing that slot (or swap in a
+     different platform/subreddit if the user redirects on the spot)
+     rather than writing a row with no real content behind it.
+   - Never invent a fact, statistic, or quote not present in the source
+     material for that slot, regardless of platform.
 
 5. **Write each post's full content to its own file first.** For each
    slot, write the complete drafted content (everything shown to the user
@@ -104,11 +154,17 @@ Trigger on requests like:
 Use this exact section order, as Markdown `##` headings:
 
 1. **Batch Summary** — date range, cadence, platforms, how many slots,
-   and a one-line note on what (if anything) was skipped or varied to
-   avoid repeating a recent topic.
+   and a one-line note on what (if anything) was skipped or varied — to
+   avoid repeating a recent topic, or because a Reddit/Product Hunt/
+   Hacker News/Indie Hackers/dev.to/Discord/Slack/Telegram slot came back
+   No-Go from `community-post-generator`'s research (or, for Discord/
+   Slack/a private Telegram target, from what the user supplied).
 2. **Queued Posts** — one `###` subsection per date, each containing the
-   full drafted content for that slot (using that platform's normal
-   output structure from `content-repurposer`).
+   full drafted content for that slot (using that slot's normal output
+   structure — `content-repurposer` for LinkedIn/Twitter/newsletter,
+   `community-post-generator` for Reddit/Product Hunt/Hacker News/Indie
+   Hackers/dev.to/Discord/Slack/Telegram, including its Community Research
+   Summary and Go/No-Go).
 3. **Calendar File Update** — confirmation of how many rows were
    appended to `state/content-calendar.md` and their Status value.
 4. **Next Step** — one line: how to approve and send (via

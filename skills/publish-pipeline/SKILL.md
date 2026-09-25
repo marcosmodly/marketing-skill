@@ -21,15 +21,18 @@ step 5) for users who've set up their own platform API credentials.
 1. **Check onboarding status.** Read
    `${CLAUDE_PLUGIN_ROOT}/references/brand-voice.md`. If it doesn't exist,
    or its first line is `<!-- MARKETING-SKILL:UNCONFIGURED -->`, ask the
-   user this plugin's 3 setup questions (priority task; target audience +
-   tone; default output format — same as `/marketing-skill:marketing-setup`)
-   before continuing, then save the answers and flip the marker to
-   `CONFIGURED` with today's date.
+   user this plugin's 4 setup questions (priority task; content types to
+   produce; target audience + tone; default output format — same as
+   `/marketing-skill:marketing-setup`) before continuing, then save the
+   answers and flip the marker to `CONFIGURED` with today's date.
 
 2. **Confirm scope.**
    - Which content pieces are ready to send (from `content-repurposer`,
-     `visual-brief-generator`, a row in `state/content-calendar.md`, or
-     pasted directly)?
+     `visual-brief-generator`, `community-post-generator`, a row in
+     `state/content-calendar.md`, or pasted directly)?
+   - If the source is `community-post-generator`, confirm its Go/No-Go
+     section actually said go — never send a draft that skill flagged as
+     blocked by the target community's own rules.
    - If the user is pointing at a calendar entry (e.g. "send the queued
      post for Tuesday"), read
      `${CLAUDE_PLUGIN_ROOT}/state/content-calendar.md`, find the matching
@@ -85,14 +88,56 @@ step 5) for users who've set up their own platform API credentials.
      directly instead of the webhook script, if the user prefers that.
      Don't assume it's connected — check available tools first.
    - **Alternate path (optional, not the default): direct platform
-     posting.** If the user wants to post straight to LinkedIn, X, or
-     Meta rather than handing off to their own automation, see
-     `${CLAUDE_PLUGIN_ROOT}/scripts/publish_direct.py --help`. It only
-     works if the user has already set up real API credentials for that
-     platform (see the plugin README) — check with `--dry-run` first,
-     same confirmation rules as above apply, and be explicit that this
-     path is less proven than the webhook path since it talks to live
-     platform APIs this plugin's author can't verify from here.
+     posting.** If the user wants to post straight to LinkedIn, X, Meta,
+     Reddit, Discord, Slack, Telegram, or dev.to rather than handing off to
+     their own automation, see `${CLAUDE_PLUGIN_ROOT}/scripts/publish_direct.py
+     --help`. It only works if the user has already set up real API
+     credentials for that platform (see the plugin README) — check with
+     `--dry-run` first, same confirmation rules as above apply, and be
+     explicit that this path is less proven than the webhook path since it
+     talks to live platform APIs this plugin's author can't verify from
+     here. For Reddit specifically, a successful API response doesn't
+     guarantee the post survives that subreddit's AutoModerator — confirm
+     the content actually came from a `community-post-generator` go (not a
+     no-go) before sending. For Discord, Slack, or Telegram specifically,
+     confirm the content came from a go too — and since a Discord or Slack
+     go is always `User-Supplied` confidence (this skill never
+     independently verified that server's/workspace's rules), and a
+     Telegram go is `User-Supplied` for a private channel/group but can be
+     `Primary`/`Secondary`/`Mixed` for a public one, check which tier this
+     specific draft actually rests on rather than assuming — that's one
+     more reason not to skip step 4's confirmation just because the
+     request "sounds routine." For Slack in particular, also confirm the
+     user actually has (or can get) the workspace permission a webhook
+     needs before treating the send as a quick step — it isn't guaranteed
+     self-serve the way Discord's is. For Telegram in particular, confirm
+     the bot has actually been added to the target chat by one of its
+     admins — creating the bot itself needs no approval from anyone, but
+     that's only the first of two gates, not the whole thing. For dev.to in
+     particular, confirm the content came from a go too, and if
+     `community-post-generator`'s research couldn't confirm the Code of
+     Conduct's self-promotion wording directly, say so before sending — a
+     2xx from dev.to's API means the article was accepted, not that a Tag
+     Moderator won't strip a tag from it afterward. **Product Hunt, Hacker
+     News, and Indie Hackers have no equivalent direct-send path, for
+     different reasons** (see README): Product Hunt's write API requires
+     special approval from Product Hunt itself; Hacker News's API has no
+     write/submit endpoint at all, for anyone; and Indie Hackers' API
+     situation is unverified rather than confirmed either way, so it's
+     treated as manual-only too — all three always go out by pasting the
+     draft in manually (producthunt.com, news.ycombinator.com, or
+     indiehackers.com), never through this script, and that's permanent
+     for Hacker News, not a "not yet approved" situation. Discord, Slack,
+     Telegram, and dev.to each have a real send path but don't share one
+     friction profile — Discord's webhook needs no approval step, Slack's
+     app often needs Workspace Owner/Admin approval before creation,
+     Telegram's bot needs no approval to create but does need a chat admin
+     to add it before it can post, and dev.to's API key needs no approval
+     process found in this skill's research at all (the simplest of the
+     four, though that's about access, not about whether a Tag Moderator
+     is happy with the result) — so don't lump any of the four into "every
+     non-Reddit platform here is manual-only," and don't lump them into
+     each other's ease either.
 
 6. **Report the result** plainly: exit code, HTTP status if a real send
    was made, and a one-line human-readable summary of what went where.
@@ -117,7 +162,12 @@ Trigger on requests like:
   "content": {
     "linkedin_post": "...",
     "twitter_thread": ["...", "..."],
-    "newsletter_blurb": "..."
+    "newsletter_blurb": "...",
+    "reddit_post": { "subreddit": "...", "title": "...", "body": "..." },
+    "discord_message": "...",
+    "slack_message": "...",
+    "telegram_message": "...",
+    "devto_post": { "title": "...", "body": "...", "tags": ["...", "..."] }
   },
   "assets": [
     { "type": "image|video", "description": "...", "url": "...or null", "prompt_reference": "..." }
