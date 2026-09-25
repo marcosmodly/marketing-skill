@@ -20,9 +20,9 @@ Sending is `publish-pipeline`'s job, one approved row at a time.
 1. **Check onboarding status.** Read
    `${CLAUDE_PLUGIN_ROOT}/references/brand-voice.md`. If it doesn't exist,
    or its first line is `<!-- MARKETING-SKILL:UNCONFIGURED -->`, pause and
-   ask the user this plugin's 3 setup questions (priority task; target
-   audience + tone; default output format — same as
-   `/marketing-skill:marketing-setup`) before continuing, then save the
+   ask the user this plugin's 4 setup questions (priority task; content
+   types to produce; target audience + tone; default output format — same
+   as `/marketing-skill:marketing-setup`) before continuing, then save the
    answers into that file and flip the marker to `CONFIGURED` with today's
    date. Otherwise, read it for tone, audience, banned words, and
    formatting constraints to apply below.
@@ -45,14 +45,18 @@ Sending is `publish-pipeline`'s job, one approved row at a time.
      doesn't specify.
    - Which platform(s) per slot — default to whatever
      `references/brand-voice.md` implies, or ask if genuinely unclear.
+   - Content type per slot — text/social post, short-form video, long-form
+     video, or image — default to whatever `references/brand-voice.md`'s
+     Content Types preference indicates, or ask if genuinely unclear.
    - Source material: one topic list from the user, a rotation of themes,
      or "pull from our own project" (same project-content search as
      `content-repurposer` — Glob for `README*`, `CHANGELOG*`,
      `docs/**/*.md` at the project root before asking the user to supply
      topics themselves).
-   - Whether visual briefs are wanted per slot (if so, hand off to
+   - Whether visual briefs are wanted per slot — default to yes when the
+     slot's content type is video or image; if so, hand off to
      `visual-brief-generator` per slot rather than duplicating its logic
-     here).
+     here.
 
 4. **Draft each slot.** For each date/platform pair, produce the actual
    post content using the same per-platform structure rules as

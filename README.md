@@ -81,13 +81,14 @@ route.
 ## Configure
 
 Every skill reads `references/brand-voice.md` before producing output —
-your task priority, target audience, tone, output format, banned words,
-and formatting constraints, defined once and reused everywhere.
+your task priority, content types (short-form video, long-form video,
+text posts, email, images), target audience, tone, output format, banned
+words, and formatting constraints, defined once and reused everywhere.
 
 - **Guided setup:** run `/marketing-skill:marketing-setup` any time
   (first-run or to update your answers).
 - **Automatic:** if you skip setup, the first skill you actually use will
-  ask the same 3 questions itself before proceeding, and save your answers
+  ask the same 4 questions itself before proceeding, and save your answers
   for next time.
 - **Manual:** edit `references/brand-voice.md` directly — keep its
   section headings intact so every skill can still find them.
