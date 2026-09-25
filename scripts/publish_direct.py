@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Scaffolding for posting text directly to LinkedIn, X, Meta (Facebook Page),
-Reddit, Discord, or Slack - no n8n/Make in between.
+Reddit, Discord, Slack, or Telegram - no n8n/Make in between.
 
 WARNING - read this before using it for anything real:
 
@@ -20,12 +20,14 @@ integration. Before relying on it:
     no OAuth review from Slack itself, but many workspaces require a
     Workspace Owner/Admin to approve new apps before a webhook can even
     be created - see "slack" below, don't assume it's as simple as
-    Discord.
+    Discord. Telegram bot creation itself needs no approval either, but
+    posting into a specific chat still needs that chat's own admin to add
+    the bot first - see "telegram" below.
   - Confirm the endpoint/version below is still current - check
     developers.linkedin.com, developer.x.com, developers.facebook.com,
-    Reddit's own API docs, Discord's own API docs, and Slack's own API
-    docs directly, since these APIs change and this script cannot check
-    for you.
+    Reddit's own API docs, Discord's own API docs, Slack's own API docs,
+    and core.telegram.org/bots/api directly, since these APIs change and
+    this script cannot check for you.
   - Run with --dry-run and compare the printed request against that
     platform's current docs before ever passing --confirmed.
   - Do one manual --confirmed test post yourself before wiring this into
@@ -36,13 +38,15 @@ integration. Before relying on it:
     (missing flair, self-promo policy, karma/age minimums, banned
     domains). Run the `community-post-generator` skill against the target
     subreddit first and resolve everything it flags before sending.
-  - For Discord and Slack specifically: `community-post-generator` can't
-    independently verify a given server's or workspace's rules the way it
-    can for Reddit/Product Hunt/Hacker News/Indie Hackers, since most
-    servers and workspaces have no public page to check at all - it works
-    from whatever rules you (as an actual member) supply it. Confirm
-    that's still current yourself before sending, same as you would
-    before posting by hand.
+  - For Discord and Slack specifically, and for a *private* Telegram
+    group/channel: `community-post-generator` can't independently verify
+    that target's rules the way it can for Reddit/Product Hunt/Hacker
+    News/Indie Hackers, since most private servers, workspaces, and
+    groups have no public page to check at all - it works from whatever
+    rules you (as an actual member) supply it. Confirm that's still
+    current yourself before sending, same as you would before posting by
+    hand. A *public* Telegram channel/group is the exception - see
+    "telegram" below.
 
 Text-only. None of these platforms' media-attachment flows are
 implemented here (Instagram in particular has no text-only post endpoint
@@ -120,12 +124,36 @@ NOTES = {
              "Same as Discord: this skill worked from whatever rules you "
              "supplied, not independent verification, so recheck the "
              "workspace's actual rules yourself before sending.",
+    "telegram": "Bot creation itself needs no approval - message @BotFather, "
+                "get a token in seconds - but that only creates the bot; "
+                "posting into a *specific* chat still requires that chat's "
+                "own admin to add the bot to it first, so a working token "
+                "doesn't mean you can post anywhere yet. Uses the Bot API's "
+                "sendMessage (api.telegram.org/bot<TOKEN>/sendMessage) - the "
+                "token is embedded in the URL itself, same credential-in-URL "
+                "pattern as Discord/Slack (redacted in --dry-run output). "
+                "Defaults to HTML parse_mode over Telegram's MarkdownV2 on "
+                "purpose: MarkdownV2 requires escaping a long list of "
+                "special characters anywhere they appear as literal text, "
+                "and getting it wrong fails the whole send with a parse "
+                "error, not just a rendering glitch - HTML only needs "
+                "'<', '>', and '&' escaped. Pass --parse-mode MarkdownV2 to "
+                "override, at your own risk. Hard-capped at 4096 characters "
+                "(rejected outright, not truncated - Telegram's API returns "
+                "'message is too long' and sends nothing). For a *private* "
+                "group/channel, community-post-generator worked from "
+                "whatever rules you supplied, same as Discord/Slack - "
+                "recheck them yourself before sending. A *public* channel "
+                "(has an @username) is the one case among these six where "
+                "the skill may have actually verified the rules directly "
+                "(via the public t.me/s/<username> preview), so check its "
+                "Source Confidence line rather than assuming User-Supplied.",
 }
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Post text directly to LinkedIn, X, Meta (Facebook Page), Reddit, Discord, or Slack. "
+        description="Post text directly to LinkedIn, X, Meta (Facebook Page), Reddit, Discord, Slack, or Telegram. "
                     "Scaffolding only - read the module docstring before using for real.",
         epilog=(
             "Required environment variables per platform:\n"
@@ -138,15 +166,21 @@ def parse_args():
             "            (also requires --subreddit and --title; --flair-id optional)\n"
             "  discord   DISCORD_WEBHOOK_URL  (the full webhook URL - itself the credential)\n"
             "  slack     SLACK_WEBHOOK_URL  (the full webhook URL - itself the credential)\n"
+            "  telegram  TELEGRAM_BOT_TOKEN  (also requires --chat-id; --parse-mode optional,\n"
+            "            defaults to HTML)\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--platform", required=True, choices=["linkedin", "x", "meta", "reddit", "discord", "slack"],
+    parser.add_argument("--platform", required=True,
+                         choices=["linkedin", "x", "meta", "reddit", "discord", "slack", "telegram"],
                          help="Which platform to post to.")
     parser.add_argument("--text", help="Post text. Reads stdin if omitted.")
     parser.add_argument("--subreddit", help="Target subreddit, no 'r/' prefix. Required for --platform reddit.")
     parser.add_argument("--title", help="Post title. Required for --platform reddit (the other platforms are body-only).")
     parser.add_argument("--flair-id", help="Optional flair template ID, --platform reddit only, if the subreddit requires one.")
+    parser.add_argument("--chat-id", help="Target chat: a numeric ID, or '@channelusername' for a public channel. Required for --platform telegram.")
+    parser.add_argument("--parse-mode", default="HTML", choices=["HTML", "MarkdownV2"],
+                         help="Telegram formatting mode (default: HTML, simpler escaping than MarkdownV2). --platform telegram only.")
     parser.add_argument("--timeout", type=float, default=15, help="Request timeout in seconds (default: 15).")
     parser.add_argument("--dry-run", action="store_true", help="Print the request instead of sending it.")
     parser.add_argument("--confirmed", action="store_true",
@@ -279,6 +313,28 @@ def build_slack_request(text):
     return url, headers, body, [url]
 
 
+def build_telegram_request(text, chat_id, parse_mode):
+    env = require_env("TELEGRAM_BOT_TOKEN")
+    if len(text) > 4096:
+        print(
+            f"Message is {len(text)} characters; Telegram rejects messages over 4096 "
+            "characters outright ('message is too long') rather than truncating them. "
+            "Shorten it before sending.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    url = f"https://api.telegram.org/bot{env['TELEGRAM_BOT_TOKEN']}/sendMessage"
+    headers = {"Content-Type": "application/json"}
+    body = json.dumps({
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": parse_mode,
+    }).encode("utf-8")
+    # The bot token is embedded in the URL path itself, not a header - redact the
+    # token value so it doesn't leak in --dry-run output (URL structure stays visible).
+    return url, headers, body, [env["TELEGRAM_BOT_TOKEN"]]
+
+
 BUILDERS = {
     "linkedin": build_linkedin_request,
     "x": build_x_request,
@@ -317,6 +373,15 @@ def main():
             )
             sys.exit(2)
         url, headers, body, secrets = build_reddit_request(text, args.subreddit, args.title, args.flair_id)
+    elif args.platform == "telegram":
+        if not args.chat_id:
+            print(
+                "--platform telegram requires --chat-id (a numeric chat ID, or "
+                "'@channelusername' for a public channel).",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        url, headers, body, secrets = build_telegram_request(text, args.chat_id, args.parse_mode)
     else:
         url, headers, body, secrets = BUILDERS[args.platform](text)
 

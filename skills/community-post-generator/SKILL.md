@@ -1,6 +1,6 @@
 ---
 name: community-post-generator
-description: Researches a specific subreddit's, Product Hunt's, Hacker News's, or Indie Hackers' actual rules and typical post style live before drafting — never a generic templated post, verifying each source is actually about the named target before trusting it, and writes it to read like a person wrote it. For Discord and Slack, where servers/workspaces have no public page to research at all, it asks the user (an actual member) for the rules instead of pretending to fetch them, and for Slack specifically drafts in Slack's own mrkdwn syntax rather than standard Markdown. Use when the user wants to post in a specific subreddit, on Product Hunt, on Hacker News (including Show HN), on Indie Hackers (including Show IH), in a specific Discord server or Slack workspace, or any other rules-driven community/forum.
+description: Researches a specific subreddit's, Product Hunt's, Hacker News's, or Indie Hackers' actual rules and typical post style live before drafting — never a generic templated post, verifying each source is actually about the named target before trusting it, and writes it to read like a person wrote it. For Discord and Slack, where servers/workspaces have no public page to research at all, it asks the user (an actual member) for the rules instead of pretending to fetch them, and for Slack specifically drafts in Slack's own mrkdwn syntax rather than standard Markdown. Telegram is bimodal: a public channel/group can actually be previewed live (t.me/s/<username>), a private one can't, so which research path applies is determined per-target rather than fixed platform-wide, and drafts default to Telegram's HTML formatting tags. Use when the user wants to post in a specific subreddit, on Product Hunt, on Hacker News (including Show HN), on Indie Hackers (including Show IH), in a specific Discord server, Slack workspace, or Telegram channel/group, or any other rules-driven community/forum.
 allowed-tools: Read, Grep, Glob, Write, WebSearch, WebFetch
 ---
 
@@ -38,6 +38,24 @@ webhook is (many workspaces gate app creation behind admin approval), and
 Slack's own formatting syntax (mrkdwn) actively conflicts with standard
 Markdown rather than just lacking rich formatting, so drafts for Slack
 are written in mrkdwn specifically, not treated as a Discord clone.
+
+Telegram doesn't fit either the "always researchable" group (Reddit/Product
+Hunt/Hacker News/Indie Hackers) or the "never researchable" one (Discord/
+Slack) — it's genuinely bimodal, and which side a given target falls on has
+to be determined before research starts, not assumed. A public channel or
+group (one with an `@username`, not just an invite link) can actually be
+previewed live at `t.me/s/<username>` without joining or authenticating, so
+the full Primary/Secondary/Mixed research this skill does for Reddit or
+Product Hunt is genuinely on the table. A private one (invite-link only) has
+no public surface at all, same as Discord and Slack, so it falls back to
+asking the user under `User-Supplied`. Step 2 determines that, plus one more
+thing Discord and Slack don't need determined at all: whether the target is
+a **channel** (broadcast, only admins post) or a **group** (many-way chat,
+members can post) — a direct self-post this skill drafts only makes sense
+for the latter; for a channel, the realistic ask is usually pitching the
+content to whoever runs it, a different deliverable than a chat message.
+Drafts default to Telegram's HTML formatting tags rather than its stricter
+MarkdownV2 mode (see step 5).
 
 The copy itself also has to survive first contact: something that reads
 as obviously AI-polished marketing text gets the same skeptical reaction
@@ -119,6 +137,25 @@ written to read like an actual person wrote them.
      not double), not standard Markdown — mention this now if the user
      seems to expect a Markdown-formatted post, so it's not a surprise at
      draft time.
+   - For Telegram: get the exact channel or group (never just "Telegram"),
+     and determine two things before anything else, since both change what
+     step 3 and step 4 can even do:
+     - **Channel or group?** A channel is one-way (only admins/owners post;
+       everyone else just reads), a group/supergroup is many-way (members
+       can post, subject to whatever the group's admins allow). If it's a
+       channel and the user isn't one of its admins, say plainly that this
+       skill can draft pitch text to send *to* whoever runs it, not a
+       message the user themselves would post — a different deliverable
+       than the chat-message shape the rest of this skill produces.
+     - **Public or private?** Does it have a public `@username` (public,
+       reachable at `t.me/<username>`), or only an invite link (private)?
+       This decides the research path in step 3: public targets get a real
+       research attempt via `t.me/s/<username>`'s web preview, private ones
+       skip straight to asking the user, the same as Discord and Slack.
+       If public, still confirm the user is actually a member (or has
+       access) before drafting — being able to preview a channel from
+       outside doesn't mean this skill or the user can verify current,
+       non-public norms the same way.
    - The underlying content/offer/topic, and any link or CTA (paste, file,
      URL, or "our product" — check `README*`, `CHANGELOG*`, `docs/**/*.md`,
      and `package.json`/`pyproject.toml` at the project root first if so,
@@ -243,6 +280,31 @@ written to read like an actual person wrote them.
      it's a designated channel, and if they don't know, ask them to check
      rather than drafting on a guess). Same "silence isn't an answer" rule
      applies.
+   - **Telegram.** Which research path applies was already determined in
+     step 2 — don't re-guess it here:
+     - **Public channel/group:** try `https://t.me/s/<username>` (Telegram's
+       unauthenticated web preview) for recent messages, and a pinned
+       message if one shows in the preview — many channels/groups pin their
+       posting rules or an "about this channel" message the same way a
+       subreddit pins rules. If that fetch is blocked or the runtime can't
+       reach `t.me`, fall back to WebSearch for the channel/group's own name
+       plus "rules" or "telegram," same tiering rule as every other
+       platform: snippets quoting the channel's own `t.me` page or pinned
+       content are `Secondary (official)`, third-party mentions are
+       `Secondary (third-party)`. If the preview loads but shows no explicit
+       rules or pinned message, that's real signal too — say so, and treat
+       the *typical recent message* pattern (tone, whether self-promotion
+       already happens there) as the closest available substitute, same
+       spirit as sampling a subreddit's top posts.
+     - **Private channel/group:** no public surface exists, full stop —
+       **ask the user directly**, same pattern as Discord and Slack (the
+       actual rules if any were stated when they joined, typical norms
+       they've observed, and if they don't know, ask them to check rather
+       than drafting on a guess). Same "silence isn't an answer" rule
+       applies.
+     Either way, also note from step 2 whether it's a channel or a group —
+     a channel where the user isn't an admin changes what gets drafted in
+     step 5, regardless of which research path applied.
    - Cite what was actually found — link the rules page or search result
      checked, note it was checked just now. Never assert a community's
      norms from training knowledge alone; subreddit rules change, and a
@@ -282,7 +344,14 @@ written to read like an actual person wrote them.
      just the likely outcome, it's the *only* possible one — there's no
      Primary or Secondary path at all, unlike Discord's narrow
      Discovery-listed exception, so don't research-and-report for Slack as
-     if a `Primary` or `Secondary` result were ever on the table.
+     if a `Primary` or `Secondary` result were ever on the table. For
+     Telegram, neither blanket rule applies — which tier set is even
+     reachable was decided by the public/private determination back in
+     step 2, not fixed by the platform itself: a public channel/group can
+     land on `Primary`, either `Secondary`, or `Mixed` exactly like Reddit
+     or Product Hunt can, while a private one collapses to `User-Supplied`
+     only, exactly like Slack. Report whichever one actually applied to
+     this target, not a platform-wide default.
 
 4. **Decide go/no-go before drafting anything.** If research turns up a
    hard block — self-promotion banned outright, the subreddit is
@@ -317,6 +386,17 @@ written to read like an actual person wrote them.
      applies the normal way if what the user described rules this out
      (self-promo banned entirely, wrong channel, no posting permission) —
      a friendlier tier name doesn't mean a friendlier bar for saying no.
+   - **For Telegram, which tier the Go rests on depends on the public/
+     private determination from step 2 — say which one, don't default to
+     either.** A public channel/group researched via `t.me/s/<username>` (or
+     WebSearch fallback) gets the same `Primary`/`Secondary (official)`/
+     `Secondary (third-party)` hedging as Reddit or Product Hunt above. A
+     private one gets the same `User-Supplied` treatment as Discord or
+     Slack: "Go, based on the rules you described — this skill couldn't
+     verify them independently since there's no public preview for a
+     private channel/group." Either way, if step 2 found it's a channel and
+     the user isn't an admin, say so again here too — a Go still means "this
+     content is welcome," not "the user can personally post it."
 
 5. **Draft the post** — shape depends on the platform (see Output
    structure below) — matching the specific community's researched format
@@ -344,6 +424,17 @@ written to read like an actual person wrote them.
      showing up depending on what's typed) — use `*bold*`, `_italic_`,
      `~strikethrough~`, and `` `code` `` per Slack's own syntax, not
      GitHub-flavored Markdown's.
+   - **For Telegram specifically, draft using HTML formatting tags by
+     default, not MarkdownV2 — this is a reliability choice, not a style
+     one.** Telegram's MarkdownV2 parse mode requires escaping over a dozen
+     characters (`_*[]()~`>#+-=|{}.!`) anywhere they appear outside actual
+     formatting, and a single missed escape fails the *entire* send with an
+     API error, not a partial render. HTML mode only needs `<`, `>`, and `&`
+     escaped, so use `<b>bold</b>`, `<i>italic</i>`, and `<code>code</code>`
+     instead of `**bold**`/`*italic*`/`` `code` ``. If the user specifically
+     wants MarkdownV2 (or the target expects it), that's fine to switch to,
+     but say plainly that it needs careful escaping and isn't the default
+     for a reason.
    - **Write it to read like an actual person typed it, not AI-polished
      marketing copy** — these communities react to that almost as badly
      as they react to overt promotion, since it's a strong tell for
@@ -377,7 +468,10 @@ written to read like an actual person wrote them.
    characters — Slack's hard technical cap is 40,000, but a message over
    4,000 gets visually truncated behind a "see more" link, a display
    problem Discord's flat 2,000-character rule doesn't have an equivalent
-   of.
+   of. For Telegram specifically, confirm the draft is under Telegram's
+   4096-character hard limit — like Discord, this is an outright rejection
+   ("message is too long"), not a truncation or a display-only issue like
+   Slack's ~4,000 threshold.
 
 ## When to use this skill
 
@@ -392,6 +486,8 @@ Trigger on requests like:
   #self-promo channel"
 - "Post this in our Slack" / "Write a message for the #announcements
   channel in [workspace]'s Slack"
+- "Post this in [Telegram channel/group]" / "Write a message for our
+  Telegram group"
 - "What's the best way to post this in [subreddit]?"
 
 If the request just says "Indie Hackers" with no other context, confirm
@@ -427,14 +523,22 @@ Use this exact section order, as Markdown `##` headings:
      (and possibly wrong or stale) upstream source.
    - `Mixed` — say which specific claims came from which of the tiers
      above, rather than blending them into one undifferentiated summary.
-   - `User-Supplied` (Discord and Slack only) — the rules came from the
-     user describing their own server or workspace, not from anything
-     this skill fetched or searched. Not a reliability ranking alongside
-     the others (it isn't "worse than Secondary" or "better than" it) —
-     it's a different kind of claim, self-reported by the requester
-     rather than independently checked at all, and has to be labeled as
-     exactly that. For Slack, this is the *only* tier that can ever
-     apply — there's no research exception the way Discord has one.
+   - `User-Supplied` (Discord and Slack always; Telegram when the target is
+     private) — the rules came from the user describing their own server,
+     workspace, or private channel/group, not from anything this skill
+     fetched or searched. Not a reliability ranking alongside the others
+     (it isn't "worse than Secondary" or "better than" it) — it's a
+     different kind of claim, self-reported by the requester rather than
+     independently checked at all, and has to be labeled as exactly that.
+     For Slack, this is the *only* tier that can ever apply — there's no
+     research exception the way Discord has one. For Telegram, it's
+     conditional rather than fixed: a **private** channel/group has no
+     research exception either, same as Slack, but a **public** one (an
+     `@username` target, previewable at `t.me/s/<username>`) can land on
+     any of the tiers above instead, exactly like Reddit or Product Hunt —
+     which case applies was already decided in step 2, and the tier
+     reported here has to match it, not default to `User-Supplied` out of
+     habit because Discord/Slack trained that reflex.
    Follow with what was actually found: self-promo policy,
    account-age/karma minimums if any, flair/title requirements, the
    typical post pattern observed, and the source(s) checked (links,
@@ -473,6 +577,17 @@ Use this exact section order, as Markdown `##` headings:
      it's pushing past ~4,000 characters (display truncation risk, not a
      hard rejection the way Discord's 2000-character line is). Same
      User-Supplied labeling as Discord.
+   - Telegram: also a single chat message, no title field. Formatted with
+     HTML tags (`<b>`, `<i>`, `<code>`) by default, not MarkdownV2 or
+     standard Markdown (see step 5) — visually similar in shape to the
+     Discord/Slack drafts, but the actual markup is neither's. Under 4096
+     characters (see step 6). Label its Source Confidence per-target, not
+     as a blanket `User-Supplied` — a public channel/group draft can carry
+     `Primary`/`Secondary`/`Mixed` labeling the same as Reddit, a private
+     one carries `User-Supplied` same as Discord/Slack. If step 2 found
+     it's a channel and the user isn't an admin, label the output as pitch
+     text for the channel's admin to post, not a ready-to-send chat
+     message.
    - Product Hunt launch (if that's the confirmed surface from step 2):
      tagline + description + first-comment text, labeled as draft assets
      for a process this skill doesn't manage end-to-end, not a single
@@ -488,30 +603,46 @@ Use this exact section order, as Markdown `##` headings:
    on them to confirm before sending, not something this skill already
    verified; for Slack specifically, also that they actually have — or
    can get — the workspace permissions a webhook requires, since that
-   isn't guaranteed the way it is on Discord).
+   isn't guaranteed the way it is on Discord; for Telegram specifically,
+   that the bot (if they plan to send via `publish_direct.py`) has actually
+   been added to that specific chat by one of its admins — creating a bot
+   via BotFather needs no approval from anyone, but that doesn't mean it
+   can post anywhere yet; and for a private channel/group, that the rules
+   they described are still current, same caveat as Discord/Slack's
+   User-Supplied cases).
 5. **Next Step** — the primary path is pasting it in manually; note that
    `publish-pipeline`'s optional direct-post path can send a Reddit
-   self-post, a Discord message, or a Slack message programmatically if
-   the user already has the right credentials (a Reddit API app, or a
-   webhook URL for that Discord channel or Slack channel; see that skill
-   and the plugin README) — but don't present Slack's path with the same
-   confidence as Discord's: Discord webhooks are close to always
-   available to a channel member, Slack's often need a Workspace
-   Owner/Admin to approve the app first. Product Hunt and Hacker News
-   have no equivalent send path here, for two different reasons worth
-   naming rather than lumping together: Product Hunt's write API exists
-   but needs Product Hunt's own special approval; Hacker News's official
-   API has no write/submit endpoint at all, for anyone. Indie Hackers'
-   API situation is genuinely unclear from this skill's research (some
-   sources reference an API, but it appears scoped to read-only
-   product/revenue data, and a community thread literally asks whether IH
-   has a developer API at all) — don't round that uncertainty off to a
-   confident yes or no, say plainly it's unverified and treat it as
-   manual-only until proven otherwise. Discord is the one platform here
-   where sending is unambiguously the easy part; Slack is closer to that
-   than to Product Hunt/HN/IH, but "closer to" isn't "the same as" — say
-   which one it actually is for this specific user rather than defaulting
-   to either assumption.
+   self-post, a Discord message, a Slack message, or a Telegram message
+   programmatically if the user already has the right credentials (a
+   Reddit API app, a webhook URL for that Discord channel or Slack
+   channel, or a bot token plus that chat's ID for Telegram; see that
+   skill and the plugin README) — but the three chat platforms don't share
+   one friction profile, so don't present any of them with borrowed
+   confidence from another:
+   - Discord: sending is unambiguously the easy part — a webhook is close
+     to always available to any channel member, no approval step.
+   - Slack: closer to Discord than to the platforms below, but not the
+     same — many workspaces need a Workspace Owner/Admin to approve
+     creating the app a webhook requires first.
+   - Telegram: a genuinely different friction shape from either — creating
+     the bot itself (via BotFather) needs no approval from anyone, that
+     part really is as easy as Discord's webhook creation, but the bot
+     then has to be *added to the specific chat* by one of that chat's
+     admins before it can post there at all. Easy first step, a real
+     second gate — don't round that off to "as easy as Discord" just
+     because bot creation alone is.
+   Product Hunt and Hacker News have no equivalent send path here, for two
+   different reasons worth naming rather than lumping together: Product
+   Hunt's write API exists but needs Product Hunt's own special approval;
+   Hacker News's official API has no write/submit endpoint at all, for
+   anyone. Indie Hackers' API situation is genuinely unclear from this
+   skill's research (some sources reference an API, but it appears scoped
+   to read-only product/revenue data, and a community thread literally
+   asks whether IH has a developer API at all) — don't round that
+   uncertainty off to a confident yes or no, say plainly it's unverified
+   and treat it as manual-only until proven otherwise. Say which of the
+   three send-path profiles above actually applies to this specific user
+   and target rather than defaulting to any one of them by habit.
 
 ## Formatting rules
 
@@ -519,7 +650,10 @@ Use this exact section order, as Markdown `##` headings:
   specific community in this run — no generic, reusable Reddit, Product
   Hunt, Hacker News, or Indie Hackers template. (Discord and Slack get the
   user-supplied equivalent — asking counts as "completing" the step,
-  skipping the ask doesn't.)
+  skipping the ask doesn't. Telegram gets whichever applies: a real
+  research attempt for a public target, the user-supplied equivalent for a
+  private one — but the public/private determination itself has to happen
+  first, not be skipped.)
 - Never treat a source as evidence about a target before confirming it's
   actually about that target, not a similarly-named different platform
   or community — this check happens before Source Confidence is assessed
@@ -571,13 +705,25 @@ Use this exact section order, as Markdown `##` headings:
   way it effectively is for Discord — Slack's app-approval requirement
   varies by workspace and this skill has no way to know which way a given
   workspace is configured.
+- On Telegram specifically: same member/don't-guess rules as Discord and
+  Slack above, but only after step 2's public/private determination has
+  actually happened — never skip straight to `User-Supplied` without first
+  checking whether the target has a public `@username` reachable via
+  `t.me/s/<username>`. Default drafts to HTML formatting tags, not
+  MarkdownV2 — a single unescaped character in MarkdownV2 fails the entire
+  send, not just that character's formatting. A draft over 4096 characters
+  isn't valid Telegram output; shorten it before presenting it, the same
+  outright-rejection failure mode as Discord, not Slack's truncation. If
+  step 2 found the target is a channel and the user isn't one of its
+  admins, label the draft as pitch text for the channel's admin, not a
+  message the user can personally send.
 - Always open the Community Research Summary with an explicit Source
   Confidence line — `Primary`, `Secondary (official)`,
-  `Secondary (third-party)`, `Mixed`, or (Discord and Slack only)
-  `User-Supplied` — and always carry a non-`Primary` confidence, naming
-  its tier, into the Go/No-Go line itself when the verdict is a go — this
-  is a required field, not an optional caveat to remember on a
-  case-by-case basis.
+  `Secondary (third-party)`, `Mixed`, or (Discord and Slack always;
+  Telegram when the target is private) `User-Supplied` — and always carry a
+  non-`Primary` confidence, naming its tier, into the Go/No-Go line itself
+  when the verdict is a go — this is a required field, not an optional
+  caveat to remember on a case-by-case basis.
 - Don't collapse `Secondary (official)` and `Secondary (third-party)`
   into one undifferentiated "secondary" note — a WebSearch snippet
   quoting the platform's own help-center page is not the same reliability
@@ -596,6 +742,17 @@ Use this exact section order, as Markdown `##` headings:
   Markdown, Slack actively requires mrkdwn instead), or a character-limit
   failure mode (Discord rejects over its limit, Slack truncates). Same
   research pattern, different platform, in every other respect.
+- Don't treat Telegram as a third clone of Discord or Slack either, even
+  though it also lands on `User-Supplied` when the target is private — its
+  research path is conditional (public targets get a real preview via
+  `t.me/s/`, private ones don't) where Discord's exception is narrow and
+  Slack's is nonexistent, its sending friction is bot-creation-easy-but-
+  per-chat-authorization-gated rather than Discord's near-universal ease or
+  Slack's app-approval gate, its formatting is HTML tags rather than
+  near-standard Markdown or mrkdwn, and its character limit (4096) rejects
+  outright like Discord's rather than truncating like Slack's. Same
+  research-and-draft pattern as all six other platforms, genuinely
+  different mechanics in every category above.
 
 ## Example output
 
@@ -817,3 +974,59 @@ two options above you want, and this skill will draft that version next.
 > `User-Supplied` tier, same honest hedging pattern, genuinely different
 > syntax and a genuinely more cautious Next Step - not a find-and-replace
 > of the Discord example.
+
+> **What a `Secondary` Telegram case looks like, and how it differs from
+> Discord's or Slack's `User-Supplied`.** Illustrative, not from an actual
+> run — this is the case that only exists for Telegram among the chat
+> platforms, since it depends on the target having a public `@username`:
+>
+> ```markdown
+> ## Community Research Summary
+> **Source Confidence: Secondary (official)** — the target is a public
+> group (`@examplebuilders`), so `https://t.me/s/examplebuilders` was
+> attempted for a live preview; the fetch itself was blocked by this
+> runtime's network policy, but WebSearch surfaced snippets quoting that
+> same `t.me/s/examplebuilders` page directly, including its pinned
+> message.
+>
+> Target: the fictional "@examplebuilders" Telegram group (confirmed a
+> group, not a channel — members can post, not just admins). Pinned
+> message (per the quoted snippet): self-promotion allowed on Fridays
+> only, one link per person, no cross-posting the same thing in multiple
+> Telegram communities. Requester confirmed they're a member.
+>
+> ## Go / No-Go
+> Go, but only if today is Friday per the pinned rule above — based on
+> `Secondary (official)` sourcing (the pinned message quoted via search
+> snippet, not a direct fetch this run), so confirm the rule is still
+> current before sending.
+>
+> ## Drafted Post
+> Been heads-down on this for about six weeks: <b>ExportKit</b>, a
+> one-click export tool for the report-building grind. Built it after
+> losing an entire afternoon to a manual export at my last job. Free tier
+> covers most single-user cases. Link in the next message so this doesn't
+> get flagged as a link-drop.
+>
+> ## Compliance Checklist
+> - Confirm today is actually a Friday before sending.
+> - Confirm the one-link-per-person rule hasn't changed since the pinned
+>   message was last updated.
+>
+> ## Next Step
+> Nothing sent. If the requester has a Telegram bot already added to
+> `@examplebuilders` by one of its admins, `publish-pipeline`'s direct-post
+> path can send this via the Bot API — creating the bot itself needs no
+> approval, but it only works if that add-to-chat step already happened.
+> ```
+>
+> `<b>ExportKit</b>` uses Telegram's HTML tag, not `**ExportKit**` or
+> `*ExportKit*` — a third syntax, distinct from both Discord's near-standard
+> Markdown and Slack's mrkdwn. And unlike either Discord or Slack example
+> above, this one reached `Secondary (official)`, not `User-Supplied` — the
+> target's public `@username` made a real (if network-blocked-and-
+> search-recovered) research pass possible, a determination made back in
+> step 2 before research even started. A private-target Telegram case would
+> look identical in shape to the Discord or Slack `User-Supplied` examples
+> above — same tier, same hedging — just with HTML tags in the draft
+> instead of near-standard Markdown or mrkdwn.
