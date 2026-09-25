@@ -89,8 +89,8 @@ step 5) for users who've set up their own platform API credentials.
      Don't assume it's connected — check available tools first.
    - **Alternate path (optional, not the default): direct platform
      posting.** If the user wants to post straight to LinkedIn, X, Meta,
-     Reddit, Discord, Slack, Telegram, dev.to, or GitHub Discussions rather
-     than handing off to their own automation, see
+     Reddit, Discord, Slack, Telegram, dev.to, GitHub Discussions, or
+     Stack Overflow rather than handing off to their own automation, see
      `${CLAUDE_PLUGIN_ROOT}/scripts/publish_direct.py --help`. It only
      works if the user has already set up real API credentials for that
      platform (see the plugin README) — check with `--dry-run` first, same
@@ -126,7 +126,23 @@ step 5) for users who've set up their own platform API credentials.
      working Personal Access Token guarantees neither, and both can change
      independently of the token's validity; also confirm whether the go
      was for the user's own repository or someone else's, since the latter
-     needs the tier hedging above and the former doesn't. **Product Hunt,
+     needs the tier hedging above and the former doesn't. For Stack
+     Overflow in particular, confirm the content came from a go too, and
+     confirm which case it is: `--question-id` omitted posts a new
+     question (the self-authored case; a follow-up invocation with
+     `--question-id` set to the ID the first call returns then posts the
+     self-answer), `--question-id` given posts an answer to that existing
+     question instead — sending the wrong shape posts something real to
+     the wrong endpoint, not a harmless no-op. Also confirm the user has
+     actually completed the Stack Exchange app registration (stackapps.com)
+     and the interactive OAuth consent step needed for a real access
+     token — this is friction none of Discord/Slack/Telegram/dev.to/GitHub
+     Discussions' credentials require (see `publish_direct.py --help` for
+     the one other platform here with comparable OAuth friction). And
+     since this skill's own research
+     couldn't confirm Stack Overflow's exact sitewide wording on
+     promotional answers, say so before sending rather than treating an
+     unconfirmed rule as cleared. **Product Hunt,
      Hacker News, and Indie Hackers have no equivalent direct-send path,
      for different reasons** (see README): Product Hunt's write API
      requires special approval from Product Hunt itself; Hacker News's API
@@ -136,19 +152,22 @@ step 5) for users who've set up their own platform API credentials.
      draft in manually (producthunt.com, news.ycombinator.com, or
      indiehackers.com), never through this script, and that's permanent
      for Hacker News, not a "not yet approved" situation. Discord, Slack,
-     Telegram, dev.to, and GitHub Discussions each have a real send path
-     but don't share one friction profile — Discord's webhook needs no
-     approval step, Slack's app often needs Workspace Owner/Admin approval
-     before creation, Telegram's bot needs no approval to create but does
-     need a chat admin to add it before it can post, dev.to's API key
-     needs no approval process found in this skill's research at all, and
-     GitHub Discussions' Personal Access Token is similarly approval-free
-     but depends on whether the target repository even has Discussions
-     turned on and whether the target category allows the account to
-     start one — access being easy doesn't mean there's anywhere to send
-     to — so don't lump any of the five into "every non-Reddit platform
-     here is manual-only," and don't lump them into each other's ease
-     either.
+     Telegram, dev.to, GitHub Discussions, and Stack Overflow each have a
+     real send path but don't share one friction profile — Discord's
+     webhook needs no approval step, Slack's app often needs Workspace
+     Owner/Admin approval before creation, Telegram's bot needs no
+     approval to create but does need a chat admin to add it before it can
+     post, dev.to's API key needs no approval process found in this
+     skill's research at all, GitHub Discussions' Personal Access Token is
+     similarly approval-free but depends on whether the target repository
+     even has Discussions turned on and whether the target category allows
+     the account to start one, and Stack Overflow needs both a registered
+     app and a completed interactive OAuth consent step before there's a
+     usable token at all, the most friction of the six — access being easy
+     (or, for Stack Overflow, genuinely not) doesn't mean there's anywhere
+     to send to — so don't lump any of the six into "every non-Reddit
+     platform here is manual-only," and don't lump them into each other's
+     ease either.
 
 6. **Report the result** plainly: exit code, HTTP status if a real send
    was made, and a one-line human-readable summary of what went where.
@@ -179,7 +198,8 @@ Trigger on requests like:
     "slack_message": "...",
     "telegram_message": "...",
     "devto_post": { "title": "...", "body": "...", "tags": ["...", "..."] },
-    "github_discussion": { "repo": "owner/repo", "category": "...", "title": "...", "body": "..." }
+    "github_discussion": { "repo": "owner/repo", "category": "...", "title": "...", "body": "..." },
+    "stackoverflow_post": { "site": "...", "question_id": "...or null", "question_title": "...or null", "question_body": "...or null", "tags": ["...", "..."], "answer_body": "..." }
   },
   "assets": [
     { "type": "image|video", "description": "...", "url": "...or null", "prompt_reference": "..." }

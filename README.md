@@ -6,7 +6,11 @@ findings across channels (including SEO, paid ads, and email), brief out
 a visual asset, research a specific subreddit's, Product Hunt's, Hacker
 News's, Indie Hackers', dev.to's, Discord server's, Slack workspace's,
 Telegram channel's/group's, or a GitHub repository's Discussions rules
-before drafting a post for it (asking you directly for Discord, Slack,
+before drafting a post for it — or, for Stack Overflow, judge whether a
+question would survive the platform's own closure norms before drafting
+a question-and-answer pair, or an answer to an existing question, since
+Stack Overflow has no rules page or post to check rules against at all
+(asking you directly for Discord, Slack,
 and any private Telegram target or repository, since those have no
 public page to check), and hand the finished content off to your own
 automation — or, with real credentials you provide, straight to a
@@ -27,7 +31,7 @@ anything actually publishes.
 | `ad-copy-generator` | "ad copy," "Meta/Google/LinkedIn/YouTube/TikTok ad variants," "A/B test copy" | Multiple ad variants per platform, each a distinct hook angle, sized to that platform's character limits |
 | `email-sequence` | "email sequence," "drip campaign," "welcome series" | A multi-email sequence with send timing, subject lines, and a real narrative arc across emails |
 | `visual-brief-generator` | "visual brief," "video brief," "shot list," "image prompts for X" | A structured shot list, per-scene prompts, aspect ratios, and style guide, with platform-specific format conventions (short-form scroll-past hook timing for TikTok/Reels/Shorts vs. long-form/feed pacing); generates the actual asset only if a visual-gen tool is connected |
-| `community-post-generator` | "post this to r/[subreddit]," "help me post on Product Hunt," "write a Show HN/Show IH for this," "post this on dev.to," "post an update to our GitHub Discussions," "post this in our Discord/Slack/Telegram" | Live-researches that specific subreddit's, Product Hunt's, Hacker News's, Indie Hackers', dev.to's, a public Telegram channel's/group's, or a public GitHub repository's Discussions actual rules and typical post style first (verifying each source is actually about that target, not a similarly-named one); for Discord, Slack, and private Telegram targets or repositories, asks you for the rules instead, since it can't research those. Gives a plain Go/No-Go either way — for GitHub Discussions specifically, whether Discussions is even enabled and whose repository it is matter as much as any rule — and only drafts a post (shaped for that platform — title+body, title+URL+first comment for Show HN, dev.to's/GitHub's title+body+tags-or-category, or a single chat message in Discord's, Slack's, or Telegram's own formatting for the chat platforms) if it's actually welcome there, written to read like a person wrote it |
+| `community-post-generator` | "post this to r/[subreddit]," "help me post on Product Hunt," "write a Show HN/Show IH for this," "post this on dev.to," "post an update to our GitHub Discussions," "write a Stack Overflow question and answer about...," "post this in our Discord/Slack/Telegram" | Live-researches that specific subreddit's, Product Hunt's, Hacker News's, Indie Hackers', dev.to's, a public Telegram channel's/group's, or a public GitHub repository's Discussions actual rules and typical post style first (verifying each source is actually about that target, not a similarly-named one); for Discord, Slack, and private Telegram targets or repositories, asks you for the rules instead, since it can't research those; for Stack Overflow, checks whether the question would survive the platform's own closure norms instead, since there's no rules page to research. Gives a plain Go/No-Go either way — for GitHub Discussions specifically, whether Discussions is even enabled and whose repository it is matter as much as any rule — and only drafts a post (shaped for that platform — title+body, title+URL+first comment for Show HN, dev.to's/GitHub's title+body+tags-or-category, a question-and-answer pair or a standalone answer for Stack Overflow, or a single chat message in Discord's, Slack's, or Telegram's own formatting for the chat platforms) if it's actually welcome there, written to read like a person wrote it |
 | `publish-pipeline` | "publish this," "send to n8n/Make," "fire the webhook," "send the queued post for [date]" | Packages finished content/assets into JSON and hands off to your automation via webhook (or, optionally, straight to a platform API) after showing you the exact payload |
 | `full-pipeline` | "run the full pipeline," "research X and publish it," "do the whole thing end to end" | Chains research, repurposing, visual brief, and publish into one run, with a mandatory pause before anything actually publishes |
 
@@ -151,7 +155,7 @@ send.
 
 `scripts/publish_direct.py` posts straight to LinkedIn, X, Meta (Facebook
 Page), Reddit, Discord, Slack, Telegram, dev.to, GitHub Discussions,
-TikTok, or Instagram instead of going through your own automation —
+Stack Overflow, TikTok, or Instagram instead of going through your own automation —
 `python3 scripts/publish_direct.py --help` lists what each platform
 needs. YouTube is deliberately not included (see below). **Read the
 script's module docstring before using it.** It was written without a
@@ -163,7 +167,8 @@ still current against that platform's own developer docs
 Reddit's own API docs, Discord's own API docs, Slack's own API docs,
 Telegram's own Bot API docs at core.telegram.org/bots/api,
 developers.forem.com/api for dev.to, docs.github.com/en/graphql for
-GitHub Discussions, developers.tiktok.com for TikTok, and
+GitHub Discussions, api.stackexchange.com/docs for Stack Overflow,
+developers.tiktok.com for TikTok, and
 developers.facebook.com/docs/instagram-platform for Instagram), confirm
 you actually have write-access API scope (X in particular gates this
 behind a paid tier, Reddit closed instant self-service app registration
@@ -188,17 +193,26 @@ dev.to, GitHub Discussions, TikTok, and Instagram, the credential is a
 static API key or access token in a header (`api-key` for dev.to,
 `Authorization: Bearer` for the other three), all redacted the same
 simple way, no OAuth flow needed to obtain any of the four in the first
-place. For Reddit, a successful response doesn't guarantee the post
+place. Stack Overflow breaks that last pattern: its credential is also a
+key/token pair sent with the request (a public app key plus an access
+token, both redacted), but getting that access token in the first place
+needs a real interactive OAuth consent flow and an app registered at
+stackapps.com — friction none of dev.to/GitHub Discussions/TikTok/
+Instagram have (X is the other platform in this script with comparable
+OAuth friction, though it isn't detailed here — see the script's own
+NOTES via `--help`). For Reddit, a successful
+response doesn't guarantee the post
 survives that subreddit's AutoModerator — see "Posting to Reddit, Product
-Hunt, Hacker News, Indie Hackers, dev.to, GitHub Discussions, Discord,
-Slack & Telegram" below before sending anything for real.
+Hunt, Hacker News, Indie Hackers, dev.to, GitHub Discussions, Stack
+Overflow, Discord, Slack & Telegram" below before sending anything for
+real.
 
 **Discord is one of the easiest to actually set up** — a webhook needs no
 OAuth app review at all, just `MANAGE_WEBHOOKS` permission on the channel
 to create one (Channel Settings → Integrations → Webhooks). That's one
 place this script is easier than the platform it's replacing, not harder:
 `community-post-generator` can't independently verify a Discord server's
-rules the way it can for the researchable five (see below), so the actual
+rules the way it can for the researchable six (see below), so the actual
 bottleneck for Discord is research, not access. It's not the unconditional
 floor, though — see dev.to and GitHub Discussions below for credentials
 that need no target-specific permission to be valid, even though only one
@@ -268,6 +282,30 @@ characters and Discussions likely shares that infrastructure, but this
 wasn't independently verified, so treat it as a risk to watch, not a rule
 this script enforces.
 
+**Stack Overflow has no single "post" endpoint at all, and its access
+story is the real friction that dev.to and GitHub Discussions, just
+above, turn out to be the easy exceptions to.** Sending a self-authored pitch is two independent
+writes — a question, then separately an answer to it — not one call, and
+not Instagram's create-then-publish shape either, since a question and
+an answer are two genuinely separate pieces of content, not one asset in
+two states. `--question-id` decides which write happens: omit it to
+create a new question (needs `--title`; `--tags` optional, sent
+semicolon-separated on the wire — this script's best-effort read of the
+API's convention, not independently confirmed, so check current docs),
+pass it to post an answer instead, whether to a question this same run
+just created or one someone else already asked. Access itself is the
+real gate here, unlike dev.to or GitHub Discussions: a registered app
+from stackapps.com plus a user-context access token obtained through a
+real interactive OAuth consent flow, not a key you copy from account
+settings. `--site` is required — the target Stack Exchange site's short
+API slug (`stackoverflow`, `serverfault`, etc.), not its domain name. No
+confirmed character limit was found for questions or answers, so unlike
+Discord/Telegram this script doesn't hard-block on length. A 2xx response
+means the API accepted the question or answer, not that the question
+will survive being closed as too broad or opinion-based — see "Posting
+to Reddit, Product Hunt, Hacker News, Indie Hackers, dev.to, GitHub
+Discussions, Stack Overflow, Discord, Slack & Telegram" below.
+
 **TikTok's access is easy the same way dev.to's and GitHub Discussions'
 are, but what you actually get for it is smaller than either.** A TikTok
 for Developers access token needs no app review to start using. The catch
@@ -311,9 +349,9 @@ path here, for different reasons.** Product Hunt's write API
 (`createPost`, etc.) requires special approval from Product Hunt itself —
 the free/default API tier is explicitly read-only, non-commercial (see
 below) — so unlike LinkedIn/X/Meta/Reddit/Discord/Slack/Telegram/dev.to/
-GitHub Discussions/TikTok/Instagram, there's no "just bring your own API
-credentials" option to script against, though that approval process at
-least exists. Hacker News has no write API to even
+GitHub Discussions/Stack Overflow/TikTok/Instagram, there's no "just
+bring your own API credentials" option to script against, though that
+approval process at least exists. Hacker News has no write API to even
 apply for — its official API is read-only by design, full stop, so this
 isn't a "not yet approved" situation, it's "nothing to approve." Indie
 Hackers is genuinely unverified rather than confirmed either way — some
@@ -343,9 +381,9 @@ way to do that, on the theory that a live company account posting
 unsupervised is a decision only you should make explicitly, not one a
 scheduling tool should make for you by default.
 
-## Posting to Reddit, Product Hunt, Hacker News, Indie Hackers, dev.to, GitHub Discussions, Discord, Slack & Telegram
+## Posting to Reddit, Product Hunt, Hacker News, Indie Hackers, dev.to, GitHub Discussions, Stack Overflow, Discord, Slack & Telegram
 
-`community-post-generator` treats these nine differently from the
+`community-post-generator` treats these ten differently from the
 broadcast platforms above: instead of a fixed post template, it does a
 live research pass — the target subreddit's actual rules, a sample of
 what's currently working there, Product Hunt's own guidelines, HN's
@@ -356,7 +394,12 @@ GitHub's sitewide Community Guidelines — before drafting anything, and it
 will tell you plainly (a "No-Go") when a community's rules would just get
 the post removed,
 rather than drafting something that reads fine but breaks a rule you
-didn't know about. It also writes the draft itself to read like an
+didn't know about. Stack Overflow breaks that "rules" framing entirely —
+there's no rules page, because there's no post to check rules against,
+only questions and answers — so there the live research pass instead
+judges whether a question is narrow and objective enough to survive the
+platform's own closure norms (see below). It also writes the draft
+itself to read like an
 actual person wrote it — no em dashes, no AI-polish tells — since these
 communities react to that almost as badly as they react to overt
 promotion.
@@ -377,10 +420,12 @@ Show IH has one. dev.to also has a sanctioned company-page feature
 (Organizations), so posting under a personal account versus one is worth
 asking about upfront.
 
-**Discord and Slack both work differently from the other five, and it's
+**Discord and Slack both work differently from the other six, and it's
 worth understanding why — and why they aren't the same as each other
-either.** Reddit, Product Hunt, Hacker News, Indie Hackers, and dev.to all
-publish rules on the open web — this skill can, at least in principle,
+either.** Reddit, Product Hunt, Hacker News, Indie Hackers, dev.to, and
+Stack Overflow are all researchable on the open web — either published
+rules, or (for Stack Overflow) the site's own scope and question norms —
+this skill can, at least in principle,
 look them up. Most Discord servers and virtually all Slack workspaces
 can't be seen at all without joining first: no public rules page, no
 crawlable post history, nothing for WebFetch or WebSearch to find. So for
@@ -415,7 +460,7 @@ added to the specific chat by one of its admins before it can post there
 — easier than Slack's app-approval gate to start, but not the
 single-step ease of a Discord webhook either.
 
-**GitHub Discussions adds a gate none of the other eight need: whether the
+**GitHub Discussions adds a gate none of the other nine need: whether the
 surface exists at all.** Most repositories never turn Discussions on —
 confirmed by testing against this very plugin's own repository, which
 doesn't have it enabled — so that has to be checked before anything else,
@@ -434,6 +479,29 @@ dev.to don't have: some categories (commonly Announcement-style ones)
 restrict who can even start a new discussion to the repository's own
 maintainers, regardless of whether the repository itself is public.
 
+**Stack Overflow doesn't fit the always-researchable group or the
+bimodal one either — it has no rules to research at all.** There's no
+announcement or forum submission on Stack Overflow, only questions and
+answers, so "research" here means something different from every other
+platform above: judging whether a planned question is narrow and
+objective enough to survive Stack Overflow's own closure norms, not
+checking it against a rules page. Its own blog explicitly endorses the
+pattern that functions as promotion here — ask a genuine, well-formed
+question, then answer it yourself, with the product as the natural
+solution — a question-and-answer pair, not a title+body post, the first
+genuinely new drafted-post shape this skill produces since Show HN's
+three-piece split. Stack Overflow is also just the flagship of the
+broader Stack Exchange network of independently-run, topic-specific Q&A
+sites, so confirming the right site is part of the scoping step, the
+same discipline as naming a subreddit. And this skill handles a second,
+narrower case too: answering a specific *existing* question someone else
+already asked, rather than authoring a new one — there, the judgment
+call is whether the product genuinely solves what's being asked, not
+whether a new question would survive closure. Either way, this skill
+couldn't confirm a specific, citable self-promotion ratio or ban
+threshold the way Reddit has one — that gap is called out plainly rather
+than invented.
+
 A few things worth knowing going in:
 - **Similarly-named platforms are a real trap, not a hypothetical one.**
   Researching Indie Hackers, one source turned out to be describing
@@ -441,14 +509,18 @@ A few things worth knowing going in:
   name — not indiehackers.com itself. The skill now verifies a source is
   actually about the named target before trusting it at all, but it's
   worth double-checking yourself if a name could plausibly refer to more
-  than one thing.
+  than one thing. Stack Overflow versus the broader **Stack Exchange
+  network** is the same trap in a new shape — "Stack Overflow" itself is
+  programming-specific, so a sysadmin question belongs on Server Fault, a
+  different topic on a different site in the network entirely, and
+  getting this wrong is the same mistake as picking the wrong subreddit.
 - **Self-promotion is the #1 way this goes wrong**, and each platform
   enforces it differently. Most active subreddits either ban it outright,
   cap it, or restrict it to a specific thread/day. Product Hunt has a
   dedicated Self-Promotion category, separate from General. Hacker News
   has no cooldown or designated lane at all — its rule is behavioral,
   about whether your account's overall pattern is genuine participation
-  or promotion-only. Indie Hackers is the most welcoming of the five
+  or promotion-only. Indie Hackers is the most welcoming of the six
   researchable platforms to the *fact* of self-promotion (it's built for
   founders sharing their own products) but still requires the right shape
   — Show IH specifically wants a founder story, your current stage, and
@@ -466,18 +538,29 @@ A few things worth knowing going in:
   layer on top of its own public/private split: GitHub's sitewide
   Community Guidelines apply everywhere, but how heavily they bite depends
   on whose repository it is — light for your own, real judgment-call
-  weight for someone else's. None of this is something the skill can
+  weight for someone else's. Stack Overflow enforces this differently in
+  kind from every platform above: there's no ratio or designated lane to
+  cite, since its own blog explicitly endorses asking a genuine question
+  and answering it yourself as legitimate, not a workaround — the real
+  risk isn't a self-promotion rule being enforced, it's a weak or
+  opinion-based question getting closed before anyone sees the answer,
+  no matter how good that answer is. None of this is something the skill can
   audit against your actual account history or standing — double-check
   that yourself wherever a minimum or a pattern is at stake.
 - **Don't batch-blast the same pitch across subreddits, groups, servers,
-  workspaces, repositories, or forums.** Each community gets its own
+  workspaces, repositories, forums, or Stack Exchange sites.** Each
+  community gets its own
   research pass (or, for Discord/Slack/a private Telegram target/a private
   repository, its own ask) and its own angle; reusing one pitch verbatim
   across several is against most communities' rules and a fast way to get
-  an account banned.
+  an account banned. For Stack Overflow specifically, that also means
+  never posting near-duplicate questions across sites just to find one
+  that sticks, and never treating the self-authored and existing-question
+  cases as interchangeable — they call for different research and produce
+  different deliverables.
 - **API access to actually post varies a lot by platform, and Discord,
-  Slack, Telegram, dev.to, and GitHub Discussions land in five different
-  places, not one.** Reddit closed instant self-service app registration
+  Slack, Telegram, dev.to, GitHub Discussions, and Stack Overflow land in
+  six different places, not one.** Reddit closed instant self-service app registration
   in late 2025 in favor of a manual approval queue (see "Posting directly
   to a platform" above) — you can still get `submit`-scope access, it
   just isn't instant. Product Hunt's write API requires Product Hunt's own
@@ -509,14 +592,22 @@ A few things worth knowing going in:
   there's anywhere to send *to* — most repositories never enable
   Discussions, and some categories restrict who can start a new discussion
   regardless of the token's validity, a target-dependent gate dev.to's
-  tags simply don't have. For Discord the hard part is research, not
+  tags simply don't have. **Stack Overflow is the most access-gated of
+  the six** — a registered stackapps.com app plus a completed interactive
+  OAuth consent step before there's a usable token at all, unlike any
+  credential above that you can just copy from account settings — and
+  even once you have one, sending is two independent writes (a question,
+  then separately an answer), not the single call every other platform
+  here makes. For Discord the hard part is research, not
   access; for Slack, both research and access can be real friction; for
   Telegram, research depends on public/private status and access has its
   own two-stage shape; for dev.to, access is close to frictionless but
   content moderation happens after the fact, separate from the API call
   itself; for GitHub Discussions, access is just as frictionless as
   dev.to's but whether the destination exists at all is a real, separate
-  question; for the other three with no send path at all, it's the
+  question; for Stack Overflow, access is the real friction and the
+  write itself is split in two; for the other three with no send path at
+  all, it's the
   reverse of Discord entirely. Either way, the drafted post stands on its
   own — paste it in manually if you'd rather not set up API access.
 - **A "Go" from this skill isn't a guarantee.** It's reading the same
@@ -533,9 +624,16 @@ A few things worth knowing going in:
   send with no notice to this skill, and a Discord server's, Slack
   workspace's, or Telegram channel's/group's actual current rules might
   differ from what you remembered (or what a public preview showed) when
-  asked.
+  asked. For Stack Overflow specifically, a "Go" means this skill judged
+  the question narrow and objective enough to plausibly survive — it
+  still isn't a guarantee against closure, since the platform's actual
+  closure decisions weigh things (moderator judgment, near-duplicate
+  detection) this skill has no way to check in advance, and this skill
+  also couldn't confirm the platform's exact sitewide wording on
+  promotional answers, so treat that specific gap as open, not cleared.
 - **No dedicated Reddit, Product Hunt, Hacker News, Indie Hackers, dev.to,
-  GitHub Discussions, Discord, Slack, or Telegram connector exists to plug
+  GitHub Discussions, Stack Overflow, Discord, Slack, or Telegram
+  connector exists to plug
   in here** (checked against Claude's connector directory as of this
   writing) — `community-post-generator` does its research with plain
   WebFetch/WebSearch against each site's own public pages (or, for
@@ -570,7 +668,7 @@ state/
   posts/                  # one file per queued post's full content, linked from the index above
 scripts/
   publish_webhook.py     # stdlib-only webhook sender (see --help)
-  publish_direct.py      # stdlib-only direct-to-platform scaffold (LinkedIn/X/Meta/Reddit/Discord/Slack/Telegram/dev.to/GitHub Discussions/TikTok/Instagram; YouTube deliberately excluded), needs your own API credentials (see --help)
+  publish_direct.py      # stdlib-only direct-to-platform scaffold (LinkedIn/X/Meta/Reddit/Discord/Slack/Telegram/dev.to/GitHub Discussions/Stack Overflow/TikTok/Instagram; YouTube deliberately excluded), needs your own API credentials (see --help)
 ```
 
 ## Contributors

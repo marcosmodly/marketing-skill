@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 Scaffolding for posting text directly to LinkedIn, X, Meta (Facebook Page),
-Reddit, Discord, Slack, Telegram, dev.to, GitHub Discussions, TikTok, or
-Instagram - no n8n/Make in between. YouTube is deliberately NOT included -
-see the note near the bottom of this docstring for why.
+Reddit, Discord, Slack, Telegram, dev.to, GitHub Discussions, Stack Overflow,
+TikTok, or Instagram - no n8n/Make in between. YouTube is deliberately NOT
+included - see the note near the bottom of this docstring for why.
 
 WARNING - read this before using it for anything real:
 
@@ -41,12 +41,18 @@ integration. Before relying on it:
     posting, not something this script can do for you - see "tiktok"
     below. Instagram's Graph API needs a Business or Creator account
     linked to a Facebook Page, with instagram_content_publish permission
-    on the access token - see "instagram" below.
+    on the access token - see "instagram" below. Stack Overflow's Stack
+    Exchange API needs a registered app (stackapps.com) plus a
+    user-context OAuth2 access token obtained through a real interactive
+    consent flow - not a static key you paste in from account settings
+    the way dev.to's is - see "stackoverflow" below.
   - Confirm the endpoint/version below is still current - check
     developers.linkedin.com, developer.x.com, developers.facebook.com,
     Reddit's own API docs, Discord's own API docs, Slack's own API docs,
     core.telegram.org/bots/api, developers.forem.com/api (dev.to's own
     docs), docs.github.com/en/graphql (GitHub's GraphQL API reference),
+    api.stackexchange.com/docs (Stack Exchange API v2.3 reference, also
+    covering stackapps.com's app-registration process),
     developers.tiktok.com (TikTok's Content Posting API docs), and
     developers.facebook.com/docs/instagram-platform (Instagram's Graph API
     docs) directly, since these APIs change and this script cannot check
@@ -88,6 +94,22 @@ integration. Before relying on it:
     `community-post-generator`'s research actually established this was
     the right repo and category for that, not just that the API call will
     succeed. See "github_discussions" below.
+  - For Stack Overflow specifically: there's no single "post" endpoint
+    the way every other platform above has one - a self-authored pitch is
+    two independent writes (a question, then separately an answer to it),
+    not one call, and not the create-a-container-then-publish-it shape
+    Instagram uses either, since a question and an answer are two
+    genuinely separate pieces of content, not one asset in two states.
+    `--question-id` decides which write this call makes: omit it to post
+    a new question, pass it to post an answer to that question - whether
+    that question is one this same run just created (the self-answer half
+    of a pair) or one someone else already asked. A 2xx response only
+    means the API accepted the question or answer, not that the question
+    will survive being closed as too broad or opinion-based - confirm
+    `community-post-generator`'s research actually judged the question
+    narrow and objective enough first, the same discipline as checking a
+    subreddit's AutoModerator won't remove a Reddit post. See
+    "stackoverflow" below.
   - For TikTok specifically: check the actual privacy level your app is
     allowed to post at before assuming --confirmed will do anything
     public. An unaudited app gets silently downgraded to SELF_ONLY by
@@ -269,6 +291,43 @@ NOTES = {
              "hard-block on it the way it does for Discord/Telegram. "
              "Whether this post even belongs here depends on whose repo it "
              "is - see the WARNING section above.",
+    "stackoverflow": "Uses the Stack Exchange API v2.3's write endpoints "
+             "(api.stackexchange.com/2.3) - questions/add to post a new "
+             "question, questions/{id}/answers/add to post an answer, "
+             "either to a question this same run just created (the "
+             "self-answer half of a self-authored pair) or to an existing "
+             "question someone else asked - the API draws no distinction "
+             "between the two, only --question-id's provenance differs. "
+             "Omit --question-id to create a new question (requires "
+             "--title; --tags optional, sent semicolon-separated on the "
+             "wire - this script's best-effort read of the API's tag "
+             "convention, not independently confirmed this session, so "
+             "check current docs before relying on it). Pass --question-id "
+             "to post an answer instead - --title/--tags are then ignored. "
+             "Two independent writes, not Instagram's "
+             "create-container-then-publish-it shape - see the WARNING "
+             "section above. Needs "
+             "a registered application's public key from stackapps.com "
+             "(STACKOVERFLOW_APP_KEY) plus a user-context OAuth2 access "
+             "token (STACKOVERFLOW_ACCESS_TOKEN) - getting that token "
+             "needs a real interactive OAuth consent flow, the same kind "
+             "of friction as the 'x' platform above, not a key you copy "
+             "from account settings the way dev.to's is. Some of this "
+             "script's research pointed at newer Personal Access Tokens "
+             "for API v2.3 possibly superseding this key+token pair - that "
+             "wasn't independently confirmed, so treat the credential "
+             "shape here as best-effort against the last confirmed "
+             "documentation, same caveat as every other platform in this "
+             "script. --site is required - the target Stack Exchange "
+             "site's short API slug (e.g. 'stackoverflow', 'serverfault'), "
+             "not its domain name; getting this wrong sends a well-formed "
+             "question or answer to the wrong site entirely. No confirmed "
+             "character limit found for questions or answers, so unlike "
+             "Discord/Telegram this script doesn't hard-block on length. A "
+             "2xx response here means the API accepted the post, not that "
+             "it will survive being closed as too broad or opinion-based - "
+             "run community-post-generator against the target site first, "
+             "same discipline as Reddit's AutoModerator caveat above.",
     "tiktok": "Uses the Content Posting API's Direct Post init endpoint "
               "(POST open.tiktokapis.com/v2/post/publish/video/init/) with "
               "source=PULL_FROM_URL - TikTok's servers fetch the video "
@@ -318,8 +377,8 @@ NOTES = {
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Post text directly to LinkedIn, X, Meta (Facebook Page), Reddit, Discord, Slack, Telegram, "
-                    "dev.to, GitHub Discussions, TikTok, or Instagram. YouTube is deliberately not included - "
-                    "see the module docstring. "
+                    "dev.to, GitHub Discussions, Stack Overflow, TikTok, or Instagram. YouTube is deliberately "
+                    "not included - see the module docstring. "
                     "Scaffolding only - read the module docstring before using for real.",
         epilog=(
             "Required environment variables per platform:\n"
@@ -338,6 +397,10 @@ def parse_args():
             "            separated, max 4; --org-id optional)\n"
             "  github_discussions  GITHUB_DISCUSSIONS_TOKEN  (also requires --title,\n"
             "            --repo-id, and --category-id - GraphQL node IDs, not 'owner/repo')\n"
+            "  stackoverflow  STACKOVERFLOW_ACCESS_TOKEN, STACKOVERFLOW_APP_KEY  (also\n"
+            "            requires --site; --question-id omitted posts a new question\n"
+            "            (needs --title; --tags optional), given posts an answer to it\n"
+            "            instead (--title/--tags ignored))\n"
             "  tiktok    TIKTOK_ACCESS_TOKEN  (also requires --video-url; --privacy-level\n"
             "            optional, defaults to SELF_ONLY - the only level an unaudited\n"
             "            app can actually use)\n"
@@ -349,19 +412,21 @@ def parse_args():
     )
     parser.add_argument("--platform", required=True,
                          choices=["linkedin", "x", "meta", "reddit", "discord", "slack", "telegram", "devto",
-                                  "github_discussions", "tiktok", "instagram"],
+                                  "github_discussions", "stackoverflow", "tiktok", "instagram"],
                          help="Which platform to post to. YouTube is not offered here - see the module docstring.")
     parser.add_argument("--text", help="Post text. Reads stdin if omitted. Optional for --platform instagram when --publish-container-id is given (step two needs no caption).")
     parser.add_argument("--subreddit", help="Target subreddit, no 'r/' prefix. Required for --platform reddit.")
-    parser.add_argument("--title", help="Post title. Required for --platform reddit, devto, and github_discussions (the chat platforms are body-only).")
+    parser.add_argument("--title", help="Post title. Required for --platform reddit, devto, and github_discussions, and for stackoverflow when posting a new question (omit for a stackoverflow answer via --question-id) - the chat platforms are body-only.")
     parser.add_argument("--flair-id", help="Optional flair template ID, --platform reddit only, if the subreddit requires one.")
     parser.add_argument("--chat-id", help="Target chat: a numeric ID, or '@channelusername' for a public channel. Required for --platform telegram.")
     parser.add_argument("--parse-mode", default="HTML", choices=["HTML", "MarkdownV2"],
                          help="Telegram formatting mode (default: HTML, simpler escaping than MarkdownV2). --platform telegram only.")
-    parser.add_argument("--tags", help="Comma-separated tags, max 4 (e.g. 'showdev,ai,opensource'). --platform devto only.")
+    parser.add_argument("--tags", help="Comma-separated tags (e.g. 'showdev,ai,opensource'). --platform devto only allows a max of 4, sent comma-separated on the wire; --platform stackoverflow has no confirmed cap and this script sends them semicolon-separated on the wire instead (the CLI input stays comma-separated either way). Ignored for a stackoverflow answer (--question-id given).")
     parser.add_argument("--org-id", help="Post under this dev.to Organization ID instead of your personal account. --platform devto only, optional.")
     parser.add_argument("--repo-id", help="Target repository's GraphQL node ID (not 'owner/repo'). Required for --platform github_discussions.")
     parser.add_argument("--category-id", help="Target discussion category's GraphQL node ID. Required for --platform github_discussions.")
+    parser.add_argument("--site", help="Target Stack Exchange site's short API slug (e.g. 'stackoverflow', 'serverfault'), not its domain name. Required for --platform stackoverflow.")
+    parser.add_argument("--question-id", help="An existing question's numeric ID to post an answer to, instead of creating a new question. --platform stackoverflow only; when given, --title/--tags are ignored.")
     parser.add_argument("--video-url", help="Public URL of an already-hosted video for TikTok to pull (source=PULL_FROM_URL). Required for --platform tiktok.")
     parser.add_argument("--privacy-level", default="SELF_ONLY",
                          choices=["SELF_ONLY", "PUBLIC_TO_EVERYONE", "MUTUAL_FOLLOW_FRIENDS", "FOLLOWER_OF_CREATOR"],
@@ -578,6 +643,45 @@ def build_github_discussions_request(text, title, repo_id, category_id):
     return url, headers, body, [env["GITHUB_DISCUSSIONS_TOKEN"]]
 
 
+def build_stackoverflow_request(text, site, title, tags, question_id):
+    env = require_env("STACKOVERFLOW_ACCESS_TOKEN", "STACKOVERFLOW_APP_KEY")
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    if question_id:
+        # Posting an answer - to a question this run just created (the
+        # self-answer half of a self-authored pair) or to an existing
+        # question someone else asked. The API draws no distinction
+        # between the two; only question_id's provenance differs.
+        url = f"https://api.stackexchange.com/2.3/questions/{question_id}/answers/add"
+        fields = {
+            "body": text,
+            "site": site,
+            "key": env["STACKOVERFLOW_APP_KEY"],
+            "access_token": env["STACKOVERFLOW_ACCESS_TOKEN"],
+        }
+    else:
+        # Creating a new question - a separate write from the self-answer
+        # that (if any) follows it in a second invocation, not a
+        # create-then-publish pair on one piece of content like Instagram.
+        url = "https://api.stackexchange.com/2.3/questions/add"
+        fields = {
+            "title": title,
+            "body": text,
+            "site": site,
+            "key": env["STACKOVERFLOW_APP_KEY"],
+            "access_token": env["STACKOVERFLOW_ACCESS_TOKEN"],
+        }
+        if tags:
+            # Best-effort semicolon separator per this script's research into
+            # the API's own convention - not independently confirmed this
+            # session; check current docs before relying on it.
+            fields["tags"] = ";".join(tags)
+    body = urllib.parse.urlencode(fields).encode("utf-8")
+    # The app key is a public per-application identifier, not a true secret,
+    # but it's redacted alongside the access token anyway - same conservative
+    # treatment this script gives every credential-shaped value.
+    return url, headers, body, [env["STACKOVERFLOW_APP_KEY"], env["STACKOVERFLOW_ACCESS_TOKEN"]]
+
+
 def build_tiktok_request(text, video_url, privacy_level):
     env = require_env("TIKTOK_ACCESS_TOKEN")
     url = "https://open.tiktokapis.com/v2/post/publish/video/init/"
@@ -698,6 +802,27 @@ def main():
             sys.exit(2)
         url, headers, body, secrets = build_github_discussions_request(
             text, args.title, args.repo_id, args.category_id
+        )
+    elif args.platform == "stackoverflow":
+        if not args.site:
+            print(
+                "--platform stackoverflow requires --site (the target Stack "
+                "Exchange site's short API slug, e.g. 'stackoverflow' or "
+                "'serverfault' - not its domain name).",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        if not args.question_id and not args.title:
+            print(
+                "--platform stackoverflow requires --title when posting a "
+                "new question. Omit --title only when --question-id is "
+                "given, to post an answer to that question instead.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        tags = [t.strip() for t in args.tags.split(",") if t.strip()] if args.tags else []
+        url, headers, body, secrets = build_stackoverflow_request(
+            text, args.site, args.title, tags, args.question_id
         )
     elif args.platform == "tiktok":
         if not args.video_url:

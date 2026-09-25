@@ -1,6 +1,6 @@
 ---
 name: community-post-generator
-description: Researches a specific subreddit's, Product Hunt's, Hacker News's, Indie Hackers', dev.to's, or a GitHub repository's Discussions rules and typical post style live before drafting — never a generic templated post, verifying each source is actually about the named target before trusting it, and writes it to read like a person wrote it. For Discord and Slack, where servers/workspaces have no public page to research at all, it asks the user (an actual member) for the rules instead of pretending to fetch them, and for Slack specifically drafts in Slack's own mrkdwn syntax rather than standard Markdown. Telegram is bimodal: a public channel/group can actually be previewed live (t.me/s/<username>), a private one can't, so which research path applies is determined per-target rather than fixed platform-wide, and drafts default to Telegram's HTML formatting tags. GitHub Discussions is bimodal too, plus a whose-repository-is-it branch that decides almost everything else. Use when the user wants to post in a specific subreddit, on Product Hunt, on Hacker News (including Show HN), on Indie Hackers (including Show IH), on dev.to (including the #showdev tag), in a specific Discord server, Slack workspace, or Telegram channel/group, or in a specific GitHub repository's Discussions, or any other rules-driven community/forum.
+description: "Researches a specific subreddit's, Product Hunt's, Hacker News's, Indie Hackers', dev.to's, a GitHub repository's Discussions, or Stack Overflow's actual rules and typical post style live before drafting — never a generic templated post, verifying each source is actually about the named target before trusting it, and writes it to read like a person wrote it. For Discord and Slack, where servers/workspaces have no public page to research at all, it asks the user (an actual member) for the rules instead of pretending to fetch them, and for Slack specifically drafts in Slack's own mrkdwn syntax rather than standard Markdown. Telegram is bimodal: a public channel/group can actually be previewed live (t.me/s/<username>), a private one can't, so which research path applies is determined per-target rather than fixed platform-wide, and drafts default to Telegram's HTML formatting tags. GitHub Discussions is bimodal too, plus a whose-repository-is-it branch that decides almost everything else. Stack Overflow has no post at all - the deliverable is a question-and-answer pair (or just an answer to an existing question), and the gate is whether the question survives the platform's own closure norms, not a rules page. Use when the user wants to post in a specific subreddit, on Product Hunt, on Hacker News (including Show HN), on Indie Hackers (including Show IH), on dev.to (including the #showdev tag), in a specific Discord server, Slack workspace, or Telegram channel/group, in a specific GitHub repository's Discussions, or on Stack Overflow (or another Stack Exchange site), or any other rules-driven community/forum."
 allowed-tools: Read, Grep, Glob, Write, WebSearch, WebFetch
 ---
 
@@ -97,6 +97,25 @@ anything. One more layer Reddit and dev.to don't have: some categories
 discussion to the repository's own maintainers, regardless of whether the
 repository itself is open to the public.
 
+Stack Overflow doesn't have a rules page to research at all, because it
+doesn't have a post to check rules against — there's no announcement or
+forum submission on Stack Overflow, only questions and answers. Its own
+blog explicitly endorses the one pattern that functions as promotion
+here: ask a genuine, well-formed question a real developer would
+plausibly have, then answer it yourself, with the product as the natural
+solution — a question-and-answer pair, not a title+body post, the first
+genuinely new Drafted Post shape since Show HN's three-piece split (see
+step 5). The real gate isn't a subreddit-style rule, it's whether the
+question is narrow and objective enough to survive Stack Overflow's own
+closure norms — a vague or opinion-based question gets closed before
+anyone sees the answer, no matter how good that answer is. Stack Overflow
+is also just the flagship of the broader Stack Exchange network of
+independently-run, topic-specific Q&A sites, so step 2 confirms the
+specific site actually fits the subject matter, the same discipline as
+naming a subreddit. This skill also handles the narrower, different case
+of answering an *existing* question someone else already asked, rather
+than authoring a new one — see step 2.
+
 The copy itself also has to survive first contact: something that reads
 as obviously AI-polished marketing text gets the same skeptical reaction
 on these platforms as overt promotion does (see step 5), so drafts are
@@ -174,7 +193,7 @@ written to read like an actual person wrote them.
      labeled as unverified against that server's actual rules. Set the
      expectation now that step 3 will ask them to supply what the rules
      actually say, not fetch them independently the way it does for the
-     other five platforms.
+     other six platforms.
    - For Slack: same as Discord — exact workspace *and* exact channel,
      confirm the user is actually a member, set the expectation that
      step 3 asks rather than fetches. Two things that are genuinely
@@ -228,6 +247,21 @@ written to read like an actual person wrote them.
        categories (commonly Announcement-style ones) restrict who can
        open a new discussion in them, separate from whether the
        repository itself is public.
+   - For Stack Overflow: confirm two things before anything else. First,
+     which specific Stack Exchange site actually fits the subject
+     matter — "Stack Overflow" itself is programming-specific; a sysadmin
+     question belongs on Server Fault, a different topic on a different
+     site in the network entirely, and getting this wrong is the same
+     mistake as picking the wrong subreddit. Second, which case this is:
+     **asking your own genuine question and answering it yourself** (the
+     pattern Stack Overflow's own blog explicitly endorses as legitimate
+     promotion — this skill's normal Go/No-Go flow applies, see step 4),
+     or **answering a specific question someone else already asked** (a
+     narrower, different request — get the actual existing question's
+     link or content; there's no question to draft, only an answer, and
+     the judgment call is whether mentioning the product there reads as
+     genuine engagement or as spam, not whether a new question would
+     survive closure).
    - The underlying content/offer/topic, and any link or CTA (paste, file,
      URL, or "our product" — check `README*`, `CHANGELOG*`, `docs/**/*.md`,
      and `package.json`/`pyproject.toml` at the project root first if so,
@@ -423,13 +457,36 @@ written to read like an actual person wrote them.
      explanation, not just traffic-driving. If step 2 found this is
      someone else's repository, weigh this layer heavily; if it's the
      user's own, it matters far less.
+   - **Stack Overflow.** What "research" means here is different from
+     every other platform above — there's no rules page to fetch, because
+     there's no post to check rules against. For the **self-authored
+     question** case: research the target Stack Exchange site's actual
+     scope and typical question style (sample a few well-received recent
+     questions in the relevant tag) to judge whether the planned question
+     is narrow and objective enough to plausibly survive — Stack
+     Overflow's own help/policy pages if reachable, or its own blog posts
+     via WebSearch otherwise (`stackoverflow.blog`'s own posts explicitly
+     describe the ask-and-answer-your-own-question pattern as legitimate,
+     not a workaround — that counts as the platform's own words, same as
+     any other `Secondary (official)` source). For the **existing
+     question** case: read the actual question given (title, body,
+     existing answers/comments if any) to judge genuine fit — does the
+     product actually solve what's being asked, or would mentioning it
+     there read as an unrelated plug grafted onto someone else's
+     question. Either way, this skill could not confirm Stack Overflow's
+     specific numeric self-promotion guidance (the kind of citable ratio
+     Reddit has) or the exact sitewide wording on promotional answers —
+     say so plainly rather than inventing a number; what's actually
+     confirmed is the self-answer pattern's legitimacy and the general
+     closure-norms risk, not a precise rule to cite.
    - Cite what was actually found — link the rules page or search result
      checked, note it was checked just now. Never assert a community's
      norms from training knowledge alone; subreddit rules change, and a
      stale assumption is exactly how a post gets removed.
    - **Track source tier as you go, not just the content.** WebFetch to
      reddit.com, producthunt.com, news.ycombinator.com, indiehackers.com,
-     dev.to, or github.com can fail outright depending on the runtime's
+     dev.to, github.com, or stackoverflow.com (and stackoverflow.blog) can
+     fail outright depending on the runtime's
      network policy (though note github.com in particular has been
      reachable in at least one session even when other platforms' domains
      weren't, while a subdomain like docs.github.com was still blocked —
@@ -554,6 +611,20 @@ written to read like an actual person wrote them.
      `Secondary`/`Mixed`/`User-Supplied`) plus an explicit note that this
      is a judgment call under GitHub's sitewide Community Guidelines, not
      a guarantee just because the API would accept the request.
+   - **For Stack Overflow, the gate is different in kind from every other
+     platform's rules check — there's no rule being weighed, there's a
+     question's own survivability.** For a self-authored question, No-Go
+     means the question itself wouldn't survive as planned — too broad,
+     too opinion-based, or answerable with a quick search rather than a
+     real problem — say so plainly and propose a narrower framing if one
+     honestly exists, the same spirit as proposing a non-promotional
+     angle elsewhere. A Go means the question is genuine and the answer
+     would be a real, complete solution independent of the product
+     mention, not an ad wearing a question's clothes. For an existing
+     question, No-Go means the product doesn't actually solve what's
+     being asked — mentioning it would read as spam regardless of how
+     well-written the answer is, and a Go still needs the same "would
+     this answer stand on its own" test.
 
 5. **Draft the post** — shape depends on the platform (see Output
    structure below) — matching the specific community's researched format
@@ -618,6 +689,20 @@ written to read like an actual person wrote them.
      generic community-forum voice this step otherwise defaults to — it's
      their own project talking to their own users, not a pitch to a
      stranger's community.
+   - **For Stack Overflow specifically, draft a question-and-answer pair
+     for the self-authored case, or an answer alone for the existing-
+     question case — never force this into a single title+body shape.**
+     The question needs a real, Jeopardy-style title (a thing someone
+     would actually search for, not "Check out my new tool") and a body
+     that states the actual problem clearly, tagged for the specific
+     Stack Exchange site's own tag conventions. The answer needs to be
+     genuinely complete and correct on its own — code blocks (triple
+     backticks) where relevant, explaining the *why* not just dropping a
+     link — with the product mentioned as the solution, not appended as a
+     plug after a thin answer. This is where the natural-writing rules
+     below matter most: an answer that reads like marketing copy is
+     exactly what gets flagged and downvoted on this platform
+     specifically.
    - **Write it to read like an actual person typed it, not AI-polished
      marketing copy** — these communities react to that almost as badly
      as they react to overt promotion, since it's a strong tell for
@@ -663,7 +748,13 @@ written to read like an actual person wrote them.
    comments, which share infrastructure with Discussions, but wasn't
    independently verified for Discussions itself — flag a draft
    approaching it as a risk to sanity-check, not a hard rule to enforce
-   the confident way Discord's or Telegram's limit is.
+   the confident way Discord's or Telegram's limit is. For Stack Overflow
+   specifically, no character-limit check applies — the actual check is
+   whether the question would survive on its own merits (narrow,
+   objective, a real problem) independent of who's answering it, and
+   whether the answer is genuinely complete: would it still be a good,
+   acceptable answer with the product mention removed? If not, it isn't
+   ready.
 
 ## When to use this skill
 
@@ -683,6 +774,10 @@ Trigger on requests like:
   Telegram group"
 - "Post an update to our GitHub Discussions" / "Write a Show and Tell post
   for [owner/repo]"
+- "Write a Stack Overflow question and answer about..." / "Ask and answer
+  our own Stack Overflow question about..."
+- "Answer this Stack Overflow question with a mention of our tool" /
+  "Can we respond to [link] on Stack Overflow?"
 - "What's the best way to post this in [subreddit]?"
 
 If the request just says "Indie Hackers" with no other context, confirm
@@ -708,8 +803,11 @@ Use this exact section order, as Markdown `##` headings:
      indiehackers.com, dev.to — its sitewide Code of Conduct and/or the
      specific tag's own sidebar guidelines — or, for a public repository
      with Discussions enabled, github.com itself — the actual discussion/
-     category page and/or GitHub's own sitewide Community Guidelines) in
-     this run.
+     category page and/or GitHub's own sitewide Community Guidelines; or
+     stackoverflow.com/stackoverflow.blog — for Stack Overflow there's no
+     rules page to fetch, so `Primary` instead means directly confirming
+     the target site's scope/tag conventions or sampling its actual recent
+     questions, not fetching a guidelines document) in this run.
    - `Secondary (official)` — a direct fetch failed, but the WebSearch
      snippets used are visibly quoting the platform's own official pages
      (help center articles, named guideline pages, the platform's own
@@ -788,6 +886,21 @@ Use this exact section order, as Markdown `##` headings:
      label the output as a reply to that thread, not a new discussion.
      Flag length against the unconfirmed ~65536-character figure (see
      step 6) as a risk, not a hard violation.
+   - Stack Overflow: not a title+body post at all — the first genuinely
+     new shape since Show HN's three-piece split. For the self-authored
+     case, draft a **question-and-answer pair**: a Jeopardy-style title (a
+     real thing someone would search for, never "Check out my new tool"),
+     a body stating the actual problem, a finalized tag list for the
+     specific Stack Exchange site's own conventions (called out
+     separately, same discipline as Reddit's flair or dev.to's tags), and
+     a separate, genuinely complete answer with the product as the
+     solution, not a plug appended to a thin answer. For the
+     existing-question case, draft an **answer alone** — there's no
+     question to write, only the answer, and it needs to stand as a
+     correct, complete answer to the actual question asked, independent
+     of the product mention. Never collapse the two cases into one
+     shape, and never force either into Reddit's or dev.to's title+body
+     template.
    - Discord: a single chat message, no separate title field at all —
      Discord posts don't have one, so don't invent one. Under 2000
      characters (see step 6). Label it clearly as built from the rules
@@ -838,18 +951,26 @@ Use this exact section order, as Markdown `##` headings:
    enabled and the target category still allows the account posting to
    start a new discussion in it — permissions and settings a repository
    owner can change at any time, which this skill has no way to monitor
-   between research and send).
+   between research and send; for Stack Overflow specifically, that they
+   actually have — or can complete — the interactive OAuth consent step
+   and app registration a real send requires, since this skill can't do
+   that on their behalf; and that a reasonable disclosure-of-affiliation
+   expectation is met in the answer, since this skill's research couldn't
+   confirm Stack Overflow's exact sitewide wording on promotional answers
+   or a citable self-promotion ratio the way Reddit has one — say so
+   plainly rather than treating an unconfirmed rule as cleared).
 5. **Next Step** — the primary path is pasting it in manually; note that
    `publish-pipeline`'s optional direct-post path can send a Reddit
    self-post, a Discord message, a Slack message, a Telegram message, a
-   dev.to article, or a GitHub Discussion programmatically if the user
-   already has the right credentials (a Reddit API app, a webhook URL for
-   that Discord channel or Slack channel, a bot token plus that chat's ID
-   for Telegram, a dev.to API key, or a GitHub Personal Access Token plus
-   the target repository's and category's GraphQL node IDs; see that
-   skill and the plugin README) — but these don't share one friction
-   profile, so don't present any of them with borrowed confidence from
-   another:
+   dev.to article, a GitHub Discussion, or a Stack Overflow question/answer
+   programmatically if the user already has the right credentials (a
+   Reddit API app, a webhook URL for that Discord channel or Slack
+   channel, a bot token plus that chat's ID for Telegram, a dev.to API
+   key, a GitHub Personal Access Token plus the target repository's and
+   category's GraphQL node IDs, or a Stack Exchange app registration plus
+   a user-context OAuth access token for Stack Overflow; see that skill
+   and the plugin README) — but these don't share one friction profile, so
+   don't present any of them with borrowed confidence from another:
    - Discord: sending is unambiguously the easy part — a webhook is close
      to always available to any channel member, no approval step.
    - Slack: closer to Discord than to the platforms below, but not the
@@ -876,6 +997,18 @@ Use this exact section order, as Markdown `##` headings:
      Discussions enabled at all, and some categories restrict who can
      start a new discussion regardless of token validity. A working token
      guarantees nothing about either.
+   - Stack Overflow: a different friction shape again, closer to X's than
+     to any of the platforms above — the Stack Exchange API v2.3 does have
+     write endpoints for both questions and answers, so this isn't a
+     YouTube-style hard exclusion, but getting a usable credential needs a
+     registered app (at stackapps.com) plus a real interactive OAuth
+     consent flow to obtain a user-context access token, not a
+     copy-pasted static key the way dev.to's API key or a Discord webhook
+     is. This skill can draft the question-and-answer pair or the
+     standalone answer either way; only the *sending* step carries this
+     extra friction. Whether a Personal Access Token has since replaced
+     part of this flow was a genuinely unclear point in this skill's own
+     research — don't present that detail as settled.
    Product Hunt and Hacker News have no equivalent send path here, for two
    different reasons worth naming rather than lumping together: Product
    Hunt's write API exists but needs Product Hunt's own special approval;
@@ -886,21 +1019,27 @@ Use this exact section order, as Markdown `##` headings:
    asks whether IH has a developer API at all) — don't round that
    uncertainty off to a confident yes or no, say plainly it's unverified
    and treat it as manual-only until proven otherwise. Say which of the
-   five send-path profiles above actually applies to this specific user
+   six send-path profiles above actually applies to this specific user
    and target rather than defaulting to any one of them by habit.
 
 ## Formatting rules
 
 - Never draft a post before completing the live rules research for that
   specific community in this run — no generic, reusable Reddit, Product
-  Hunt, Hacker News, Indie Hackers, or dev.to template. (Discord and Slack get the
+  Hunt, Hacker News, Indie Hackers, dev.to, or Stack Overflow template.
+  (Discord and Slack get the
   user-supplied equivalent — asking counts as "completing" the step,
   skipping the ask doesn't. Telegram and GitHub Discussions each get
   whichever applies: a real research attempt for a public target, the
   user-supplied equivalent for a private one — but the public/private
   determination itself has to happen first, not be skipped, and for
   GitHub Discussions, confirming the surface is even enabled comes before
-  that.)
+  that. Stack Overflow's research is different in kind from every other
+  entry in this list — there's no rules page to fetch — but skipping it is
+  the same violation: drafting a question or answer without first
+  checking the target Stack Exchange site's scope and typical question
+  style, or without reading the actual existing question for the
+  answer-only case.)
 - Never treat a source as evidence about a target before confirming it's
   actually about that target, not a similarly-named different platform
   or community — this check happens before Source Confidence is assessed
@@ -919,12 +1058,13 @@ Use this exact section order, as Markdown `##` headings:
   every draft, but override its tone/formatting defaults toward the
   target community's own norm when they conflict, and say so explicitly.
 - If WebFetch to the platform's own domain (reddit.com, producthunt.com,
-  news.ycombinator.com, indiehackers.com, dev.to, or github.com) is
-  unreachable in this runtime, fall back to WebSearch and say so — never
-  silently substitute general knowledge for a live check. Try github.com
-  itself before assuming it's blocked the way other platforms' domains
-  have been — it's been reachable in sessions where community platforms
-  otherwise weren't, even when a subdomain like docs.github.com wasn't.
+  news.ycombinator.com, indiehackers.com, dev.to, github.com, or
+  stackoverflow.com/stackoverflow.blog) is unreachable in this runtime,
+  fall back to WebSearch and say so — never silently substitute general
+  knowledge for a live check. Try github.com itself before assuming it's
+  blocked the way other platforms' domains have been — it's been
+  reachable in sessions where community platforms otherwise weren't, even
+  when a subdomain like docs.github.com wasn't.
 - Never use an em dash in drafted post copy, and never let a draft carry
   other common AI-writing tells (triadic padding, throat-clearing
   openers, uniformly clean sentence rhythm) — see step 5's list. This
@@ -964,6 +1104,21 @@ Use this exact section order, as Markdown `##` headings:
   not verified fact. Never present a draft for a category that restricts
   new-discussion creation to maintainers without saying so, if the
   posting account isn't one.
+- On Stack Overflow specifically: never present a self-authored question
+  that's transparently just a promotional pretext dressed up as a
+  question — if it wouldn't be a genuine, useful question with the
+  product mention deleted, it isn't ready. Never treat the self-authored
+  and existing-question cases as interchangeable — they need different
+  research (site-fit and closure-norms for one, reading the actual
+  existing question for the other) and produce different deliverables (a
+  full Q&A pair versus an answer alone). Never claim a specific,
+  citable self-promotion ratio or ban threshold as confirmed — this
+  skill's research could not pin down Stack Overflow's exact sitewide
+  wording on promotional answers, only the legitimacy of the
+  ask-and-answer-your-own-question pattern from Stack Overflow's own
+  blog and the general closure-norms risk; say so plainly rather than
+  inventing a number the way Reddit's cadence limit can sometimes be
+  cited.
 - On Discord specifically: never draft a post for a server the user isn't
   a member of, and never draft one on a guess when the user says they
   don't know or haven't checked the server's rules — ask them to check
@@ -1026,7 +1181,7 @@ Use this exact section order, as Markdown `##` headings:
   Slack's app-approval gate, its formatting is HTML tags rather than
   near-standard Markdown or mrkdwn, and its character limit (4096) rejects
   outright like Discord's rather than truncating like Slack's. Same
-  research-and-draft pattern as all eight other platforms, genuinely
+  research-and-draft pattern as all nine other platforms, genuinely
   different mechanics in every category above.
 - Don't treat dev.to as a reskinned Reddit, Hacker News, or Indie Hackers
   either, despite surface similarities to each — it isn't one
@@ -1047,9 +1202,26 @@ Use this exact section order, as Markdown `##` headings:
   repository it is, which changes the entire risk calculus in a way
   public/private access or tag choice never does for the other two. Some
   categories restrict who can start a new discussion independent of the
-  repository's own visibility, a permission layer none of the other eight
+  repository's own visibility, a permission layer none of the other nine
   platforms have. Same research-and-draft pattern, genuinely different
   mechanics.
+- Don't treat Stack Overflow as just a stricter version of dev.to or
+  GitHub Discussions because all three have self-serve write APIs — it
+  has no post at all, the thing every other platform in this list
+  produces one of. There's no rules page to research (dev.to's Code of
+  Conduct, GitHub's Community Guidelines, and every subreddit's own
+  rules all exist; Stack Overflow's equivalent doesn't), so the Go/No-Go
+  gate is a question's own survivability rather than a rule being
+  weighed against it. It also has no public/private branch at all, unlike
+  Telegram and GitHub Discussions — every Stack Exchange site is public,
+  so it sits in the always-researchable family with dev.to, just
+  researched for a different thing (site-fit and question style, not a
+  policy page). And it's the only platform here with two structurally
+  different request shapes bundled under one name — a self-authored
+  question-and-answer pair versus an answer to someone else's existing
+  question — where every other platform in this list drafts exactly one
+  shape of thing per run. Same research-and-draft discipline, a genuinely
+  different mechanic in almost every category above.
 
 ## Example output
 
@@ -1532,3 +1704,123 @@ two options above you want, and this skill will draft that version next.
 > surface exists at all; here, whether a real, sampled category actually
 > welcomes exactly this kind of post. Both are `Primary` because both were
 > fetched directly, not because both point the same direction.
+
+> **A real research run, Stack Overflow — the self-authored
+> question-and-answer case** (from an actual test run against this plugin
+> itself): both of Stack Overflow's own domains were blocked this run,
+> same pattern as the dev.to example above, so this shows the same
+> "blocked fetch, but the search results still trace back to the
+> platform's own words" path landing on `Secondary (official)`, applied to
+> a platform whose deliverable isn't a post at all:
+>
+> ````markdown
+> ## Community Research Summary
+> **Source Confidence: Secondary (official)** — stackoverflow.com and
+> stackoverflow.blog were both unreachable this run (blocked outright by
+> the runtime's network policy, not just one page), so research fell back
+> to WebSearch. That search surfaced content that traces back to Stack
+> Overflow's own blog by name and URL: a stackoverflow.blog post
+> explicitly describing "ask a question, answer it yourself" as a
+> legitimate way to document a solution, not a workaround to route around
+> the rules — the platform's own words, one step removed from a direct
+> read, not a third party's guess at its position. This run could not
+> confirm a specific, citable self-promotion ratio or ban threshold the
+> way Reddit has one; that gap carries into the Go/No-Go line below, not
+> smoothed over.
+>
+> Target site: Stack Overflow itself, not a different Stack Exchange
+> site — the question is squarely programming-specific, so the
+> site-selection check from step 2 was a quick confirmation, not a real
+> judgment call this time. Case: self-authored — the requester wants to
+> ask a genuine question about a real design decision in this plugin's
+> own `publish_direct.py` script and answer it themselves, not respond to
+> someone else's existing question.
+>
+> ## Go / No-Go
+> Go, based on `Secondary (official)` sourcing — the question is narrow,
+> objective, and answerable with actual code (how to make a CLI script
+> default to a safe dry run and require an explicit flag before it sends
+> anything live), the kind of question that tends to survive Stack
+> Overflow's closure norms rather than getting flagged as opinion-based or
+> too broad. The self-answer pattern itself is confirmed welcome by Stack
+> Overflow's own blog, not just assumed. One plain caveat: the exact
+> sitewide wording on promotional answers stayed unconfirmed this run, so
+> the answer has to be genuinely complete on its own, not leaning on the
+> product mention to carry it.
+>
+> ## Drafted Post
+>
+> **Question title:** How to make a CLI script default to a dry run and
+> require an explicit flag before it sends anything live?
+>
+> **Question body (tags: python, argparse, command-line-interface):**
+> I'm writing a command-line script that posts content to a few external
+> APIs. I want it to default to printing what *would* be sent, and only
+> actually send if the user passes an explicit confirmation flag, so a
+> plain run is always safe and sending for real takes a deliberate
+> choice, not just remembering to add `--dry-run` every time.
+>
+> What I have right now just checks `if args.dry_run:` and skips the
+> request, which means the default behavior is "send" unless you remember
+> the flag. I want the safe behavior to be the default instead. What's a
+> clean way to structure this with `argparse`?
+>
+> **Answer:**
+> Flip which state is the default. Instead of a `--dry-run` flag you have
+> to remember, make sending itself require an explicit `--confirmed`
+> flag, and treat its absence as the safe path:
+>
+> ```
+> parser.add_argument("--dry-run", action="store_true", default=True)
+> parser.add_argument("--confirmed", action="store_true")
+> args = parser.parse_args()
+>
+> if args.confirmed:
+>     send_request(payload)
+> else:
+>     print("--- DRY RUN ---")
+>     print(payload)
+>     print("--- END DRY RUN --- (pass --confirmed to actually send)")
+> ```
+>
+> Now a plain run always prints instead of sending, no matter what anyone
+> forgets, and sending for real needs someone to type `--confirmed`
+> deliberately. I used exactly this pattern in a small Claude Code plugin
+> I built (`publish_direct.py` in marketing-skill) for the same reason: it
+> drafts posts for various platforms, and I did not want a default,
+> no-flags run to ever be able to post something live by accident. Every
+> platform-specific request builder in that script runs either way, but
+> the actual network call only fires behind the `--confirmed` check.
+>
+> ## Compliance Checklist
+> - Confirm the Stack Exchange app registration (stackapps.com) and the
+>   interactive OAuth consent step needed for a real access token are
+>   actually done, if this is going to be sent via `publish_direct.py`
+>   rather than pasted in manually — this skill can draft the question and
+>   answer, but can't complete that consent flow on the requester's
+>   behalf.
+> - Confirm the answer still reads as genuinely complete without the
+>   product mention — this run's research couldn't confirm Stack
+>   Overflow's exact self-promotion wording, so don't treat that as
+>   already cleared.
+>
+> ## Next Step
+> Nothing sent. If the requester completes the Stack Exchange app
+> registration and OAuth consent step, `publish-pipeline`'s direct-post
+> path can send both the question and the self-answer via the Stack
+> Exchange API v2.3 — but unlike dev.to's single API key, that credential
+> needs a real interactive consent step to obtain in the first place, not
+> just a copy-paste from account settings.
+> ````
+>
+> Notice there's no single title+body field anywhere in that Drafted Post
+> section — a question title, a separately-tagged question body, and a
+> free-standing answer, the shape step 5 requires and no other platform in
+> this skill produces. The answer leans on an actual code block, per step
+> 5's rule that a Stack Overflow answer has to be genuinely correct and
+> complete on its own merits, not marketing copy with a link attached. And
+> like the dev.to example above, reaching `Secondary (official)` here
+> didn't require a successful fetch — both of Stack Overflow's domains
+> were blocked, the same as most platforms this skill researches — it
+> required the search results to visibly trace back to the platform's own
+> stated position rather than a third party's guess at it.
