@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Scaffolding for posting text directly to LinkedIn, X, Meta (Facebook Page),
-Reddit, Discord, Slack, Telegram, or dev.to - no n8n/Make in between.
+Scaffolding for posting directly to LinkedIn, X, Meta (Facebook Page),
+Reddit, Discord, Slack, Telegram, dev.to, YouTube (Shorts), Instagram
+(Reels), or TikTok - no n8n/Make in between.
 
 WARNING - read this before using it for anything real:
 
@@ -27,13 +28,20 @@ integration. Before relying on it:
     from your own account settings - see "devto" below; that's about
     access, though, not content - a Tag Moderator can still strip a tag
     that doesn't fit it, or a post can still be reported through the
-    sitewide Code of Conduct.
+    sitewide Code of Conduct. YouTube, Instagram, and TikTok are a
+    different shape again - all three post actual video, not text, and
+    each has its own access story: see "youtube", "instagram", and
+    "tiktok" below - TikTok in particular forces every post from an
+    unaudited app to private/self-only visibility, no matter what's
+    requested.
   - Confirm the endpoint/version below is still current - check
     developers.linkedin.com, developer.x.com, developers.facebook.com,
     Reddit's own API docs, Discord's own API docs, Slack's own API docs,
-    core.telegram.org/bots/api, and developers.forem.com/api (dev.to's own
-    docs) directly, since these APIs change and this script cannot check
-    for you.
+    core.telegram.org/bots/api, developers.forem.com/api (dev.to's own
+    docs), developers.google.com/youtube/v3 (YouTube), and
+    developers.tiktok.com/docs/en/content-posting-api-get-started (TikTok)
+    directly, since these APIs change and this script cannot check for
+    you.
   - Run with --dry-run and compare the printed request against that
     platform's current docs before ever passing --confirmed.
   - Do one manual --confirmed test post yourself before wiring this into
@@ -61,24 +69,48 @@ integration. Before relying on it:
     same as a confirmed rule - a 2xx response here just means the API
     accepted the article, not that a Tag Moderator won't strip a tag that
     doesn't fit it afterward. See "devto" below.
+  - For YouTube, Instagram, and TikTok specifically: run the
+    `short-form-video` skill first for the actual script/caption/hashtag
+    content and its best-time-to-post guidance - this script only sends
+    what you give it, it doesn't draft anything. A 2xx from TikTok's init
+    call or a successful Instagram container creation is not the same
+    thing as "the video is live" - both process the video after this
+    script's request returns (see their notes below for what to check).
 
-Text-only. None of these platforms' media-attachment flows are
-implemented here (Instagram in particular has no text-only post endpoint
-at all - see NOTES below - and isn't supported here at all).
+Text-only for the first eight platforms. None of their media-attachment
+flows are implemented here beyond that (a plain Facebook Page post via
+--platform meta is text-only; Instagram has no text-only post endpoint at
+all, which is why it isn't reachable via --platform meta - see
+"instagram" below for the separate video flow that does exist).
+
+YouTube, Instagram, and TikTok are video-native - see their notes below
+for how each one actually receives the video (a local file YouTube pulls
+the bytes from directly via a resumable upload, vs. a public URL YouTube,
+Instagram, and TikTok fetch from). There is no hashtag field for
+Instagram or TikTok; include hashtags directly in the caption text the
+same way you'd type them in the app. YouTube's --tags is its actual
+video-tags metadata (search keywords), not hashtags - put any #Shorts-
+style hashtags in the description text instead.
 
 Same safety pattern as publish_webhook.py: refuses to send unless you
 pass --dry-run or --confirmed explicitly, and never sends without one.
+--dry-run never makes a network call, even for the multi-step flows below
+(YouTube's upload, Instagram's container-then-publish, and to a lesser
+extent Reddit/Telegram/dev.to's validation) - where a later step depends
+on an earlier step's real response, the preview says so explicitly rather
+than faking one.
 """
 import argparse
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
 
 
-META_GRAPH_API_VERSION = os.environ.get("META_GRAPH_API_VERSION", "v21.0")
+META_GRAPH_API_VERSION = os.environ.get("META_GRAPH_API_VERSION", "v26.0")
 
 NOTES = {
     "linkedin": "Uses the legacy UGC Posts API (v2/ugcPosts). LinkedIn has "
@@ -90,8 +122,10 @@ NOTES = {
          "someone's behalf. X also gates write access behind a paid API "
          "tier as of recent pricing - confirm your access level.",
     "meta": "Facebook Page text posts only. Instagram has no text-only "
-            "post endpoint - it requires an image/video container plus a "
-            "separate publish call, not implemented here.",
+            "post endpoint - see --platform instagram for the separate "
+            "video (Reels) flow that does exist, which is a different API "
+            "surface (the IG Business account, not this Page-feed "
+            "endpoint) and needs its own credentials.",
     "reddit": "Requires an OAuth2 access token with 'submit' scope, from "
               "your own registered Reddit app (reddit.com/prefs/apps). As "
               "of late 2025 Reddit closed instant self-service app "
@@ -181,12 +215,87 @@ NOTES = {
              "though dev.to's API supports one. See the WARNING section "
              "above on the Code of Conduct gap before trusting a 2xx "
              "response as the same thing as 'this was welcome.'",
+    "youtube": "Uses the standard YouTube Data API v3 (videos.insert via "
+               "its resumable upload endpoint) - there's no separate "
+               "'Shorts API'; a video becomes a Short by being vertical "
+               "(9:16), under the length YouTube currently treats as Short-"
+               "eligible, and (as a belt-and-suspenders signal) tagged "
+               "#Shorts in the description. Needs an OAuth2 access token "
+               "with the youtube.upload scope from your own Google Cloud "
+               "project, authorized against the channel you're uploading "
+               "to - getting that token (the OAuth consent flow itself) "
+               "isn't handled by this script. Since a mid-2026 quota "
+               "change, uploads draw from a separate ~100-per-day 'Video "
+               "Uploads' bucket on your project rather than the old shared "
+               "10,000-unit pool, so normal personal/small-team posting "
+               "volume shouldn't need extra quota approval the way it "
+               "used to - confirm your project's current bucket size in "
+               "Google Cloud Console rather than assuming. Takes a local "
+               "file via --video-path (this is the one platform here that "
+               "uploads real bytes rather than pointing at a hosted URL) "
+               "and requires --made-for-kids true|false explicitly - "
+               "that's YouTube's own mandatory COPPA self-declaration on "
+               "every upload, not something this script can default on "
+               "your behalf. --privacy-status defaults to private so a "
+               "--confirmed run never goes public by accident; pass "
+               "--privacy-status public or unlisted yourself once you've "
+               "actually reviewed the result.",
+    "instagram": "Publishes a Reel via the Instagram Graph API - a "
+                 "different flow from --platform meta's Facebook Page "
+                 "post, and needs different credentials: an Instagram "
+                 "Business or Creator account linked to a Facebook Page, "
+                 "and a Meta app with the instagram_business_content_"
+                 "publish permission actually approved (Meta's app review, "
+                 "not just Development Mode - Development Mode only lets "
+                 "your app's own admins/developers/testers post, which is "
+                 "fine for posting to your own account but won't work for "
+                 "anyone else's). Needs IG_USER_ID (the Instagram Business "
+                 "account's own ID, not the Facebook Page ID) alongside "
+                 "META_PAGE_ACCESS_TOKEN. Unlike YouTube or TikTok's file-"
+                 "based paths, Instagram has no raw-upload endpoint at "
+                 "all - pass --video-url pointing at the video already "
+                 "hosted somewhere public; Instagram's own servers fetch "
+                 "it from there. The real flow is three steps, not one: "
+                 "create a media container (media_type=REELS), poll it "
+                 "until Instagram finishes fetching/processing the video "
+                 "(status_code=FINISHED - this script polls for up to "
+                 "--upload-timeout seconds, default 600), then publish the "
+                 "container. A --dry-run only previews step 1, since steps "
+                 "2 and 3 need step 1's real container ID to exist first. "
+                 "No separate hashtag field - put hashtags directly in "
+                 "--text (the caption), the same as typing them in the "
+                 "app.",
+    "tiktok": "Uses TikTok's Content Posting API (POST /v2/post/publish/"
+              "video/init/) with PULL_FROM_URL as the source, so pass "
+              "--video-url rather than a local file - TikTok's own "
+              "servers fetch it from there, and that URL's domain has to "
+              "already be verified for your app in TikTok's developer "
+              "portal or the call is rejected outright. Needs an app "
+              "approved for the video.publish scope, and the specific "
+              "creator has to have authorized that scope for your app - "
+              "getting either of those isn't handled by this script. "
+              "**Every post from an app that hasn't passed TikTok's own "
+              "audit is forced to SELF_ONLY (private, visible only to the "
+              "poster) no matter what --privacy-level is requested** - "
+              "audit review reportedly takes anywhere from a few days to "
+              "about two weeks, and this script has no way to check your "
+              "app's audit status for you, so confirm it directly in "
+              "TikTok's developer portal rather than assuming a public "
+              "post will actually be public. A 2xx response here means "
+              "TikTok accepted the request and queued it - fetching and "
+              "posting the video happens asynchronously afterward, so "
+              "that response is not confirmation the video is actually "
+              "live; check TikTok's own status-fetch endpoint or your "
+              "app's activity to confirm. No separate hashtag field, same "
+              "as Instagram - put hashtags directly in --text (used as "
+              "TikTok's post title/caption field).",
 }
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Post text directly to LinkedIn, X, Meta (Facebook Page), Reddit, Discord, Slack, Telegram, or dev.to. "
+        description="Post directly to LinkedIn, X, Meta (Facebook Page), Reddit, Discord, Slack, Telegram, "
+                    "dev.to, YouTube (Shorts), Instagram (Reels), or TikTok. "
                     "Scaffolding only - read the module docstring before using for real.",
         epilog=(
             "Required environment variables per platform:\n"
@@ -203,23 +312,60 @@ def parse_args():
             "            defaults to HTML)\n"
             "  devto     DEVTO_API_KEY  (also requires --title; --tags optional, comma-\n"
             "            separated, max 4; --org-id optional)\n"
+            "  youtube   YOUTUBE_ACCESS_TOKEN  (also requires --video-path, --title,\n"
+            "            --made-for-kids true|false; --privacy-status defaults to private,\n"
+            "            --tags/--category-id optional)\n"
+            "  instagram META_PAGE_ACCESS_TOKEN, IG_USER_ID  (also requires --video-url;\n"
+            "            --upload-timeout controls how long this script polls for Instagram\n"
+            "            to finish processing the video, default 600s)\n"
+            "  tiktok    TIKTOK_ACCESS_TOKEN  (also requires --video-url; --privacy-level\n"
+            "            defaults to SELF_ONLY - see the tiktok note on why)\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--platform", required=True,
-                         choices=["linkedin", "x", "meta", "reddit", "discord", "slack", "telegram", "devto"],
+                         choices=["linkedin", "x", "meta", "reddit", "discord", "slack", "telegram", "devto",
+                                  "youtube", "instagram", "tiktok"],
                          help="Which platform to post to.")
-    parser.add_argument("--text", help="Post text. Reads stdin if omitted.")
+    parser.add_argument("--text", help="Post text (caption/description/message, depending on platform). Reads stdin if omitted.")
     parser.add_argument("--subreddit", help="Target subreddit, no 'r/' prefix. Required for --platform reddit.")
-    parser.add_argument("--title", help="Post title. Required for --platform reddit and --platform devto (the chat platforms are body-only).")
+    parser.add_argument("--title", help="Post title. Required for --platform reddit, devto, and youtube (video title) - the chat platforms and instagram/tiktok are body/caption-only.")
     parser.add_argument("--flair-id", help="Optional flair template ID, --platform reddit only, if the subreddit requires one.")
     parser.add_argument("--chat-id", help="Target chat: a numeric ID, or '@channelusername' for a public channel. Required for --platform telegram.")
     parser.add_argument("--parse-mode", default="HTML", choices=["HTML", "MarkdownV2"],
                          help="Telegram formatting mode (default: HTML, simpler escaping than MarkdownV2). --platform telegram only.")
-    parser.add_argument("--tags", help="Comma-separated tags, max 4 (e.g. 'showdev,ai,opensource'). --platform devto only.")
+    parser.add_argument("--tags", help="Comma-separated tags. --platform devto: max 4, a real taxonomy field. "
+                                        "--platform youtube: video search-keywords metadata, NOT hashtags (put "
+                                        "#Shorts-style hashtags in --text instead). Not used by instagram/tiktok - "
+                                        "neither has a separate hashtag field, so put hashtags directly in --text.")
     parser.add_argument("--org-id", help="Post under this dev.to Organization ID instead of your personal account. --platform devto only, optional.")
-    parser.add_argument("--timeout", type=float, default=15, help="Request timeout in seconds (default: 15).")
-    parser.add_argument("--dry-run", action="store_true", help="Print the request instead of sending it.")
+    parser.add_argument("--video-path", help="Local path to the video file to upload. --platform youtube only - "
+                                              "the one platform here that uploads raw bytes rather than pointing at a hosted URL.")
+    parser.add_argument("--video-url", help="Public URL the platform's own servers fetch the video from. "
+                                             "Required for --platform instagram and --platform tiktok - neither "
+                                             "accepts a raw file upload the way youtube does.")
+    parser.add_argument("--category-id", help="YouTube video category ID (e.g. '22' for People & Blogs, '24' for "
+                                                "Entertainment). --platform youtube only, optional - omitted entirely "
+                                                "from the request if not given, rather than guessing one.")
+    parser.add_argument("--privacy-status", default="private", choices=["private", "unlisted", "public"],
+                         help="--platform youtube only. Defaults to private so a --confirmed run never goes public "
+                              "by accident - pass unlisted or public explicitly once you've reviewed the result.")
+    parser.add_argument("--made-for-kids", choices=["true", "false"], default=None,
+                         help="--platform youtube only, required. YouTube's own mandatory COPPA self-declaration - "
+                              "there is no default this script will guess on your behalf.")
+    parser.add_argument("--privacy-level", default="SELF_ONLY",
+                         choices=["SELF_ONLY", "PUBLIC_TO_EVERYONE", "MUTUAL_FOLLOW_FRIENDS", "FOLLOWER_OF_CREATOR"],
+                         help="--platform tiktok only. Defaults to SELF_ONLY (private) since TikTok forces this for "
+                              "every post from an app that hasn't passed its own audit, regardless of what's asked "
+                              "for - see the tiktok note in --help's module docstring reference.")
+    parser.add_argument("--disable-duet", action="store_true", help="--platform tiktok only. Off (duets allowed) unless passed.")
+    parser.add_argument("--disable-comment", action="store_true", help="--platform tiktok only. Off (comments allowed) unless passed.")
+    parser.add_argument("--disable-stitch", action="store_true", help="--platform tiktok only. Off (stitching allowed) unless passed.")
+    parser.add_argument("--upload-timeout", type=float, default=600,
+                         help="--platform instagram only (default: 600s). How long to keep polling Instagram's "
+                              "media container while it processes the video before giving up.")
+    parser.add_argument("--timeout", type=float, default=15, help="Request timeout in seconds for ordinary (non-upload) calls (default: 15).")
+    parser.add_argument("--dry-run", action="store_true", help="Print the request(s) instead of sending them. Never makes a network call.")
     parser.add_argument("--confirmed", action="store_true",
                          help="Required to actually send. Only pass this after a human has seen the exact "
                               "request and explicitly said to proceed, in this conversation.")
@@ -416,6 +562,336 @@ def redact(text, secrets):
     return text
 
 
+def run_youtube(args):
+    """Two real HTTP steps: initiate a resumable upload session (JSON), then
+    PUT the actual video bytes to the URL that session returns. --dry-run
+    only ever shows step 1 in full - step 2's URL doesn't exist until step 1
+    is actually sent, so it's described rather than faked."""
+    if not args.video_path:
+        print("--platform youtube requires --video-path (a local video file).", file=sys.stderr)
+        return 2
+    if not os.path.isfile(args.video_path):
+        print(f"No file found at --video-path {args.video_path}", file=sys.stderr)
+        return 2
+    if not args.title:
+        print("--platform youtube requires --title.", file=sys.stderr)
+        return 2
+    if args.made_for_kids is None:
+        print(
+            "--platform youtube requires --made-for-kids true|false. YouTube requires "
+            "every upload to self-declare this (its COPPA compliance question) - there "
+            "is no default this script will guess on your behalf.",
+            file=sys.stderr,
+        )
+        return 2
+
+    env = require_env("YOUTUBE_ACCESS_TOKEN")
+    description = load_text(args.text)
+    tags = [t.strip() for t in args.tags.split(",") if t.strip()] if args.tags else []
+    video_size = os.path.getsize(args.video_path)
+
+    init_url = "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status"
+    init_headers = {
+        "Authorization": f"Bearer {env['YOUTUBE_ACCESS_TOKEN']}",
+        "Content-Type": "application/json; charset=UTF-8",
+        "X-Upload-Content-Type": "video/*",
+        "X-Upload-Content-Length": str(video_size),
+    }
+    snippet = {"title": args.title, "description": description}
+    if tags:
+        snippet["tags"] = tags
+    if args.category_id:
+        snippet["categoryId"] = args.category_id
+    init_body = json.dumps({
+        "snippet": snippet,
+        "status": {
+            "privacyStatus": args.privacy_status,
+            "selfDeclaredMadeForKids": args.made_for_kids == "true",
+        },
+    }).encode("utf-8")
+    secrets = [env["YOUTUBE_ACCESS_TOKEN"]]
+
+    if args.dry_run:
+        print("=== DRY RUN: no request sent ===")
+        print("Platform: youtube")
+        print(f"Note: {NOTES['youtube']}")
+        print("Step 1/2 - initiate resumable upload session:")
+        print("  Method: POST")
+        print(f"  URL: {redact(init_url, secrets)}")
+        print("  Headers:")
+        for name, value in init_headers.items():
+            print(f"    {name}: {redact(value, secrets)}")
+        print(f"  Body ({len(init_body)} bytes):")
+        print("  " + redact(init_body.decode("utf-8"), secrets))
+        print(
+            f"Step 2/2 - would PUT {video_size} bytes read from {args.video_path} to "
+            "the upload URL returned in Step 1's real response 'Location' header. "
+            "Step 1 was not actually sent during --dry-run, so that URL doesn't exist "
+            "yet - this step can't be previewed any further than that."
+        )
+        print("=== END DRY RUN ===")
+        return 0
+
+    init_request = urllib.request.Request(init_url, data=init_body, headers=init_headers, method="POST")
+    try:
+        with urllib.request.urlopen(init_request, timeout=args.timeout) as response:
+            upload_url = response.getheader("Location")
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8", errors="replace")
+        print("YouTube API rejected the upload session (Step 1/2)", file=sys.stderr)
+        print(f"Status: {e.code} {e.reason}", file=sys.stderr)
+        print(f"Response: {error_body[:500] or '(empty body)'}", file=sys.stderr)
+        return 4
+    except (urllib.error.URLError, OSError) as e:
+        print(f"Failed to reach YouTube's API: {e}", file=sys.stderr)
+        return 3
+
+    if not upload_url:
+        print("YouTube accepted Step 1 but returned no upload URL (Location header) - cannot continue.", file=sys.stderr)
+        return 4
+
+    with open(args.video_path, "rb") as f:
+        video_bytes = f.read()
+
+    upload_request = urllib.request.Request(
+        upload_url,
+        data=video_bytes,
+        headers={"Content-Type": "video/*", "Content-Length": str(video_size)},
+        method="PUT",
+    )
+    try:
+        with urllib.request.urlopen(upload_request, timeout=args.upload_timeout) as response:
+            status = response.getcode()
+            reason = response.reason
+            response_body = response.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8", errors="replace")
+        print("YouTube API rejected the video upload (Step 2/2)", file=sys.stderr)
+        print(f"Status: {e.code} {e.reason}", file=sys.stderr)
+        print(f"Response: {error_body[:500] or '(empty body)'}", file=sys.stderr)
+        return 4
+    except (urllib.error.URLError, OSError) as e:
+        print(f"Failed to reach YouTube's upload URL: {e}", file=sys.stderr)
+        return 3
+
+    print("Uploaded to YouTube")
+    print(f"Status: {status} {reason}")
+    print(f"Response: {response_body[:500] or '(empty body)'}")
+    return 0
+
+
+def run_instagram(args):
+    """Three real steps: create a Reels media container from a hosted video
+    URL, poll it until Instagram finishes fetching/processing the video,
+    then publish it. --dry-run only shows step 1 - steps 2 and 3 need step
+    1's real container ID, which doesn't exist yet during a dry run."""
+    env = require_env("META_PAGE_ACCESS_TOKEN", "IG_USER_ID")
+    if not args.video_url:
+        print(
+            "--platform instagram requires --video-url - a URL Instagram's own "
+            "servers can fetch the video from. This API has no raw-file-upload path; "
+            "host the video somewhere public first and pass that URL here.",
+            file=sys.stderr,
+        )
+        return 2
+    caption = load_text(args.text)
+    secrets = [env["META_PAGE_ACCESS_TOKEN"]]
+    base = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{env['IG_USER_ID']}"
+    create_url = f"{base}/media"
+    create_body = urllib.parse.urlencode({
+        "media_type": "REELS",
+        "video_url": args.video_url,
+        "caption": caption,
+        "access_token": env["META_PAGE_ACCESS_TOKEN"],
+    }).encode("utf-8")
+
+    if args.dry_run:
+        print("=== DRY RUN: no request sent ===")
+        print("Platform: instagram")
+        print(f"Note: {NOTES['instagram']}")
+        print("Step 1/3 - create the Reels media container:")
+        print("  Method: POST")
+        print(f"  URL: {redact(create_url, secrets)}")
+        print(f"  Body: {redact(create_body.decode('utf-8'), secrets)}")
+        print(
+            "Step 2/3 - would poll GET <container-id>?fields=status_code (up to "
+            f"--upload-timeout={args.upload_timeout:.0f}s) until status_code=FINISHED - "
+            "Instagram has to fetch and process the video from video_url first."
+        )
+        print(
+            f"Step 3/3 - would POST {redact(base, secrets)}/media_publish with the "
+            "container's creation ID once FINISHED."
+        )
+        print(
+            "Steps 2 and 3 depend on Step 1's real container ID, which doesn't exist "
+            "yet during --dry-run, so they can't be previewed any further than this."
+        )
+        print("=== END DRY RUN ===")
+        return 0
+
+    try:
+        with urllib.request.urlopen(
+            urllib.request.Request(create_url, data=create_body, method="POST"),
+            timeout=args.timeout,
+        ) as response:
+            container = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8", errors="replace")
+        print("Instagram API rejected creating the media container (Step 1/3)", file=sys.stderr)
+        print(f"Status: {e.code} {e.reason}", file=sys.stderr)
+        print(f"Response: {error_body[:500] or '(empty body)'}", file=sys.stderr)
+        return 4
+    except (urllib.error.URLError, OSError) as e:
+        print(f"Failed to reach Instagram's API: {e}", file=sys.stderr)
+        return 3
+
+    container_id = container.get("id")
+    if not container_id:
+        print(f"Instagram accepted Step 1 but returned no container id: {container}", file=sys.stderr)
+        return 4
+
+    status_url = f"{base.rsplit('/', 1)[0]}/{container_id}?fields=status_code&access_token={urllib.parse.quote(env['META_PAGE_ACCESS_TOKEN'])}"
+    deadline = time.time() + args.upload_timeout
+    status_code = None
+    while time.time() < deadline:
+        try:
+            with urllib.request.urlopen(status_url, timeout=args.timeout) as response:
+                status_code = json.loads(response.read().decode("utf-8")).get("status_code")
+        except (urllib.error.HTTPError, urllib.error.URLError, OSError) as e:
+            print(f"Warning: status check failed, retrying: {e}", file=sys.stderr)
+        if status_code == "FINISHED":
+            break
+        if status_code == "ERROR":
+            print("Instagram failed to process the video (container status_code=ERROR).", file=sys.stderr)
+            return 4
+        time.sleep(5)
+    else:
+        print(
+            f"Instagram hadn't finished processing the video after "
+            f"{args.upload_timeout:.0f}s (last status: {status_code}). It may still "
+            f"finish - check container {container_id} manually, or rerun with a "
+            "longer --upload-timeout (the container stays valid for a while).",
+            file=sys.stderr,
+        )
+        return 4
+
+    publish_body = urllib.parse.urlencode({
+        "creation_id": container_id,
+        "access_token": env["META_PAGE_ACCESS_TOKEN"],
+    }).encode("utf-8")
+    try:
+        with urllib.request.urlopen(
+            urllib.request.Request(f"{base}/media_publish", data=publish_body, method="POST"),
+            timeout=args.timeout,
+        ) as response:
+            status = response.getcode()
+            reason = response.reason
+            response_body = response.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8", errors="replace")
+        print("Instagram API rejected publishing the Reel (Step 3/3)", file=sys.stderr)
+        print(f"Status: {e.code} {e.reason}", file=sys.stderr)
+        print(f"Response: {error_body[:500] or '(empty body)'}", file=sys.stderr)
+        return 4
+    except (urllib.error.URLError, OSError) as e:
+        print(f"Failed to reach Instagram's API: {e}", file=sys.stderr)
+        return 3
+
+    print("Published to Instagram Reels")
+    print(f"Status: {status} {reason}")
+    print(f"Response: {response_body[:500] or '(empty body)'}")
+    return 0
+
+
+def run_tiktok(args):
+    """One real HTTP call - TikTok fetches the video itself (PULL_FROM_URL)
+    and processes/posts it asynchronously after this call returns."""
+    env = require_env("TIKTOK_ACCESS_TOKEN")
+    if not args.video_url:
+        print(
+            "--platform tiktok requires --video-url. This script uses TikTok's "
+            "PULL_FROM_URL source, where TikTok's own servers fetch the video - the "
+            "URL's domain must already be verified for your app in TikTok's developer "
+            "portal, or the init call will be rejected.",
+            file=sys.stderr,
+        )
+        return 2
+    caption = load_text(args.text)
+    if args.privacy_level != "SELF_ONLY":
+        print(
+            f"Warning: --privacy-level {args.privacy_level} was requested, but TikTok "
+            "forces every post from an unaudited app to SELF_ONLY (private, visible "
+            "only to you) regardless of what's requested here - it only actually "
+            "reaches an audience once your app passes TikTok's audit.",
+            file=sys.stderr,
+        )
+    url = "https://open.tiktokapis.com/v2/post/publish/video/init/"
+    headers = {
+        "Authorization": f"Bearer {env['TIKTOK_ACCESS_TOKEN']}",
+        "Content-Type": "application/json; charset=UTF-8",
+    }
+    body = json.dumps({
+        "post_info": {
+            "title": caption,
+            "privacy_level": args.privacy_level,
+            "disable_duet": args.disable_duet,
+            "disable_comment": args.disable_comment,
+            "disable_stitch": args.disable_stitch,
+        },
+        "source_info": {
+            "source": "PULL_FROM_URL",
+            "video_url": args.video_url,
+        },
+    }).encode("utf-8")
+    secrets = [env["TIKTOK_ACCESS_TOKEN"]]
+
+    if args.dry_run:
+        print("=== DRY RUN: no request sent ===")
+        print("Platform: tiktok")
+        print(f"Note: {NOTES['tiktok']}")
+        print("Method: POST")
+        print(f"URL: {url}")
+        print("Headers:")
+        for name, value in headers.items():
+            print(f"  {name}: {redact(value, secrets)}")
+        print(f"Body ({len(body)} bytes):")
+        print(body.decode("utf-8"))
+        print("=== END DRY RUN ===")
+        return 0
+
+    request = urllib.request.Request(url, data=body, headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(request, timeout=args.timeout) as response:
+            status = response.getcode()
+            reason = response.reason
+            response_body = response.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8", errors="replace")
+        print("TikTok API rejected the post", file=sys.stderr)
+        print(f"Status: {e.code} {e.reason}", file=sys.stderr)
+        print(f"Response: {error_body[:500] or '(empty body)'}", file=sys.stderr)
+        return 4
+    except (urllib.error.URLError, OSError) as e:
+        print(f"Failed to reach TikTok's API: {e}", file=sys.stderr)
+        return 3
+
+    print("Queued on TikTok (processing happens asynchronously)")
+    print(f"Status: {status} {reason}")
+    print(f"Response: {response_body[:500] or '(empty body)'}")
+    print(
+        "A 2xx status means TikTok accepted the request, not that the video is live "
+        "yet - confirm via TikTok's status-fetch endpoint or your app's activity log."
+    )
+    return 0
+
+
+VIDEO_RUNNERS = {
+    "youtube": run_youtube,
+    "instagram": run_instagram,
+    "tiktok": run_tiktok,
+}
+
+
 def main():
     args = parse_args()
 
@@ -426,6 +902,9 @@ def main():
             file=sys.stderr,
         )
         sys.exit(2)
+
+    if args.platform in VIDEO_RUNNERS:
+        sys.exit(VIDEO_RUNNERS[args.platform](args))
 
     text = load_text(args.text)
 

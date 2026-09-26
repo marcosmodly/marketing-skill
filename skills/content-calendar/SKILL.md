@@ -85,7 +85,12 @@ Sending is `publish-pipeline`'s job, one approved row at a time.
    - Whether visual briefs are wanted per slot — default to yes when the
      slot's content type is video or image; if so, hand off to
      `visual-brief-generator` per slot rather than duplicating its logic
-     here.
+     here. If the slot's platform is specifically YouTube Shorts,
+     Instagram Reels, or TikTok, hand off to `short-form-video` instead —
+     it's the more specific fit for those three (it also produces the
+     platform caption, hashtags, and posting-time guidance a slot needs,
+     not just the shot list) — and reserve `visual-brief-generator` for
+     long-form video or a platform outside that trio.
 
 4. **Draft each slot.** For each date/platform pair, produce the actual
    post content:
@@ -93,6 +98,12 @@ Sending is `publish-pipeline`'s job, one approved row at a time.
      structure rules as `content-repurposer` (read
      `${CLAUDE_PLUGIN_ROOT}/skills/content-repurposer/SKILL.md` for the
      exact formatting rules rather than reinventing them here).
+   - YouTube Shorts / Instagram Reels / TikTok slots: hand off to
+     `${CLAUDE_PLUGIN_ROOT}/skills/short-form-video/SKILL.md` instead of
+     `content-repurposer` or `visual-brief-generator` for this slot — it
+     produces the hook-first script, the platform caption/title, sized
+     hashtags, and a best-time-to-post window in one pass, which is what
+     this slot actually needs to be postable, not just a shot list.
    - Reddit / Product Hunt / Hacker News / Indie Hackers / dev.to / Discord
      / Slack / Telegram slots: hand off to
      `${CLAUDE_PLUGIN_ROOT}/skills/community-post-generator/SKILL.md`
@@ -162,6 +173,7 @@ Use this exact section order, as Markdown `##` headings:
 2. **Queued Posts** — one `###` subsection per date, each containing the
    full drafted content for that slot (using that slot's normal output
    structure — `content-repurposer` for LinkedIn/Twitter/newsletter,
+   `short-form-video` for YouTube Shorts/Instagram Reels/TikTok,
    `community-post-generator` for Reddit/Product Hunt/Hacker News/Indie
    Hackers/dev.to/Discord/Slack/Telegram, including its Community Research
    Summary and Go/No-Go).

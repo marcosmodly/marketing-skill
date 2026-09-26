@@ -14,10 +14,17 @@ platform, and a style/mood guide. If a connected image- or video-generation
 MCP tool is available in the current session and the user wants to generate
 now, use it. Otherwise the written brief itself is the deliverable.
 
-**Important:** as of this writing, none of Higgsfield, Runway, or
-Midjourney has a known official MCP server, so this skill never assumes one
-of those specifically is connected. It checks whatever tools are actually
-available at runtime instead of hardcoding a tool name.
+**Important:** Higgsfield launched an official hosted MCP server in 2026
+(Runway and Midjourney still have no known official one as of this
+writing), so it's no longer accurate to assume none of the major
+image/video-gen tools has one — but having an MCP server available in
+general doesn't mean it's connected in any given session. This skill
+checks whatever tools are actually available at runtime instead of
+hardcoding a tool name, the same as it always has. For short-form vertical
+video specifically (YouTube Shorts/Instagram Reels/TikTok), see the more
+targeted `short-form-video` skill instead, which checks for the same
+connectors and also produces platform-specific captions, hashtags, and
+posting-time guidance this skill doesn't.
 
 ## Step-by-step process
 
