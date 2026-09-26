@@ -9,7 +9,10 @@ Telegram channel's/group's, or a GitHub repository's Discussions rules
 before drafting a post for it — or, for Stack Overflow, judge whether a
 question would survive the platform's own closure norms before drafting
 a question-and-answer pair, or an answer to an existing question, since
-Stack Overflow has no rules page or post to check rules against at all
+Stack Overflow has no rules page or post to check rules against at all,
+or, for Lobsters, confirm you can even get an account there at all
+before anything else, since Lobsters gates account creation itself
+behind a personal invite from an existing member
 (asking you directly for Discord, Slack,
 and any private Telegram target or repository, since those have no
 public page to check), and hand the finished content off to your own
@@ -31,7 +34,7 @@ anything actually publishes.
 | `ad-copy-generator` | "ad copy," "Meta/Google/LinkedIn/YouTube/TikTok ad variants," "A/B test copy" | Multiple ad variants per platform, each a distinct hook angle, sized to that platform's character limits |
 | `email-sequence` | "email sequence," "drip campaign," "welcome series" | A multi-email sequence with send timing, subject lines, and a real narrative arc across emails |
 | `visual-brief-generator` | "visual brief," "video brief," "shot list," "image prompts for X" | A structured shot list, per-scene prompts, aspect ratios, and style guide, with platform-specific format conventions (short-form scroll-past hook timing for TikTok/Reels/Shorts vs. long-form/feed pacing); generates the actual asset only if a visual-gen tool is connected |
-| `community-post-generator` | "post this to r/[subreddit]," "help me post on Product Hunt," "write a Show HN/Show IH for this," "post this on dev.to," "post an update to our GitHub Discussions," "write a Stack Overflow question and answer about...," "post this in our Discord/Slack/Telegram" | Live-researches that specific subreddit's, Product Hunt's, Hacker News's, Indie Hackers', dev.to's, a public Telegram channel's/group's, or a public GitHub repository's Discussions actual rules and typical post style first (verifying each source is actually about that target, not a similarly-named one); for Discord, Slack, and private Telegram targets or repositories, asks you for the rules instead, since it can't research those; for Stack Overflow, checks whether the question would survive the platform's own closure norms instead, since there's no rules page to research. Gives a plain Go/No-Go either way — for GitHub Discussions specifically, whether Discussions is even enabled and whose repository it is matter as much as any rule — and only drafts a post (shaped for that platform — title+body, title+URL+first comment for Show HN, dev.to's/GitHub's title+body+tags-or-category, a question-and-answer pair or a standalone answer for Stack Overflow, or a single chat message in Discord's, Slack's, or Telegram's own formatting for the chat platforms) if it's actually welcome there, written to read like a person wrote it |
+| `community-post-generator` | "post this to r/[subreddit]," "help me post on Product Hunt," "write a Show HN/Show IH for this," "post this on dev.to," "post an update to our GitHub Discussions," "write a Stack Overflow question and answer about...," "post this on Lobsters," "post this in our Discord/Slack/Telegram" | Live-researches that specific subreddit's, Product Hunt's, Hacker News's, Indie Hackers', dev.to's, a public Telegram channel's/group's, a public GitHub repository's Discussions, or Lobsters' actual rules and typical post style first (verifying each source is actually about that target, not a similarly-named one); for Discord, Slack, and private Telegram targets or repositories, asks you for the rules instead, since it can't research those; for Stack Overflow, checks whether the question would survive the platform's own closure norms instead, since there's no rules page to research; for Lobsters, first checks whether you can even get an account at all, since it has no self-serve signup. Gives a plain Go/No-Go either way — for GitHub Discussions specifically, whether Discussions is even enabled and whose repository it is matter as much as any rule — and only drafts a post (shaped for that platform — title+body, title+URL+first comment for Show HN, dev.to's/GitHub's/Lobsters' title+body+tags-or-category, a question-and-answer pair or a standalone answer for Stack Overflow, or a single chat message in Discord's, Slack's, or Telegram's own formatting for the chat platforms) if it's actually welcome there, written to read like a person wrote it |
 | `publish-pipeline` | "publish this," "send to n8n/Make," "fire the webhook," "send the queued post for [date]" | Packages finished content/assets into JSON and hands off to your automation via webhook (or, optionally, straight to a platform API) after showing you the exact payload |
 | `full-pipeline` | "run the full pipeline," "research X and publish it," "do the whole thing end to end" | Chains research, repurposing, visual brief, and publish into one run, with a mandatory pause before anything actually publishes |
 
@@ -204,7 +207,7 @@ NOTES via `--help`). For Reddit, a successful
 response doesn't guarantee the post
 survives that subreddit's AutoModerator — see "Posting to Reddit, Product
 Hunt, Hacker News, Indie Hackers, dev.to, GitHub Discussions, Stack
-Overflow, Discord, Slack & Telegram" below before sending anything for
+Overflow, Lobsters, Discord, Slack & Telegram" below before sending anything for
 real.
 
 **Discord is one of the easiest to actually set up** — a webhook needs no
@@ -212,7 +215,7 @@ OAuth app review at all, just `MANAGE_WEBHOOKS` permission on the channel
 to create one (Channel Settings → Integrations → Webhooks). That's one
 place this script is easier than the platform it's replacing, not harder:
 `community-post-generator` can't independently verify a Discord server's
-rules the way it can for the researchable six (see below), so the actual
+rules the way it can for the researchable seven (see below), so the actual
 bottleneck for Discord is research, not access. It's not the unconditional
 floor, though — see dev.to and GitHub Discussions below for credentials
 that need no target-specific permission to be valid, even though only one
@@ -344,8 +347,8 @@ before public videos are even allowed. `content-repurposer` still drafts
 YouTube title/description/tags text; there's just nowhere for this script
 to send it.
 
-**Product Hunt, Hacker News, and Indie Hackers all have no direct-send
-path here, for different reasons.** Product Hunt's write API
+**Product Hunt, Hacker News, Indie Hackers, and Lobsters all have no
+direct-send path here, for different reasons.** Product Hunt's write API
 (`createPost`, etc.) requires special approval from Product Hunt itself —
 the free/default API tier is explicitly read-only, non-commercial (see
 below) — so unlike LinkedIn/X/Meta/Reddit/Discord/Slack/Telegram/dev.to/
@@ -356,9 +359,16 @@ apply for — its official API is read-only by design, full stop, so this
 isn't a "not yet approved" situation, it's "nothing to approve." Indie
 Hackers is genuinely unverified rather than confirmed either way — some
 sources mention an API, but it looks scoped to read-only product/revenue
-data, and nothing confirms a way to submit a post through it.
+data, and nothing confirms a way to submit a post through it. Lobsters
+compounds two separate barriers rather than being just one: this
+skill's research found no public write/submit endpoint at all (the same
+as Hacker News), and even setting that aside, sending anything still
+needs an account this script can't get anyone, since Lobsters gates
+account creation itself behind a personal invite from an existing
+member.
 `community-post-generator` still drafts the post text either way; you
-paste it into producthunt.com, news.ycombinator.com, or indiehackers.com
+paste it into producthunt.com, news.ycombinator.com, indiehackers.com,
+or (once an account actually exists) lobste.rs/stories/new
 yourself.
 
 ### Running this on a schedule
@@ -381,9 +391,9 @@ way to do that, on the theory that a live company account posting
 unsupervised is a decision only you should make explicitly, not one a
 scheduling tool should make for you by default.
 
-## Posting to Reddit, Product Hunt, Hacker News, Indie Hackers, dev.to, GitHub Discussions, Stack Overflow, Discord, Slack & Telegram
+## Posting to Reddit, Product Hunt, Hacker News, Indie Hackers, dev.to, GitHub Discussions, Stack Overflow, Lobsters, Discord, Slack & Telegram
 
-`community-post-generator` treats these ten differently from the
+`community-post-generator` treats these eleven differently from the
 broadcast platforms above: instead of a fixed post template, it does a
 live research pass — the target subreddit's actual rules, a sample of
 what's currently working there, Product Hunt's own guidelines, HN's
@@ -420,11 +430,14 @@ Show IH has one. dev.to also has a sanctioned company-page feature
 (Organizations), so posting under a personal account versus one is worth
 asking about upfront.
 
-**Discord and Slack both work differently from the other six, and it's
+**Discord and Slack both work differently from the other seven, and it's
 worth understanding why — and why they aren't the same as each other
-either.** Reddit, Product Hunt, Hacker News, Indie Hackers, dev.to, and
-Stack Overflow are all researchable on the open web — either published
-rules, or (for Stack Overflow) the site's own scope and question norms —
+either.** Reddit, Product Hunt, Hacker News, Indie Hackers, dev.to,
+Stack Overflow, and Lobsters are all researchable on the open web —
+either published
+rules, or (for Stack Overflow) the site's own scope and question norms,
+or (for Lobsters, once an account exists to research from) its own tags
+and About page —
 this skill can, at least in principle,
 look them up. Most Discord servers and virtually all Slack workspaces
 can't be seen at all without joining first: no public rules page, no
@@ -460,7 +473,7 @@ added to the specific chat by one of its admins before it can post there
 — easier than Slack's app-approval gate to start, but not the
 single-step ease of a Discord webhook either.
 
-**GitHub Discussions adds a gate none of the other nine need: whether the
+**GitHub Discussions adds a gate none of the other ten need: whether the
 surface exists at all.** Most repositories never turn Discussions on —
 confirmed by testing against this very plugin's own repository, which
 doesn't have it enabled — so that has to be checked before anything else,
@@ -502,6 +515,27 @@ couldn't confirm a specific, citable self-promotion ratio or ban
 threshold the way Reddit has one — that gap is called out plainly rather
 than invented.
 
+**Lobsters breaks a different assumption every platform above quietly
+relies on: that anyone can at least create an account and attempt to
+post.** Lobsters has no self-serve signup at all — a new account needs a
+personal invite from an existing member, requested socially (its own
+chat room, or reaching out if the requester already has a recognizable
+online presence), never by cold-messaging members asking for one, and
+the invite tree itself is public. So the first check for a Lobsters
+request is one no other platform needs: whether the requester (or
+anyone they know) already has an account — if not, that's a hard
+precondition to report, not a rules judgment to research around. Past
+that gate, Lobsters researches like a smaller, more explicit-about-it
+Hacker News: tags assigned at submission time (like dev.to, not
+free-form), a `show` tag as its Show HN/Show IH/`#showdev` equivalent,
+and — a rare case in this skill's research — an actual citable numeric
+self-promotion ratio stated on its own About page (under a quarter of
+one's stories and comments), unlike Hacker News's vaguer behavioral norm
+or Stack Overflow's confirmed gap above. Its flagging system is also
+structured rather than a bare vote: a flag needs a reason picked from a
+fixed list, and enough flags route the post into an actual moderator
+review queue.
+
 A few things worth knowing going in:
 - **Similarly-named platforms are a real trap, not a hypothetical one.**
   Researching Indie Hackers, one source turned out to be describing
@@ -520,7 +554,7 @@ A few things worth knowing going in:
   dedicated Self-Promotion category, separate from General. Hacker News
   has no cooldown or designated lane at all — its rule is behavioral,
   about whether your account's overall pattern is genuine participation
-  or promotion-only. Indie Hackers is the most welcoming of the six
+  or promotion-only. Indie Hackers is the most welcoming of the seven
   researchable platforms to the *fact* of self-promotion (it's built for
   founders sharing their own products) but still requires the right shape
   — Show IH specifically wants a founder story, your current stage, and
@@ -544,7 +578,12 @@ A few things worth knowing going in:
   and answering it yourself as legitimate, not a workaround — the real
   risk isn't a self-promotion rule being enforced, it's a weak or
   opinion-based question getting closed before anyone sees the answer,
-  no matter how good that answer is. None of this is something the skill can
+  no matter how good that answer is. Lobsters is the rare case with an
+  actual stated number to weigh, like Reddit — under a quarter of one's
+  stories and comments as a rule of thumb — though this skill has no way
+  to audit your real posting history against it, so treat it as a data
+  point in the reasoning, not a check it can pass or fail with certainty.
+  None of this is something the skill can
   audit against your actual account history or standing — double-check
   that yourself wherever a minimum or a pattern is at stake.
 - **Don't batch-blast the same pitch across subreddits, groups, servers,
@@ -557,7 +596,10 @@ A few things worth knowing going in:
   never posting near-duplicate questions across sites just to find one
   that sticks, and never treating the self-authored and existing-question
   cases as interchangeable — they call for different research and produce
-  different deliverables.
+  different deliverables. For Lobsters specifically, never draft or
+  research anything before confirming the requester actually has (or can
+  get) an account — a draft with no account behind it is a wasted step,
+  not a harmless one in reserve.
 - **API access to actually post varies a lot by platform, and Discord,
   Slack, Telegram, dev.to, GitHub Discussions, and Stack Overflow land in
   six different places, not one.** Reddit closed instant self-service app registration
@@ -606,9 +648,12 @@ A few things worth knowing going in:
   itself; for GitHub Discussions, access is just as frictionless as
   dev.to's but whether the destination exists at all is a real, separate
   question; for Stack Overflow, access is the real friction and the
-  write itself is split in two; for the other three with no send path at
+  write itself is split in two; for the other four with no send path at
   all, it's the
-  reverse of Discord entirely. Either way, the drafted post stands on its
+  reverse of Discord entirely — and Lobsters among those four is its own
+  case again: even setting the missing write API aside, there's no
+  self-serve account to get credentials for in the first place. Either
+  way, the drafted post stands on its
   own — paste it in manually if you'd rather not set up API access.
 - **A "Go" from this skill isn't a guarantee.** It's reading the same
   public rules a human would (or, for Discord/Slack/a private Telegram
@@ -631,8 +676,13 @@ A few things worth knowing going in:
   detection) this skill has no way to check in advance, and this skill
   also couldn't confirm the platform's exact sitewide wording on
   promotional answers, so treat that specific gap as open, not cleared.
+  For Lobsters specifically, the account-invite precondition is separate
+  from the content "Go" — clearing one says nothing about the other, and
+  even a genuine "Go" on content can't be audited against the requester's
+  real activity history, so the stated ratio stays a judgment input, not
+  a pass/fail check this skill can run for certain.
 - **No dedicated Reddit, Product Hunt, Hacker News, Indie Hackers, dev.to,
-  GitHub Discussions, Stack Overflow, Discord, Slack, or Telegram
+  GitHub Discussions, Stack Overflow, Lobsters, Discord, Slack, or Telegram
   connector exists to plug
   in here** (checked against Claude's connector directory as of this
   writing) — `community-post-generator` does its research with plain

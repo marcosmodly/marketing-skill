@@ -1,6 +1,6 @@
 ---
 name: community-post-generator
-description: "Researches a specific subreddit's, Product Hunt's, Hacker News's, Indie Hackers', dev.to's, a GitHub repository's Discussions, or Stack Overflow's actual rules and typical post style live before drafting — never a generic templated post, verifying each source is actually about the named target before trusting it, and writes it to read like a person wrote it. For Discord and Slack, where servers/workspaces have no public page to research at all, it asks the user (an actual member) for the rules instead of pretending to fetch them, and for Slack specifically drafts in Slack's own mrkdwn syntax rather than standard Markdown. Telegram is bimodal: a public channel/group can actually be previewed live (t.me/s/<username>), a private one can't, so which research path applies is determined per-target rather than fixed platform-wide, and drafts default to Telegram's HTML formatting tags. GitHub Discussions is bimodal too, plus a whose-repository-is-it branch that decides almost everything else. Stack Overflow has no post at all - the deliverable is a question-and-answer pair (or just an answer to an existing question), and the gate is whether the question survives the platform's own closure norms, not a rules page. Use when the user wants to post in a specific subreddit, on Product Hunt, on Hacker News (including Show HN), on Indie Hackers (including Show IH), on dev.to (including the #showdev tag), in a specific Discord server, Slack workspace, or Telegram channel/group, in a specific GitHub repository's Discussions, or on Stack Overflow (or another Stack Exchange site), or any other rules-driven community/forum."
+description: "Researches a specific subreddit's, Product Hunt's, Hacker News's, Indie Hackers', dev.to's, a GitHub repository's Discussions, Stack Overflow's, or Lobsters' actual rules and typical post style live before drafting — never a generic templated post, verifying each source is actually about the named target before trusting it, and writes it to read like a person wrote it. For Discord and Slack, where servers/workspaces have no public page to research at all, it asks the user (an actual member) for the rules instead of pretending to fetch them, and for Slack specifically drafts in Slack's own mrkdwn syntax rather than standard Markdown. Telegram is bimodal: a public channel/group can actually be previewed live (t.me/s/<username>), a private one can't, so which research path applies is determined per-target rather than fixed platform-wide, and drafts default to Telegram's HTML formatting tags. GitHub Discussions is bimodal too, plus a whose-repository-is-it branch that decides almost everything else. Stack Overflow has no post at all - the deliverable is a question-and-answer pair (or just an answer to an existing question), and the gate is whether the question survives the platform's own closure norms, not a rules page. Lobsters gates account creation itself behind a personal invite from an existing member, so the first check is whether the requester can even post there at all, before any rules research matters. Use when the user wants to post in a specific subreddit, on Product Hunt, on Hacker News (including Show HN), on Indie Hackers (including Show IH), on dev.to (including the #showdev tag), in a specific Discord server, Slack workspace, or Telegram channel/group, in a specific GitHub repository's Discussions, on Stack Overflow (or another Stack Exchange site), on Lobsters, or any other rules-driven community/forum."
 allowed-tools: Read, Grep, Glob, Write, WebSearch, WebFetch
 ---
 
@@ -116,6 +116,28 @@ naming a subreddit. This skill also handles the narrower, different case
 of answering an *existing* question someone else already asked, rather
 than authoring a new one — see step 2.
 
+Lobsters breaks a different assumption every platform above quietly
+relies on: that anyone can at least create an account and attempt to
+post. Lobsters has no self-serve signup at all — a new account needs a
+personal invite from an existing member, requested socially (its own
+chat room, or reaching out if the requester already has a recognizable
+online presence), never by cold-messaging members asking for one, and
+the invite tree itself is public. So step 2 has to check something no
+other platform needs checked first: whether the requester (or anyone
+they know) already has an account — if not, there's nothing this skill
+or the user can do about it directly, and unlike a No-Go from
+unwelcoming rules, that's a hard precondition to report, not a judgment
+call to research around. Past that gate, Lobsters researches like a
+smaller, more explicit-about-it Hacker News: tags assigned at submission
+time (like dev.to, not free-form), a `show` tag as its Show HN/Show
+IH/`#showdev` equivalent, and — a rare case in this skill's research —
+an actual citable numeric self-promotion ratio stated on its own About
+page (under a quarter of one's stories and comments), rather than the
+vaguer behavioral norms Hacker News and Reddit tend to get. Its flagging
+system is also structured rather than a bare vote: a flag needs a reason
+picked from a fixed list, and enough flags route the post into an actual
+moderator review queue.
+
 The copy itself also has to survive first contact: something that reads
 as obviously AI-polished marketing text gets the same skeptical reaction
 on these platforms as overt promotion does (see step 5), so drafts are
@@ -193,7 +215,7 @@ written to read like an actual person wrote them.
      labeled as unverified against that server's actual rules. Set the
      expectation now that step 3 will ask them to supply what the rules
      actually say, not fetch them independently the way it does for the
-     other six platforms.
+     other seven platforms.
    - For Slack: same as Discord — exact workspace *and* exact channel,
      confirm the user is actually a member, set the expectation that
      step 3 asks rather than fetches. Two things that are genuinely
@@ -262,6 +284,19 @@ written to read like an actual person wrote them.
      the judgment call is whether mentioning the product there reads as
      genuine engagement or as spam, not whether a new question would
      survive closure).
+   - For Lobsters: before anything else, confirm the requester actually
+     has an account, or knows an existing member willing to invite one —
+     Lobsters has no self-serve signup at all, only a personal invite
+     from someone already on the site, requested socially (its own chat
+     room, or reaching out if the requester already has some recognizable
+     online presence), never by cold-messaging members asking for one. The
+     invite tree itself is public at `lobste.rs/users`. If neither
+     applies, say so plainly and stop here — this isn't a rules judgment
+     to research around, it's a hard precondition nothing downstream can
+     fix. If it does apply, get the specific tag(s) now (assigned at
+     submission time from Lobsters' own fixed list, similar to dev.to) and
+     whether this is a `show`-tag personal-project post or a regular
+     submission, since that changes what step 3 samples for comparison.
    - The underlying content/offer/topic, and any link or CTA (paste, file,
      URL, or "our product" — check `README*`, `CHANGELOG*`, `docs/**/*.md`,
      and `package.json`/`pyproject.toml` at the project root first if so,
@@ -479,14 +514,29 @@ written to read like an actual person wrote them.
      say so plainly rather than inventing a number; what's actually
      confirmed is the self-answer pattern's legitimacy and the general
      closure-norms risk, not a precise rule to cite.
+   - **Lobsters.** Once the account precondition from step 2 is cleared,
+     research the same way as Reddit or dev.to: `lobste.rs/about` for its
+     stated self-promotion norm — a rare case in this skill's research
+     where an actual numeric ratio is citable, like Reddit's, unlike Stack
+     Overflow's confirmed gap above (a rule of thumb of under a quarter of
+     one's stories and comments, plus a qualitative bar: a genuinely
+     technical article, open-source release, debugging story, architecture
+     writeup, or postmortem, not a bare announcement) — and a sample of
+     recent posts under the target tag(s) to judge current norms, the same
+     way a subreddit gets sampled. Also note Lobsters' structured flagging
+     system (a flag requires a reason chosen from a fixed list — spam,
+     already posted, off-topic, and similar — and enough flags route a
+     post into an actual moderator review queue) as a real, differently-
+     shaped risk from a subreddit's removal or a dev.to tag getting
+     stripped.
    - Cite what was actually found — link the rules page or search result
      checked, note it was checked just now. Never assert a community's
      norms from training knowledge alone; subreddit rules change, and a
      stale assumption is exactly how a post gets removed.
    - **Track source tier as you go, not just the content.** WebFetch to
      reddit.com, producthunt.com, news.ycombinator.com, indiehackers.com,
-     dev.to, github.com, or stackoverflow.com (and stackoverflow.blog) can
-     fail outright depending on the runtime's
+     dev.to, github.com, stackoverflow.com (and stackoverflow.blog), or
+     lobste.rs can fail outright depending on the runtime's
      network policy (though note github.com in particular has been
      reachable in at least one session even when other platforms' domains
      weren't, while a subdomain like docs.github.com was still blocked —
@@ -625,6 +675,15 @@ written to read like an actual person wrote them.
      being asked — mentioning it would read as spam regardless of how
      well-written the answer is, and a Go still needs the same "would
      this answer stand on its own" test.
+   - **For Lobsters, the account-precondition check from step 2 is
+     separate from the content go/no-go here** — a requester who cleared
+     the invite check can still get a no-go on the actual post, the normal
+     way: self-promotion pushing well past the under-a-quarter rule of
+     thumb, a post that reads as an announcement rather than a genuinely
+     technical writeup, or a tag whose recent posts clearly don't welcome
+     this kind of content. Treat the stated ratio as a real, citable data
+     point in the reasoning, not just a vague lean — one of the few
+     platforms in this skill's research with an actual stated number.
 
 5. **Draft the post** — shape depends on the platform (see Output
    structure below) — matching the specific community's researched format
@@ -703,6 +762,12 @@ written to read like an actual person wrote them.
      below matter most: an answer that reads like marketing copy is
      exactly what gets flagged and downvoted on this platform
      specifically.
+   - **Lobsters: title + submission (a URL, or a self-post body for a
+     text-only submission) plus the finalized tag list** — the same
+     general shape as Reddit or Hacker News, not a new shape of its own.
+     Call the tags out separately, the same discipline as Reddit's flair
+     or dev.to's tags, and if this is a `show`-tag post, say so explicitly
+     rather than leaving it implicit in the tag list alone.
    - **Write it to read like an actual person typed it, not AI-polished
      marketing copy** — these communities react to that almost as badly
      as they react to overt promotion, since it's a strong tell for
@@ -754,7 +819,11 @@ written to read like an actual person wrote them.
    objective, a real problem) independent of who's answering it, and
    whether the answer is genuinely complete: would it still be a good,
    acceptable answer with the product mention removed? If not, it isn't
-   ready.
+   ready. For Lobsters specifically, there's no character-limit check
+   this skill could confirm — the actual check is whether the account
+   precondition from step 2 was genuinely cleared, and whether the
+   self-promotion ratio and content quality actually clear the bar its
+   own About page states, not just technically avoid removal.
 
 ## When to use this skill
 
@@ -778,6 +847,7 @@ Trigger on requests like:
   our own Stack Overflow question about..."
 - "Answer this Stack Overflow question with a mention of our tool" /
   "Can we respond to [link] on Stack Overflow?"
+- "Post this on Lobsters" / "Submit this to lobste.rs"
 - "What's the best way to post this in [subreddit]?"
 
 If the request just says "Indie Hackers" with no other context, confirm
@@ -807,7 +877,9 @@ Use this exact section order, as Markdown `##` headings:
      stackoverflow.com/stackoverflow.blog — for Stack Overflow there's no
      rules page to fetch, so `Primary` instead means directly confirming
      the target site's scope/tag conventions or sampling its actual recent
-     questions, not fetching a guidelines document) in this run.
+     questions, not fetching a guidelines document; or lobste.rs itself —
+     its own About page and a sample of actual recent tagged posts) in
+     this run.
    - `Secondary (official)` — a direct fetch failed, but the WebSearch
      snippets used are visibly quoting the platform's own official pages
      (help center articles, named guideline pages, the platform's own
@@ -901,6 +973,12 @@ Use this exact section order, as Markdown `##` headings:
      of the product mention. Never collapse the two cases into one
      shape, and never force either into Reddit's or dev.to's title+body
      template.
+   - Lobsters: title + submission (a URL, or a self-post body for a
+     text-only submission) + the finalized tag list, called out
+     separately — the same general shape as Reddit, not Show HN's
+     three-piece split or Stack Overflow's question-and-answer pair. If
+     this is a `show`-tag post, label it as such rather than leaving it
+     implicit.
    - Discord: a single chat message, no separate title field at all —
      Discord posts don't have one, so don't invent one. Under 2000
      characters (see step 6). Label it clearly as built from the rules
@@ -958,7 +1036,13 @@ Use this exact section order, as Markdown `##` headings:
    expectation is met in the answer, since this skill's research couldn't
    confirm Stack Overflow's exact sitewide wording on promotional answers
    or a citable self-promotion ratio the way Reddit has one — say so
-   plainly rather than treating an unconfirmed rule as cleared).
+   plainly rather than treating an unconfirmed rule as cleared; for
+   Lobsters specifically, that the requester actually has an account or a
+   willing existing member to invite them — this skill can tell them
+   whether they need one, but can't get anyone an invite itself — and
+   that the post's actual share of their recent activity genuinely stays
+   under the stated under-a-quarter rule of thumb, which this skill has
+   no way to audit against their real posting history).
 5. **Next Step** — the primary path is pasting it in manually; note that
    `publish-pipeline`'s optional direct-post path can send a Reddit
    self-post, a Discord message, a Slack message, a Telegram message, a
@@ -1009,11 +1093,18 @@ Use this exact section order, as Markdown `##` headings:
      extra friction. Whether a Personal Access Token has since replaced
      part of this flow was a genuinely unclear point in this skill's own
      research — don't present that detail as settled.
-   Product Hunt and Hacker News have no equivalent send path here, for two
+   Product Hunt, Hacker News, and Lobsters have no equivalent send path
+   here, for three
    different reasons worth naming rather than lumping together: Product
    Hunt's write API exists but needs Product Hunt's own special approval;
    Hacker News's official API has no write/submit endpoint at all, for
-   anyone. Indie Hackers' API situation is genuinely unclear from this
+   anyone; Lobsters compounds two separate barriers rather than being just
+   one — this skill's research found no public write/submit endpoint at
+   all (the same as Hacker News), and even setting that aside, sending
+   anything still needs an account this skill can't get anyone, since
+   Lobsters gates account creation itself behind a personal invite (see
+   step 2) — a barrier none of the other ten platforms have. Indie
+   Hackers' API situation is genuinely unclear from this
    skill's research (some sources reference an API, but it appears scoped
    to read-only product/revenue data, and a community thread literally
    asks whether IH has a developer API at all) — don't round that
@@ -1026,7 +1117,8 @@ Use this exact section order, as Markdown `##` headings:
 
 - Never draft a post before completing the live rules research for that
   specific community in this run — no generic, reusable Reddit, Product
-  Hunt, Hacker News, Indie Hackers, dev.to, or Stack Overflow template.
+  Hunt, Hacker News, Indie Hackers, dev.to, Stack Overflow, or Lobsters
+  template.
   (Discord and Slack get the
   user-supplied equivalent — asking counts as "completing" the step,
   skipping the ask doesn't. Telegram and GitHub Discussions each get
@@ -1034,7 +1126,10 @@ Use this exact section order, as Markdown `##` headings:
   user-supplied equivalent for a private one — but the public/private
   determination itself has to happen first, not be skipped, and for
   GitHub Discussions, confirming the surface is even enabled comes before
-  that. Stack Overflow's research is different in kind from every other
+  that. Lobsters gets the same research as Reddit or dev.to, but only
+  after the account-invite precondition from step 2 clears — skipping
+  straight to research without checking that first gets the order
+  backwards. Stack Overflow's research is different in kind from every other
   entry in this list — there's no rules page to fetch — but skipping it is
   the same violation: drafting a question or answer without first
   checking the target Stack Exchange site's scope and typical question
@@ -1058,8 +1153,9 @@ Use this exact section order, as Markdown `##` headings:
   every draft, but override its tone/formatting defaults toward the
   target community's own norm when they conflict, and say so explicitly.
 - If WebFetch to the platform's own domain (reddit.com, producthunt.com,
-  news.ycombinator.com, indiehackers.com, dev.to, github.com, or
-  stackoverflow.com/stackoverflow.blog) is unreachable in this runtime,
+  news.ycombinator.com, indiehackers.com, dev.to, github.com,
+  stackoverflow.com/stackoverflow.blog, or lobste.rs) is unreachable in
+  this runtime,
   fall back to WebSearch and say so — never silently substitute general
   knowledge for a live check. Try github.com itself before assuming it's
   blocked the way other platforms' domains have been — it's been
@@ -1119,6 +1215,18 @@ Use this exact section order, as Markdown `##` headings:
   blog and the general closure-norms risk; say so plainly rather than
   inventing a number the way Reddit's cadence limit can sometimes be
   cited.
+- On Lobsters specifically: never research or draft anything before
+  confirming the account-invite precondition from step 2 — a post
+  drafted for a requester with no account and no path to one is a
+  wasted step, not a harmless draft-in-reserve. Never treat the stated
+  under-a-quarter self-promotion ratio as a hard technical limit this
+  skill can enforce automatically — it can't audit the requester's real
+  posting history, so the ratio is a data point to weigh in the Go/No-Go
+  reasoning, not a check this skill can pass or fail with certainty.
+  Never present a `show`-tag draft as if it carried Show HN's or Show
+  IH's mandated structure (a founder story, current stage, concrete
+  questions) — Lobsters' `show` tag has no such required shape, and
+  inventing one misrepresents the convention being followed.
 - On Discord specifically: never draft a post for a server the user isn't
   a member of, and never draft one on a guess when the user says they
   don't know or haven't checked the server's rules — ask them to check
@@ -1181,7 +1289,7 @@ Use this exact section order, as Markdown `##` headings:
   Slack's app-approval gate, its formatting is HTML tags rather than
   near-standard Markdown or mrkdwn, and its character limit (4096) rejects
   outright like Discord's rather than truncating like Slack's. Same
-  research-and-draft pattern as all nine other platforms, genuinely
+  research-and-draft pattern as all ten other platforms, genuinely
   different mechanics in every category above.
 - Don't treat dev.to as a reskinned Reddit, Hacker News, or Indie Hackers
   either, despite surface similarities to each — it isn't one
@@ -1202,7 +1310,7 @@ Use this exact section order, as Markdown `##` headings:
   repository it is, which changes the entire risk calculus in a way
   public/private access or tag choice never does for the other two. Some
   categories restrict who can start a new discussion independent of the
-  repository's own visibility, a permission layer none of the other nine
+  repository's own visibility, a permission layer none of the other ten
   platforms have. Same research-and-draft pattern, genuinely different
   mechanics.
 - Don't treat Stack Overflow as just a stricter version of dev.to or
@@ -1222,6 +1330,23 @@ Use this exact section order, as Markdown `##` headings:
   question — where every other platform in this list drafts exactly one
   shape of thing per run. Same research-and-draft discipline, a genuinely
   different mechanic in almost every category above.
+- Don't treat Lobsters as a smaller Hacker News just because it's the
+  closest sibling here, or as a clone of dev.to just because both use
+  tags — it adds a gate none of the other ten platforms have: whether
+  the requester can even get an account at all. Every other platform in
+  this list assumes self-serve signup is possible, differing only in
+  whether *posting* needs extra permission (a webhook, a chat admin's
+  add, Discussions turned on, an OAuth token); Lobsters gates *account
+  creation itself* behind a personal invite from an existing member, a
+  precondition that has to clear before research is even worth doing,
+  not a rule to research around. It also carries an actual citable
+  self-promotion ratio, unlike Hacker News's vaguer behavioral norm or
+  Stack Overflow's confirmed gap, and a structured, reason-coded flagging
+  system that routes repeated flags into an actual moderator queue,
+  neither of which dev.to's tag-stripping or Reddit's/HN's plain
+  downvote-and-report model has. Same research-and-draft discipline,
+  genuinely different mechanics, and a precondition check no other
+  platform here needs at all.
 
 ## Example output
 
@@ -1824,3 +1949,112 @@ two options above you want, and this skill will draft that version next.
 > were blocked, the same as most platforms this skill researches — it
 > required the search results to visibly trace back to the platform's own
 > stated position rather than a third party's guess at it.
+
+> **A real research run, Lobsters — the account-precondition case** (from
+> an actual test run against this plugin itself): checking whether the
+> requester can even post to Lobsters at all, before anything else:
+>
+> ```markdown
+> ## Community Research Summary
+> **Source Confidence: N/A — precondition not met.** Lobsters has no
+> self-serve signup; a new account requires a personal invite from an
+> existing member. The requester confirmed they don't have a Lobsters
+> account and don't know an existing member who could invite them, so no
+> rules research was attempted — there was nothing to research toward
+> yet.
+>
+> ## Go / No-Go
+> No-go, but not from unwelcoming rules — there's no account to post
+> from. The actual next step is getting an invite: Lobsters' own chat
+> room (lobste.rs/chat) is the accepted place to ask, or reaching out
+> directly to an existing member if the requester has some recognizable
+> online presence to vouch for them. Cold-messaging members asking for an
+> invite is explicitly bad etiquette on this platform, not just unlikely
+> to work.
+>
+> ## Compliance Checklist
+> - Confirm the requester actually wants to pursue an invite before
+>   treating this as blocked indefinitely — it may be faster to post this
+>   content somewhere the requester already has standing.
+>
+> ## Next Step
+> Nothing drafted this run. If the requester gets an invite, re-run this
+> skill against the same target — research and draft can happen in the
+> same pass once the account exists.
+> ```
+>
+> Notice the Source Confidence line doesn't reach for a tier at all —
+> `Primary` through `User-Supplied` all describe how confident this skill
+> is about researched *rules*, and there were no rules to research yet,
+> the same structural short-circuit as GitHub Discussions' "surface
+> doesn't exist" case above, but gating the *requester's own access*
+> rather than the *target's configuration*. A No-Go here isn't a content
+> judgment; it's a precondition nothing downstream can route around.
+
+> **A real research run, Lobsters — the precondition cleared, content
+> go/no-go case** (from an actual test run against this plugin itself):
+> same platform, this time the requester already has an account:
+>
+> ```markdown
+> ## Community Research Summary
+> **Source Confidence: Secondary (official)** — lobste.rs was unreachable
+> this run (blocked outright by the runtime's network policy), so
+> research fell back to WebSearch, which surfaced content tracing
+> directly to Lobsters' own About page and its own meta-discussion
+> threads, not a third party's guess: "It's great to have authors
+> participate in the community, but not to exploit it as a write-only
+> tool for product announcements or driving traffic to their work. As a
+> rule of thumb, self-promo should be less than a quarter of one's
+> stories and comments." A `show` tag exists as the accepted way to share
+> a personal project.
+>
+> Target: the `show` and `python` tags. Requester confirmed they already
+> have a Lobsters account (invited by an existing member last year) and
+> this would be roughly their fourth submission this quarter against
+> maybe fifteen comments in the same period — comfortably under the
+> stated ratio.
+>
+> ## Go / No-Go
+> Go, based on `Secondary (official)` sourcing — the requester's activity
+> mix stays well under the quarter rule of thumb, and the actual content
+> (a real debugging story, not a bare announcement) matches what the
+> policy says works. Hedge: confirm the rule's exact wording directly at
+> lobste.rs/about before posting, since this run couldn't fetch it.
+>
+> ## Drafted Post
+> **Title:** Tracked down a race condition that only reproduced under
+> load, here's what actually caused it
+> **Tags:** show, python
+>
+> Spent most of a weekend chasing a bug that only showed up under real
+> traffic, never in tests. Turned out to be two workers writing to the
+> same cache key with no lock between them, a classic problem but not one
+> I'd have guessed from the symptoms we were seeing.
+>
+> Wrote up the actual debugging process, not just the fix, since the "how
+> did you even find this" part felt more useful than the one-line patch.
+> Includes the logging trick that finally made the race visible.
+>
+> Happy to get into the specifics if anyone's dealt with something
+> similar.
+>
+> ## Compliance Checklist
+> - Confirm the requester's actual activity mix still holds by the time
+>   this posts — this skill took their word for the count, not an
+>   independent audit.
+>
+> ## Next Step
+> Nothing sent. Lobsters has no public write API this skill's research
+> could find, so this goes out the same way as Hacker News or Product
+> Hunt — paste it in manually at lobste.rs/stories/new, no
+> `publish_direct.py` path available for it.
+> ```
+>
+> Same tags-called-out-separately discipline as dev.to, but the shape
+> itself is Reddit's (title + body), not a new one — the account
+> precondition is what's genuinely new about this platform, not the
+> Drafted Post shape. And notice the ratio from the Community Research
+> Summary carries all the way into the Go/No-Go line as an actual
+> reasoning input, not just background color — one of the few platforms
+> in this skill's research with a real number to weigh instead of a
+> vaguer behavioral read.

@@ -143,14 +143,22 @@ step 5) for users who've set up their own platform API credentials.
      couldn't confirm Stack Overflow's exact sitewide wording on
      promotional answers, say so before sending rather than treating an
      unconfirmed rule as cleared. **Product Hunt,
-     Hacker News, and Indie Hackers have no equivalent direct-send path,
-     for different reasons** (see README): Product Hunt's write API
+     Hacker News, Indie Hackers, and Lobsters have no equivalent
+     direct-send path, for different reasons** (see README): Product
+     Hunt's write API
      requires special approval from Product Hunt itself; Hacker News's API
-     has no write/submit endpoint at all, for anyone; and Indie Hackers'
+     has no write/submit endpoint at all, for anyone; Indie Hackers'
      API situation is unverified rather than confirmed either way, so it's
-     treated as manual-only too — all three always go out by pasting the
-     draft in manually (producthunt.com, news.ycombinator.com, or
-     indiehackers.com), never through this script, and that's permanent
+     treated as manual-only too; and Lobsters compounds two separate
+     barriers rather than being just one — this skill's research found no
+     public write/submit endpoint at all (the same as Hacker News), and
+     even setting that aside, sending anything still needs an account
+     this script can't get anyone, since Lobsters gates account creation
+     itself behind a personal invite from an existing member — all four
+     always go out by pasting the
+     draft in manually (producthunt.com, news.ycombinator.com,
+     indiehackers.com, or lobste.rs/stories/new — once an account
+     actually exists), never through this script, and that's permanent
      for Hacker News, not a "not yet approved" situation. Discord, Slack,
      Telegram, dev.to, GitHub Discussions, and Stack Overflow each have a
      real send path but don't share one friction profile — Discord's
