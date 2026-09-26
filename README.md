@@ -154,7 +154,16 @@ even for a scheduled daily run with nobody there to reply. A handful of
 Status values are permanent suppression, not just history: `Bounced`,
 `Unsubscribed`/`Do-Not-Contact`, and `Replied` all block that person from
 ever being re-queued by this skill again, regardless of how a later
-request is phrased.
+request is phrased. When Gmail is connected, these three are also
+detected automatically — every run starts with an inbox sync that reads
+real replies and bounce notifications for anyone still logged `Sent`, so
+the suppression list stays accurate without a human having to remember
+to update it (an ambiguous result is reported, never guessed at). Two
+more things ride along in the same table: a `Subject Variant` (A/B) per
+row so reply rates can eventually be attributed to a subject line, and a
+`Recommended Send Time` computed from each prospect's own region — this
+skill still never sends on its own, so that time is either sent manually
+or via Gmail's own native scheduled-send feature.
 
 ## Automation handoff
 
@@ -503,15 +512,25 @@ image/video-gen connector — it doesn't assume either is present:
   them with contact details. Without one connected, the skill falls back
   to public-web research (WebSearch/WebFetch) on prospects you name
   directly, at lower confidence, and says so in its output.
-- **Gmail** (via a connected Gmail MCP server) to create real drafts you
-  can review and send yourself. Without it connected, `email-outreach`
-  still produces the full email content — it's just saved to
-  `state/outreach/` instead of also landing in your Gmail Drafts folder.
+- **Gmail** (via a connected Gmail MCP server) for two things: creating
+  real drafts you can review and send yourself, and — at the start of
+  every run — reading real replies and bounce notifications for anyone
+  already logged `Sent`, so `state/outreach-log.md`'s suppression list
+  updates itself instead of depending on manual edits. Without it
+  connected, `email-outreach` still produces the full email content and
+  still checks its local log — it's just saved to `state/outreach/`
+  instead of also landing in your Gmail Drafts folder, and the log's
+  `Replied`/`Bounced`/`Unsubscribed` statuses only change when you (or
+  the prospect, via a reply you paste in) update them.
 
 Either way, `email-outreach` only ever creates drafts or queues content —
 actually sending (Gmail's `send_message`) always requires your explicit,
 live go-ahead in that conversation, the same rule `publish-pipeline`
-follows for every other channel in this plugin.
+follows for every other channel in this plugin. It also never has a
+scheduled-send tool to call: the per-prospect "Recommended Send Time" it
+computes (from the prospect's own region, inside your configured
+send-time window) is there for you to act on manually, or by pointing
+Gmail's own scheduled-send feature at that time yourself.
 
 ## Repo layout
 
