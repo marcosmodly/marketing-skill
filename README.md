@@ -28,7 +28,7 @@ anything actually publishes.
 | `seo-brief` | "SEO brief," "keyword research," "optimize this for search" | Target/secondary keywords, search intent, suggested outline, meta title/description — never fabricates search-volume numbers |
 | `ad-copy-generator` | "ad copy," "Meta/Google/LinkedIn ad variants," "A/B test copy" | Multiple ad variants per platform, each a distinct hook angle, sized to that platform's character limits |
 | `email-sequence` | "email sequence," "drip campaign," "welcome series" | A multi-email sequence with send timing, subject lines, and a real narrative arc across emails |
-| `email-outreach` | "cold outreach," "prospecting emails," "daily sales outreach," "personalized cold email to [name]" | Researches real prospects against a defined ICP (via a connected prospecting tool, or public-web research), checks each one against a permanent contact log so nobody's contacted twice — or ever again once unsubscribed/replied — drafts a genuinely personalized email per prospect, re-confirms strategy monthly, and queues everything for approval (or drafts directly in Gmail if connected); never sends |
+| `email-outreach` | "cold outreach," "prospecting emails," "daily sales outreach," "personalized cold email to [name]" | Researches real prospects against a defined ICP (public-web research by default; a connected prospecting tool only if you ask for verified contact details), checks each one against a permanent contact log so nobody's contacted twice — or ever again once unsubscribed/replied — drafts a genuinely personalized email per prospect, re-confirms strategy monthly, and queues everything for approval (or drafts directly in Gmail if connected); never sends |
 | `visual-brief-generator` | "visual brief," "video brief," "shot list," "image prompts for X" | A structured shot list, per-scene prompts, aspect ratios, and style guide; generates the actual asset only if a visual-gen tool is connected |
 | `community-post-generator` | "post this to r/[subreddit]," "help me post on Product Hunt," "write a Show HN/Show IH for this," "post this on dev.to," "post this in our Discord/Slack/Telegram" | Live-researches that specific subreddit's, Product Hunt's, Hacker News's, Indie Hackers', dev.to's, or a public Telegram channel's/group's actual rules and typical post style first (verifying each source is actually about that target, not a similarly-named one); for Discord, Slack, and private Telegram targets, asks you for the rules instead, since it can't research those. Gives a plain Go/No-Go either way, and only drafts a post (shaped for that platform — title+body, title+URL+first comment for Show HN, dev.to's title+body+tags, or a single chat message in Discord's, Slack's, or Telegram's own formatting for the chat platforms) if it's actually welcome there, written to read like a person wrote it |
 | `publish-pipeline` | "publish this," "send to n8n/Make," "fire the webhook," "send the queued post for [date]" | Packages finished content/assets into JSON and hands off to your automation via webhook (or, optionally, straight to a platform API) after showing you the exact payload |
@@ -507,11 +507,15 @@ different things, the same way `visual-brief-generator` checks for an
 image/video-gen connector — it doesn't assume either is present:
 
 - **A prospecting/data-enrichment tool** (e.g. a connected Vibe
-  Prospecting MCP server) to actually research prospects against your
-  ICP and, only with your explicit go-ahead on the cost shown, enrich
-  them with contact details. Without one connected, the skill falls back
-  to public-web research (WebSearch/WebFetch) on prospects you name
-  directly, at lower confidence, and says so in its output.
+  Prospecting MCP server) — used only when you ask for it. **Free
+  public-web research (WebSearch/WebFetch) is the default for every
+  batch**, connected or not, at lower confidence and without verified
+  contact details. Say something like "use Vibe Prospecting" or "get me
+  a verified email for this one" to opt a run (or a single prospect)
+  into the paid path instead — being connected doesn't switch it on by
+  itself, and even after you opt in, any actual credit spend
+  (`enrich-prospects`/`export-to-csv`) still shows its cost and waits for
+  your go-ahead separately.
 - **Gmail** (via a connected Gmail MCP server) for two things: creating
   real drafts you can review and send yourself, and — at the start of
   every run — reading real replies and bounce notifications for anyone

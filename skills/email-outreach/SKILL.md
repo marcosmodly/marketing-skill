@@ -101,6 +101,15 @@ technically one tool call away.
      straight to step 6's research for just those, using whatever the
      user already gave you), versus "find me N more" (full research flow
      in step 6).
+   - **Research method — free by default.** Unless the user's request for
+     this run explicitly asks for paid/verified enrichment (e.g. "use
+     Vibe Prospecting," "get me verified emails," "pull real contact
+     details this time"), research this batch with the free WebSearch/
+     WebFetch path in step 6, even when Vibe Prospecting is connected.
+     Don't offer or switch to the paid path unprompted — if it's relevant
+     to mention (e.g. the free pass came up thin, or the user seems to
+     want higher-confidence data), say plainly that paid enrichment is
+     available on request, then wait to actually use it until they ask.
    - Any one-off override to the strategy defaults for this run only
      (e.g. a different segment or offer just for today) — apply it to
      this batch without rewriting `references/outreach-strategy.md`;
@@ -122,44 +131,52 @@ technically one tool call away.
    - Pull filters from `references/outreach-strategy.md`'s ICP/segment
      section (industry, company size, job title/department, geography,
      exclusions).
-   - **Check for a connected prospecting tool** — this skill checks
-     whatever's actually available in the current session rather than
-     assuming one specific service is connected (same pattern
-     `visual-brief-generator` uses for image/video-gen tools). As of this
-     writing that means the Vibe Prospecting MCP tools
-     (`fetch-entities`, `autocomplete`, `match-prospects`,
-     `enrich-prospects`, `fetch-prospects-events`,
-     `fetch-businesses-events`, `export-to-csv`, `show-sample`, etc.).
-     - **If connected:** run `autocomplete` first for any filter field
-       that requires standardized values (job title, LinkedIn category,
-       skills, interests, intent topics), then `fetch-entities` with
-       `entity_type: "prospects"` and those filters — oversample
-       modestly (e.g. 1.5–2x the remaining batch need) to leave room for
-       suppression-list drops, then `show-sample` the results. **Never
-       call `enrich-prospects` or `export-to-csv` (or anything else that
-       spends Vibe Prospecting credits) without first showing the
-       estimated cost and getting the user's explicit go-ahead** — this
-       is that tool's own hard rule, and nothing about this being a
-       routine daily job or a scheduled trigger waives it. A
-       scheduled/unattended run with nobody there to approve a spend
-       stops and reports the shortfall rather than guessing or skipping
-       the check. Tag prospects found this way `Verified`.
-     - **If not connected**, or for a prospect the user named directly:
-       research via WebSearch/WebFetch instead — the prospect's and
-       company's own public pages (LinkedIn, company site, recent news)
-       — for the same fields: role, company, and one concrete recent
-       fact to use as the personalization hook. Tag this research
-       `Public-Web` (lower confidence than `Verified`) and say so in the
-       output. If the user supplies the facts directly (e.g. pastes their
-       own notes on a prospect), tag that prospect `User-Supplied`.
-   - **Trigger-event research is opt-in, not automatic.** If the
-     strategy's angle depends on a trigger-event type (a funding round,
-     an executive hire, a hiring surge in a specific department) and Vibe
-     Prospecting is connected, you may use `fetch-businesses-events`/
-     `fetch-prospects-events` for it — but ask the user before fetching
-     detailed event records, per that tool's own rule, even though this
-     is a recurring job; don't treat "we do this every day" as standing
-     permission to skip the ask.
+   - **Default to free research, regardless of what's connected.**
+     Research via WebSearch/WebFetch — the prospect's and company's own
+     public pages (LinkedIn, company site, recent news) — for role,
+     company, and one concrete recent fact to use as the personalization
+     hook. Tag this research `Public-Web` (lower confidence than
+     `Verified`) and say so in the output. If the user supplies the facts
+     directly (e.g. pastes their own notes on a prospect), tag that
+     prospect `User-Supplied`. This is the path to use even when Vibe
+     Prospecting is connected, unless step 4 recorded that the user opted
+     into paid enrichment for this run.
+   - **Paid path — only when the user opted in during step 4.** This
+     skill checks whatever's actually connected in the current session
+     rather than assuming one specific service is present (same pattern
+     `visual-brief-generator` uses for image/video-gen tools); as of this
+     writing that means the Vibe Prospecting MCP tools (`fetch-entities`,
+     `autocomplete`, `match-prospects`, `enrich-prospects`,
+     `fetch-prospects-events`, `fetch-businesses-events`,
+     `export-to-csv`, `show-sample`, etc.). If the user asked for this
+     and it's connected: run `autocomplete` first for any filter field
+     that requires standardized values (job title, LinkedIn category,
+     skills, interests, intent topics), then `fetch-entities` with
+     `entity_type: "prospects"` and those filters — oversample modestly
+     (e.g. 1.5–2x the remaining batch need) to leave room for
+     suppression-list drops, then `show-sample` the results. **Never call
+     `enrich-prospects` or `export-to-csv` (or anything else that spends
+     Vibe Prospecting credits) without first showing the estimated cost
+     and getting the user's explicit go-ahead** — this is that tool's own
+     hard rule, on top of and separate from the user having opted into
+     "paid" as a research method; opting in isn't the same as approving a
+     specific cost, and nothing about this being a routine daily job or a
+     scheduled trigger waives the cost check. A scheduled/unattended run
+     that opted into paid ahead of time (see this skill's own standing
+     pre-authorization, if the user set one up) may proceed up to that
+     cap; otherwise it stops and reports the shortfall rather than
+     guessing or skipping the check. Tag prospects found this way
+     `Verified`. If the user asked for paid but nothing's actually
+     connected, say so plainly and fall back to the free path above
+     instead of stalling.
+   - **Trigger-event research is opt-in, not automatic.** Only relevant
+     when the user opted into the paid path above. If the strategy's
+     angle depends on a trigger-event type (a funding round, an
+     executive hire, a hiring surge in a specific department), you may
+     use `fetch-businesses-events`/`fetch-prospects-events` for it — but
+     ask the user before fetching detailed event records, per that
+     tool's own rule, even though this is a recurring job; don't treat
+     "we do this every day" as standing permission to skip the ask.
    - **Resolve identity and check for duplicates before anyone counts
      toward the batch.** For each candidate, resolve identity (email >
      LinkedIn URL > full name + company) and check
@@ -319,10 +336,15 @@ Use this exact section order, as Markdown `##` headings:
   `Bounced`, or `Replied`, regardless of how much time has passed, how a
   later request is phrased, or whether that status was set by a human or
   detected automatically.
+- Default every batch to free WebSearch/WebFetch research; only touch
+  Vibe Prospecting (or any other paid enrichment) when the user's request
+  for that run explicitly asked for it — being connected is not, by
+  itself, a reason to use it.
 - Never call `enrich-prospects`, `export-to-csv`, or any other
   credit-spending Vibe Prospecting action without showing the cost
   estimate and getting explicit go-ahead first — a recurring daily job is
-  not standing authorization to skip that.
+  not standing authorization to skip that, and neither is the user having
+  opted into "paid" as this run's research method.
 - Every email needs its own concrete, research-backed personalization
   hook — nothing that passes unchanged to a different prospect (the swap
   test in step 7) ships as-is.
@@ -351,13 +373,18 @@ Use this exact section order, as Markdown `##` headings:
 > plus an inbox sync that resolves two prior sends — target segment is
 > RevOps/Sales Ops managers at 51–200-employee SaaS companies, offer is
 > the "one-click export" feature already used as this repo's running
-> fictional example. Vibe Prospecting and Gmail both connected.
+> fictional example. Vibe Prospecting and Gmail both connected, but the
+> batch still defaults to free research — only one prospect here got the
+> paid path, because the user specifically asked for a verified contact
+> for that one account.
 
 ```markdown
 ## Outreach Run Summary
 2026-09-26. Target 10, delivered 9 (1 dropped as a duplicate, no
 replacement candidate matched the segment before the batch closed).
-0 due follow-ups today. Research source: Verified (Vibe Prospecting).
+0 due follow-ups today. Research source: Public-Web (default) for 8
+prospects; Verified (Vibe Prospecting, opted in by the user for one
+named target account) for 1.
 
 ## Inbox Sync
 Gmail connected. Checked 6 open `Sent` rows: 1 moved to `Replied`
@@ -371,8 +398,9 @@ Fresh — last refreshed 2026-09-03, next refresh due 2026-10-03.
 ## Prospect Research
 | Prospect | Segment | Source | Hook | Recommended Send Time |
 |---|---|---|---|---|
-| Dana Kim, VP Sales Ops — Fernbank Analytics | RevOps/SalesOps, 51-200 | Verified | Company posted 3 open sales-ops roles this month — team scaling fast, manual export pain grows with headcount | Tue 2026-09-29, 9:10am America/New_York |
-| ...8 more... | | | | |
+| Dana Kim, VP Sales Ops — Fernbank Analytics | RevOps/SalesOps, 51-200 | Public-Web | Company's careers page lists 3 open sales-ops roles this month — team scaling fast, manual export pain grows with headcount | Tue 2026-09-29, 9:10am America/New_York |
+| Renee Ortiz, VP Sales Ops — Castleview Logistics | RevOps/SalesOps, 51-200 | Verified (user opted in for this account) | Verified email pulled via Vibe Prospecting; recent funding round confirmed via `fetch-businesses-events` (asked and confirmed with the user first) | Wed 2026-09-30, 8:40am America/Chicago |
+| ...7 more, Public-Web... | | | | |
 
 ## Duplicate & Suppression Check
 | Prospect | Reason |
