@@ -28,8 +28,8 @@ step 5) for users who've set up their own platform API credentials.
 
 2. **Confirm scope.**
    - Which content pieces are ready to send (from `content-repurposer`,
-     `visual-brief-generator`, `community-post-generator`, a row in
-     `state/content-calendar.md`, or pasted directly)?
+     `visual-brief-generator`, `short-form-video`, `community-post-generator`,
+     a row in `state/content-calendar.md`, or pasted directly)?
    - If the source is `community-post-generator`, confirm its Go/No-Go
      section actually said go — never send a draft that skill flagged as
      blocked by the target community's own rules.
@@ -138,6 +138,39 @@ step 5) for users who've set up their own platform API credentials.
      is happy with the result) — so don't lump any of the four into "every
      non-Reddit platform here is manual-only," and don't lump them into
      each other's ease either.
+   - **YouTube, Instagram, and TikTok (`--platform youtube`/`instagram`/
+     `tiktok`)** are a different shape from every platform above — all
+     three post actual video, and confirm the content came from
+     `short-form-video`, not this skill improvising a caption. Don't
+     present any of the three with borrowed ease from another:
+     - **YouTube** is the most self-serve of the three: the user's own
+       Google Cloud OAuth client, authorized against their own channel, is
+       enough — no platform-side approval queue the way Reddit or TikTok
+       have. It's also the one platform here that uploads a local file
+       (`--video-path`) rather than pointing at a hosted URL; confirm the
+       asset entry has a real `path`, not just a `url`, before offering this
+       path. `--privacy-status` defaults to `private` in the script itself —
+       flag that plainly so "just post it" doesn't quietly mean "post it
+       where only you can see it."
+     - **Instagram Reels** needs the heaviest setup of the three: a Business
+       or Creator IG account linked to a Facebook Page, a Meta app with
+       `instagram_business_content_publish` actually approved (not just
+       Development Mode), and — unlike YouTube — the video already hosted
+       at a public URL, since Instagram's API fetches from a URL rather than
+       accepting an upload; confirm the asset entry has a real `url` before
+       offering this path, and that step 4's confirmation makes clear this
+       is a three-step, several-second-to-minutes process (container
+       creation, processing, then publish), not instant.
+     - **TikTok** needs an app approved for the `video.publish` scope, and —
+       critically — **every post from an app that hasn't passed TikTok's own
+       audit is forced to private/self-only visibility, no matter what's
+       requested.** Never present a TikTok send as reaching a public
+       audience without the user confirming their app's audit status
+       directly in TikTok's developer portal first; a 2xx response only
+       means TikTok accepted and queued the request, not that the video is
+       live, since TikTok fetches and processes it asynchronously
+       afterward. Also needs the video at a public URL, same as Instagram,
+       with that URL's domain pre-verified in TikTok's developer portal.
 
 6. **Report the result** plainly: exit code, HTTP status if a real send
    was made, and a one-line human-readable summary of what went where.
@@ -167,10 +200,13 @@ Trigger on requests like:
     "discord_message": "...",
     "slack_message": "...",
     "telegram_message": "...",
-    "devto_post": { "title": "...", "body": "...", "tags": ["...", "..."] }
+    "devto_post": { "title": "...", "body": "...", "tags": ["...", "..."] },
+    "youtube_short": { "title": "...", "description": "...", "tags": ["...", "..."], "privacy_status": "private|unlisted|public" },
+    "instagram_reel": { "caption": "..." },
+    "tiktok_video": { "caption": "..." }
   },
   "assets": [
-    { "type": "image|video", "description": "...", "url": "...or null", "prompt_reference": "..." }
+    { "type": "image|video", "description": "...", "url": "...or null", "path": "...or null", "prompt_reference": "...", "platform": "youtube_short|instagram_reel|tiktok_video|..." }
   ],
   "metadata": { "campaign": "...", "brand_voice_version": "..." }
 }
@@ -178,7 +214,14 @@ Trigger on requests like:
 
 Omit fields that don't apply (e.g. no `assets` if none were generated),
 but keep the top-level shape stable so downstream n8n/Make workflows can
-rely on it.
+rely on it. For a `youtube_short`/`instagram_reel`/`tiktok_video` entry,
+the matching `assets` item needs either `path` (a local file — the only
+form YouTube's direct-post option in step 5 can use) or `url` (a
+publicly-reachable hosted link — required for Instagram's and TikTok's
+direct-post options in step 5, which fetch the video themselves rather
+than accepting an upload); which one is available depends on whether
+`short-form-video` generated the clip via a connected tool (may produce
+either) or the user is supplying their own already-hosted video.
 
 ## Formatting rules
 
@@ -191,6 +234,12 @@ rely on it.
   under `content` rather than renaming existing keys.
 - Never write `Approved` to `state/content-calendar.md` except in step 4,
   immediately after a real human reply, immediately before sending.
+- For `youtube`/`instagram`/`tiktok` sends specifically: never report a
+  2xx response as "the video is live" — Instagram and TikTok both process
+  the video asynchronously after that response, so report exactly what the
+  script itself reported (queued/processing vs. confirmed published), and
+  never claim a TikTok send reached a public audience without the user
+  having confirmed their app's audit status.
 
 ## Example output
 

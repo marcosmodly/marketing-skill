@@ -1,18 +1,20 @@
 # marketing-skill
 
-A Claude Code plugin that packages a marketing workflow as eleven
+A Claude Code plugin that packages a marketing workflow as twelve
 composable skills: research a competitor, batch-plan a content calendar,
 repurpose findings across channels (including SEO, paid ads, and email),
 run a steady daily batch of researched, individually personalized cold
 outreach emails (deduplicated against a permanent contact log, with its
-own monthly strategy refresh), brief out a visual asset, research a
-specific subreddit's, Product Hunt's, Hacker News's, Indie Hackers',
-dev.to's, Discord server's, Slack workspace's, or Telegram
-channel's/group's own rules before drafting a post for it (asking you
-directly for Discord, Slack, and any private Telegram target, since those
-have no public page to check), and hand the finished content off to your
-own automation — or, with real credentials you provide, straight to a
-platform API — for publishing.
+own monthly strategy refresh), brief out a visual asset, turn a topic into
+a ready-to-post short-form vertical video package for YouTube Shorts,
+Instagram Reels, and TikTok (script, caption, hashtags, and best-time-to-
+post guidance for each), research a specific subreddit's, Product Hunt's,
+Hacker News's, Indie Hackers', dev.to's, Discord server's, Slack
+workspace's, or Telegram channel's/group's own rules before drafting a
+post for it (asking you directly for Discord, Slack, and any private
+Telegram target, since those have no public page to check), and hand the
+finished content off to your own automation — or, with real credentials
+you provide, straight to a platform API — for publishing.
 
 **[See a full worked run →](EXAMPLE.md)** — one continuous
 `full-pipeline` call from research to the approval checkpoint before
@@ -30,6 +32,7 @@ anything actually publishes.
 | `email-sequence` | "email sequence," "drip campaign," "welcome series" | A multi-email sequence with send timing, subject lines, and a real narrative arc across emails |
 | `email-outreach` | "cold outreach," "prospecting emails," "daily sales outreach," "personalized cold email to [name]" | Researches real prospects against a defined ICP (public-web research by default; a connected prospecting tool only if you ask for verified contact details), checks each one against a permanent contact log so nobody's contacted twice — or ever again once unsubscribed/replied — drafts a genuinely personalized email per prospect, re-confirms strategy monthly, and queues everything for approval (or drafts directly in Gmail if connected); never sends |
 | `visual-brief-generator` | "visual brief," "video brief," "shot list," "image prompts for X" | A structured shot list, per-scene prompts, aspect ratios, and style guide; generates the actual asset only if a visual-gen tool is connected |
+| `short-form-video` | "TikTok video," "Instagram Reel script," "YouTube Short," "short-form/vertical video for..." | A hook-first script/shot list plus a ready-to-post package per platform (YouTube Shorts/Instagram Reels/TikTok) — title/caption, sized hashtags, and a best-time-to-post window; generates the actual video only if a connected tool (Higgsfield, Canva, or similar) is available and you opt in, otherwise points to current free tools |
 | `community-post-generator` | "post this to r/[subreddit]," "help me post on Product Hunt," "write a Show HN/Show IH for this," "post this on dev.to," "post this in our Discord/Slack/Telegram" | Live-researches that specific subreddit's, Product Hunt's, Hacker News's, Indie Hackers', dev.to's, or a public Telegram channel's/group's actual rules and typical post style first (verifying each source is actually about that target, not a similarly-named one); for Discord, Slack, and private Telegram targets, asks you for the rules instead, since it can't research those. Gives a plain Go/No-Go either way, and only drafts a post (shaped for that platform — title+body, title+URL+first comment for Show HN, dev.to's title+body+tags, or a single chat message in Discord's, Slack's, or Telegram's own formatting for the chat platforms) if it's actually welcome there, written to read like a person wrote it |
 | `publish-pipeline` | "publish this," "send to n8n/Make," "fire the webhook," "send the queued post for [date]" | Packages finished content/assets into JSON and hands off to your automation via webhook (or, optionally, straight to a platform API) after showing you the exact payload |
 | `full-pipeline` | "run the full pipeline," "research X and publish it," "do the whole thing end to end" | Chains research, repurposing, visual brief, and publish into one run, with a mandatory pause before anything actually publishes |
@@ -40,9 +43,9 @@ Plus one setup command: `/marketing-skill:marketing-setup`.
 
 `competitor-research`, `content-calendar`, `content-repurposer`,
 `seo-brief`, `ad-copy-generator`, `email-sequence`, `email-outreach`,
-`visual-brief-generator`, and `community-post-generator` can pull from
-the project they're installed in instead of requiring you to paste
-content every time. If you reference
+`visual-brief-generator`, `short-form-video`, and `community-post-generator`
+can pull from the project they're installed in instead of requiring you to
+paste content every time. If you reference
 "our product," "our feature," "our changelog," etc. without providing the
 text, they'll check `README*`, `CHANGELOG*`, `docs/**/*.md`, and
 `package.json`/`pyproject.toml` at the project root first, and ask you
@@ -191,8 +194,9 @@ send.
 ### Posting directly to a platform (optional, needs your own credentials)
 
 `scripts/publish_direct.py` posts straight to LinkedIn, X, Meta (Facebook
-Page), Reddit, Discord, Slack, Telegram, or dev.to instead of going
-through your own automation — `python3 scripts/publish_direct.py --help`
+Page), Reddit, Discord, Slack, Telegram, dev.to, YouTube (Shorts),
+Instagram (Reels), or TikTok instead of going through your own automation
+— `python3 scripts/publish_direct.py --help`
 lists what each platform needs. **Read the script's module docstring
 before using it.** It was written without a connected account or live
 credentials for any of these platforms to test against, so it's
@@ -207,10 +211,17 @@ this behind a paid tier, Reddit closed instant self-service app
 registration in late 2025 for a manual approval queue — existing approved
 apps still work, and Slack may need a Workspace Owner/Admin to approve the
 app a webhook requires — see below), and do one manual `--confirmed` test
-post yourself before trusting it in anything automated. It's text-only —
-no media attachments, and Instagram isn't supported at all since it has no
-text-only post endpoint. Same `--dry-run`/`--confirmed` safety pattern as
-the webhook script, including credential redaction in `--dry-run` output —
+post yourself before trusting it in anything automated. The first eight
+platforms (LinkedIn/X/Meta/Reddit/Discord/Slack/Telegram/dev.to) are
+text-only — no media attachments, and a plain text-only Instagram post
+isn't supported at all since Instagram has no such endpoint. YouTube,
+Instagram, and TikTok are the three video exceptions, added specifically
+for short-form video from the `short-form-video` skill — see "Posting to
+YouTube Shorts, Instagram Reels & TikTok" below for what each actually
+needs, since none of the three share a setup cost with each other or with
+the eight text platforms above. Same `--dry-run`/`--confirmed` safety
+pattern as the webhook script, including credential redaction in
+`--dry-run` output —
 for Discord and Slack specifically, the webhook URL itself is the
 credential (there's no separate token), so that whole URL gets redacted,
 not just a header; for Telegram, only the bot token embedded in the URL
@@ -489,16 +500,109 @@ A few things worth knowing going in:
   purpose-built API client. If that changes, connecting one wouldn't need
   a code change here, just point the skill at it.
 
+## Posting to YouTube Shorts, Instagram Reels & TikTok
+
+`short-form-video` drafts the script and per-platform package; sending it
+for real is `scripts/publish_direct.py`'s job via `--platform youtube`,
+`--platform instagram`, or `--platform tiktok`, same as the eight text
+platforms above — but these three post actual video, and each one's
+access story is genuinely different from the other two, not a shared
+"video posting" tier:
+
+**YouTube is the most self-serve of the three.** It uses the standard
+YouTube Data API v3 (there's no separate "Shorts API" — a video becomes a
+Short by being vertical and short enough, optionally reinforced with a
+`#Shorts` tag in the description). All you need is your own Google Cloud
+project's OAuth2 client, authorized against the channel you're uploading
+to — no platform-side approval queue the way Reddit or TikTok require. A
+mid-2026 quota change helps here too: video uploads now draw from their
+own ~100-per-day bucket on your project instead of competing with every
+other API call against the old shared 10,000-unit pool, so ordinary
+personal or small-team posting volume shouldn't need special quota
+approval anymore — confirm your project's current bucket size in Google
+Cloud Console rather than assuming. It's also the one platform of the
+three where the video is actually uploaded (a local file, via a resumable
+upload) rather than fetched by the platform from a URL. `publish_direct.py`
+defaults `--privacy-status` to `private` specifically so a `--confirmed`
+run never goes public by accident.
+
+**Instagram Reels needs the heaviest setup of the three.** You need an
+Instagram Business or Creator account linked to a Facebook Page, a Meta
+app with the `instagram_business_content_publish` permission actually
+approved through Meta's app review (Development Mode alone only lets your
+app's own admins/developers/testers post — fine for your own account,
+not for anyone else's), and the video already hosted somewhere publicly
+reachable: unlike YouTube, the Instagram Graph API has no raw-upload
+endpoint at all — it fetches the video from a URL you give it. The real
+flow is three steps, not one (create a media container, wait for
+Instagram to finish processing the video, then publish it), which
+`publish_direct.py` handles by polling rather than assuming it's instant.
+
+**TikTok sits in between, with a real ceiling the other two don't have.**
+Its Content Posting API needs an app approved for the `video.publish`
+scope, and — this is the one to know before promising "just post it" —
+**every post from an app that hasn't passed TikTok's own audit is forced
+to private/self-only visibility, no matter what's requested.** Audit
+review reportedly takes anywhere from a few days to about two weeks;
+until it passes, TikTok posting through this script is useful for testing
+the pipeline, not for actually reaching an audience. Like Instagram, it
+fetches the video from a URL rather than accepting an upload — that URL's
+domain also has to be pre-verified for your app in TikTok's developer
+portal. And a 2xx response from either Instagram's or TikTok's API means
+the request was accepted, not that the video is live yet — both process
+the video asynchronously afterward, so confirm the actual result (TikTok's
+own status-fetch endpoint, or checking the account directly) before
+reporting a send as done.
+
+None of this blocks the default path: `short-form-video` always produces
+the full script, caption, and hashtags regardless of whether any of this
+is set up, and posting it yourself by hand — download or generate the
+clip, paste the caption, tap post — works the same as it always has.
+
 ## Connecting a visual-generation tool
 
 `visual-brief-generator` checks your currently connected tools for an
 image/video-generation MCP connector at runtime — it doesn't assume a
-specific one. As of this writing, none of Higgsfield, Runway, or
-Midjourney has a known official MCP server, so there's nothing to
-hardcode; a **Canva** connector does exist (requires connecting via OAuth
-in your Claude settings) as one real option for visual asset work. If
-none is connected, the skill still produces the full written brief and
-prompts — just paste them into whatever tool you use.
+specific one. Higgsfield launched an official hosted MCP server in 2026
+(Runway and Midjourney still have no known official one as of this
+writing); a **Canva** connector also exists (requires connecting via
+OAuth in your Claude settings) as another real option for visual asset
+work — neither is hardcoded or assumed present. If none is connected, the
+skill still produces the full written brief and prompts — just paste them
+into whatever tool you use.
+
+## Connecting a short-form video generation tool
+
+`short-form-video` checks the same way, at runtime, for a connected
+image/video-generation tool — it never assumes one is present, the same
+rule `visual-brief-generator` follows above.
+
+- **Higgsfield** is a real option if you have it connected: its hosted
+  MCP server exposes 30+ image/video models (including Veo, Sora, Kling,
+  and Seedance) through one connection, generating clips up to roughly 15
+  seconds per generation from a text or image prompt. It isn't a default
+  connector for every account, so if you have a Higgsfield account and
+  want to use it here, add it yourself as a custom connector: in Claude,
+  go to Customize → Connectors → Add custom connector, and give it a name
+  plus Higgsfield's own MCP server URL from your Higgsfield account.
+  Connecting the MCP server itself is free; **generating through it still
+  spends Higgsfield's own credits** (published annual plans currently run
+  from about $15/month for 200 credits up to $99/month for 3,000 — new
+  accounts get some starter credits free). Being connected doesn't mean
+  free generation, the same distinction this plugin's `email-outreach`
+  skill already draws about a connected prospecting tool.
+- **Canva** works here too, the same connector already documented above
+  for `visual-brief-generator`.
+- **If neither is connected**, the skill still produces the full script
+  and per-platform package, and recommends current free tools to actually
+  make the video yourself — **CapCut** is the most confident
+  recommendation (genuinely free, no watermark on exports, built for
+  vertical Shorts/Reels/TikTok-style editing specifically), with Canva's
+  free tier as a second solid option. Plenty of other "free AI short-video
+  generator" tools advertise themselves online; this plugin's research
+  couldn't independently verify most of their actual quality or
+  free-ness, so treat any of them beyond these two as something to vet
+  yourself before trusting with real content.
 
 ## Connecting outreach tools (prospecting + Gmail)
 
@@ -542,7 +646,7 @@ Gmail's own scheduled-send feature at that time yourself.
 .claude-plugin/
   plugin.json         # plugin metadata
   marketplace.json     # lets this repo install itself via `marketplace add`
-skills/                 # the 11 skills, one SKILL.md each
+skills/                 # the 12 skills, one SKILL.md each
 commands/
   marketing-setup.md    # the /marketing-skill:marketing-setup command
 references/
@@ -555,7 +659,7 @@ state/
   outreach/               # one file per drafted email's full content, linked from the log above
 scripts/
   publish_webhook.py     # stdlib-only webhook sender (see --help)
-  publish_direct.py      # stdlib-only direct-to-platform scaffold (LinkedIn/X/Meta/Reddit/Discord/Slack/Telegram/dev.to), needs your own API credentials (see --help)
+  publish_direct.py      # stdlib-only direct-to-platform scaffold (LinkedIn/X/Meta/Reddit/Discord/Slack/Telegram/dev.to/YouTube/Instagram/TikTok), needs your own API credentials (see --help)
 ```
 
 ## Contributors

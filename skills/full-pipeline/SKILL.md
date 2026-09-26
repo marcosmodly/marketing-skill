@@ -44,11 +44,17 @@ want the whole thing done in one shot rather than one skill at a time.
    its process, feeding in the Stage 1 brief's key sections as source
    content.
 
-5. **Stage 3 — Visual Brief.** Read
+5. **Stage 3 — Visual Brief.** If the target platform(s) are specifically
+   YouTube Shorts, Instagram Reels, and/or TikTok, read
+   `${CLAUDE_PLUGIN_ROOT}/skills/short-form-video/SKILL.md` instead and
+   follow its process — it's the closer fit for those three and also
+   produces the caption/hashtags/posting-time guidance the run needs, not
+   just a shot list. Otherwise read
    `${CLAUDE_PLUGIN_ROOT}/skills/visual-brief-generator/SKILL.md` and
-   follow its process, feeding in the Stage 2 content. Only actually
-   generate assets if the user opts in and a visual-gen tool is connected
-   — otherwise produce the brief only, per that skill's own rules.
+   follow its process, feeding in the Stage 2 content. Either way, only
+   actually generate an asset if the user opts in and a video/image-gen
+   tool is connected — otherwise produce the brief only, per that skill's
+   own rules.
 
 6. **Stage 4 — Mandatory checkpoint.** Before anything is actually
    published, stop and show the user the full assembled payload (per
