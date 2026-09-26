@@ -1,15 +1,18 @@
 # marketing-skill
 
-A Claude Code plugin that packages a marketing workflow as ten composable
-skills: research a competitor, batch-plan a content calendar, repurpose
-findings across channels (including SEO, paid ads, and email), brief out
-a visual asset, research a specific subreddit's, Product Hunt's, Hacker
-News's, Indie Hackers', dev.to's, Discord server's, Slack workspace's, or
-Telegram channel's/group's own rules before drafting a post for it (asking
-you directly for Discord, Slack, and any private Telegram target, since
-those have no public page to check), and hand the finished content off to
-your own automation — or, with real credentials you provide, straight to
-a platform API — for publishing.
+A Claude Code plugin that packages a marketing workflow as eleven
+composable skills: research a competitor, batch-plan a content calendar,
+repurpose findings across channels (including SEO, paid ads, and email),
+run a steady daily batch of researched, individually personalized cold
+outreach emails (deduplicated against a permanent contact log, with its
+own monthly strategy refresh), brief out a visual asset, research a
+specific subreddit's, Product Hunt's, Hacker News's, Indie Hackers',
+dev.to's, Discord server's, Slack workspace's, or Telegram
+channel's/group's own rules before drafting a post for it (asking you
+directly for Discord, Slack, and any private Telegram target, since those
+have no public page to check), and hand the finished content off to your
+own automation — or, with real credentials you provide, straight to a
+platform API — for publishing.
 
 **[See a full worked run →](EXAMPLE.md)** — one continuous
 `full-pipeline` call from research to the approval checkpoint before
@@ -25,6 +28,7 @@ anything actually publishes.
 | `seo-brief` | "SEO brief," "keyword research," "optimize this for search" | Target/secondary keywords, search intent, suggested outline, meta title/description — never fabricates search-volume numbers |
 | `ad-copy-generator` | "ad copy," "Meta/Google/LinkedIn ad variants," "A/B test copy" | Multiple ad variants per platform, each a distinct hook angle, sized to that platform's character limits |
 | `email-sequence` | "email sequence," "drip campaign," "welcome series" | A multi-email sequence with send timing, subject lines, and a real narrative arc across emails |
+| `email-outreach` | "cold outreach," "prospecting emails," "daily sales outreach," "personalized cold email to [name]" | Researches real prospects against a defined ICP (via a connected prospecting tool, or public-web research), checks each one against a permanent contact log so nobody's contacted twice — or ever again once unsubscribed/replied — drafts a genuinely personalized email per prospect, re-confirms strategy monthly, and queues everything for approval (or drafts directly in Gmail if connected); never sends |
 | `visual-brief-generator` | "visual brief," "video brief," "shot list," "image prompts for X" | A structured shot list, per-scene prompts, aspect ratios, and style guide; generates the actual asset only if a visual-gen tool is connected |
 | `community-post-generator` | "post this to r/[subreddit]," "help me post on Product Hunt," "write a Show HN/Show IH for this," "post this on dev.to," "post this in our Discord/Slack/Telegram" | Live-researches that specific subreddit's, Product Hunt's, Hacker News's, Indie Hackers', dev.to's, or a public Telegram channel's/group's actual rules and typical post style first (verifying each source is actually about that target, not a similarly-named one); for Discord, Slack, and private Telegram targets, asks you for the rules instead, since it can't research those. Gives a plain Go/No-Go either way, and only drafts a post (shaped for that platform — title+body, title+URL+first comment for Show HN, dev.to's title+body+tags, or a single chat message in Discord's, Slack's, or Telegram's own formatting for the chat platforms) if it's actually welcome there, written to read like a person wrote it |
 | `publish-pipeline` | "publish this," "send to n8n/Make," "fire the webhook," "send the queued post for [date]" | Packages finished content/assets into JSON and hands off to your automation via webhook (or, optionally, straight to a platform API) after showing you the exact payload |
@@ -35,7 +39,7 @@ Plus one setup command: `/marketing-skill:marketing-setup`.
 ## Using your own project as source material
 
 `competitor-research`, `content-calendar`, `content-repurposer`,
-`seo-brief`, `ad-copy-generator`, `email-sequence`,
+`seo-brief`, `ad-copy-generator`, `email-sequence`, `email-outreach`,
 `visual-brief-generator`, and `community-post-generator` can pull from
 the project they're installed in instead of requiring you to paste
 content every time. If you reference
@@ -99,6 +103,17 @@ words, and formatting constraints, defined once and reused everywhere.
 - **Manual:** edit `references/brand-voice.md` directly — keep its
   section headings intact so every skill can still find them.
 
+`email-outreach` additionally reads its own
+`references/outreach-strategy.md` — ICP/target segment(s), value
+proposition and angle per segment, offer and primary CTA, daily volume,
+follow-up cadence, and suppression window. It's configured the same way:
+guided setup the first time `email-outreach` runs, or hand-edit directly.
+Unlike `brand-voice.md`, it also re-opens itself automatically — the
+skill checks its "last refreshed" date on every run and walks you through
+a strategy-refresh conversation once 30 days have passed, using
+`state/outreach-log.md`'s accumulated send/reply/bounce counts to inform
+it.
+
 ## Content calendar & approval model
 
 `content-calendar` batch-generates posts and queues them in
@@ -122,6 +137,24 @@ to `Sent` right after a successful send.
 
 This matters most the moment you try to run this plugin unattended — see
 "Running this on a schedule" below.
+
+## Outreach log & suppression model
+
+`email-outreach` batch-generates cold emails and queues them in
+`state/outreach-log.md` — a plain Markdown table that's both the daily
+queue and the permanent contact history (rows accumulate; nothing gets
+cleared out). It's safe to hand-edit directly, including to log an
+unsubscribe request that arrived outside email. Same separation as the
+content calendar: each row's Notes column points at the file under
+`state/outreach/` that holds that email's full content, and Status can
+only reach `Approved` immediately after a human sees the real email in a
+live conversation and says to send it — `email-outreach` itself never
+writes that value, and never calls Gmail's `send_message` on its own,
+even for a scheduled daily run with nobody there to reply. A handful of
+Status values are permanent suppression, not just history: `Bounced`,
+`Unsubscribed`/`Do-Not-Contact`, and `Replied` all block that person from
+ever being re-queued by this skill again, regardless of how a later
+request is phrased.
 
 ## Automation handoff
 
@@ -272,6 +305,16 @@ need to change that approval step yourself — this plugin doesn't ship a
 way to do that, on the theory that a live company account posting
 unsupervised is a decision only you should make explicitly, not one a
 scheduling tool should make for you by default.
+
+`email-outreach` follows the exact same model, just applied to cold email
+instead of social posts: schedule a daily session to get a consistent
+daily batch (its own "consistent daily outreach" requirement), and it
+queues every draft as `Drafted`/`Ready for Approval` — never `Sent` —
+exactly like `content-calendar` does, for the same reason. Its monthly
+strategy refresh doesn't need a separate schedule at all: the skill
+checks `references/outreach-strategy.md`'s own last-refreshed date on
+every run and walks through the refresh conversation itself once 30 days
+have passed, so the one daily trigger alone covers both cadences.
 
 ## Posting to Reddit, Product Hunt, Hacker News, Indie Hackers, dev.to, Discord, Slack & Telegram
 
@@ -448,20 +491,45 @@ in your Claude settings) as one real option for visual asset work. If
 none is connected, the skill still produces the full written brief and
 prompts — just paste them into whatever tool you use.
 
+## Connecting outreach tools (prospecting + Gmail)
+
+`email-outreach` checks your currently connected tools at runtime for two
+different things, the same way `visual-brief-generator` checks for an
+image/video-gen connector — it doesn't assume either is present:
+
+- **A prospecting/data-enrichment tool** (e.g. a connected Vibe
+  Prospecting MCP server) to actually research prospects against your
+  ICP and, only with your explicit go-ahead on the cost shown, enrich
+  them with contact details. Without one connected, the skill falls back
+  to public-web research (WebSearch/WebFetch) on prospects you name
+  directly, at lower confidence, and says so in its output.
+- **Gmail** (via a connected Gmail MCP server) to create real drafts you
+  can review and send yourself. Without it connected, `email-outreach`
+  still produces the full email content — it's just saved to
+  `state/outreach/` instead of also landing in your Gmail Drafts folder.
+
+Either way, `email-outreach` only ever creates drafts or queues content —
+actually sending (Gmail's `send_message`) always requires your explicit,
+live go-ahead in that conversation, the same rule `publish-pipeline`
+follows for every other channel in this plugin.
+
 ## Repo layout
 
 ```
 .claude-plugin/
   plugin.json         # plugin metadata
   marketplace.json     # lets this repo install itself via `marketplace add`
-skills/                 # the 10 skills, one SKILL.md each
+skills/                 # the 11 skills, one SKILL.md each
 commands/
   marketing-setup.md    # the /marketing-skill:marketing-setup command
 references/
   brand-voice.md         # shared config every skill reads (hand-edited)
+  outreach-strategy.md   # email-outreach's own config: ICP, angle, offer, cadence (hand-edited or guided setup)
 state/
   content-calendar.md    # calendar/history index (generated + appended to, hand-editable)
   posts/                  # one file per queued post's full content, linked from the index above
+  outreach-log.md         # outreach queue/history + permanent suppression list (generated + appended to, hand-editable)
+  outreach/               # one file per drafted email's full content, linked from the log above
 scripts/
   publish_webhook.py     # stdlib-only webhook sender (see --help)
   publish_direct.py      # stdlib-only direct-to-platform scaffold (LinkedIn/X/Meta/Reddit/Discord/Slack/Telegram/dev.to), needs your own API credentials (see --help)
