@@ -230,8 +230,15 @@ written to read like an actual person wrote them.
      - Any minimum account age or karma — this skill has no way to check
        the user's actual account against it, so surface the requirement
        and ask the user to confirm they clear it, rather than assuming.
-     - Required post flair, and whether flair is self-service or
-       mod-assigned.
+     - The subreddit's actual list of available post flairs, not just
+       whether one is required — self-service flairs are choosable at
+       submit time even when optional, so pull the real list (the submit
+       form, sampled posts' own flair tags, or a `link_flair_text` field
+       on sampled listings) and pick the best-fitting one for this draft
+       regardless of whether the rules mandate one. Only skip flair
+       entirely when research turns up no flair system at all for that
+       subreddit, not when one was merely optional. Note whether flair is
+       self-service or mod-assigned either way.
      - Text-post vs. link-post norms, and title-format conventions (some
        subreddits enforce a specific title template via AutoMod).
    - **The actual "usual post."** Sample a handful of recent top/hot posts
@@ -526,8 +533,9 @@ written to read like an actual person wrote them.
        specific odd detail reads more human than a uniformly clean draft.
 
 6. **Self-check before presenting the draft**: every rule pulled out in
-   step 3 (required flair included, disclosure included if the community
-   expects it, no banned link/domain, title matches any enforced format)
+   step 3 (a flair chosen from the subreddit's actual list, not just
+   whether one was required; disclosure included if the community
+   expects it; no banned link/domain; title matches any enforced format)
    checked off explicitly, not assumed satisfied — plus a pass for the
    writing-tell list above (no em dashes, no throat-clearing opener, no
    triadic padding) before the draft is shown to the user. For Discord
@@ -616,7 +624,8 @@ Use this exact section order, as Markdown `##` headings:
      reported here has to match it, not default to `User-Supplied` out of
      habit because Discord/Slack trained that reflex.
    Follow with what was actually found: self-promo policy,
-   account-age/karma minimums if any, flair/title requirements, the
+   account-age/karma minimums if any, the available flair list and
+   title/format requirements, the
    typical post pattern observed, and the source(s) checked (links,
    search queries, or — for `User-Supplied` — what the user said and
    when), noted as checked (or supplied) in this run.
@@ -630,9 +639,12 @@ Use this exact section order, as Markdown `##` headings:
    no-go, stop here — no Drafted Post section.**
 3. **Drafted Post** *(only if step 2 is a go)* — shape follows the actual
    platform, never forced into one universal template:
-   - Reddit / Product Hunt Discussions: title + self-post body, with any
-     required flair or disclosure called out separately, not buried in
-     the body text.
+   - Reddit / Product Hunt Discussions: title + self-post body, with a
+     chosen flair called out separately, not buried in the body text —
+     pick one from the subreddit's actual flair list even when flair
+     isn't required, and only omit this line when research found no
+     flair system at all for that subreddit. Call out any disclosure
+     requirement the same way, separately from the body.
    - Hacker News Show HN: title + submission URL + the maker's own first
      comment, drafted as three distinct pieces — Show HN is a link
      submission plus your own top-level comment on the resulting thread,
