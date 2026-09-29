@@ -138,6 +138,17 @@ the request having been phrased as blanket authorization ("just post
 these") never counts as that reply. `publish-pipeline` then flips the row
 to `Sent` right after a successful send.
 
+When more than one row is ready at once, `publish-pipeline` lists them
+together as a numbered batch (each with its Account/Destination/
+Attachments/Final Text spelled out) instead of asking "send this?" one
+row at a time — a reply has to name specific numbers to approve them,
+since an unqualified "send them all" invites rubber-stamping a list
+nobody actually read. It also flags any row more than 14 days old as
+Stale right in that listing, and `content-calendar` separately reports
+how many rows across the whole calendar have crossed that age every time
+it runs — a queue that's easy to lose track of is exactly what turns a
+careful approval step into a bulk-approved backlog later.
+
 This matters most the moment you try to run this plugin unattended — see
 "Running this on a schedule" below.
 
@@ -166,7 +177,12 @@ more things ride along in the same table: a `Subject Variant` (A/B) per
 row so reply rates can eventually be attributed to a subject line, and a
 `Recommended Send Time` computed from each prospect's own region — this
 skill still never sends on its own, so that time is either sent manually
-or via Gmail's own native scheduled-send feature.
+or via Gmail's own native scheduled-send feature. Same numbered-approval
+rule as `publish-pipeline`: an unqualified "send today's batch" doesn't
+count as naming any specific row, and every run reports how many rows in
+the log have sat unapproved for more than 7 days (shorter than the
+content calendar's 14, since personalized prospect research goes stale
+faster) so that count can't quietly grow unnoticed.
 
 ## Automation handoff
 

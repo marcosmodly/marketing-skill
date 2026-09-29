@@ -49,23 +49,53 @@ step 5) for users who've set up their own platform API credentials.
 
 3. **Assemble the JSON payload** using the exact structure below.
 
-4. **Always show the assembled payload and destination URL, and get
-   explicit user go-ahead before a real send.** This step fires an
-   external side effect the user may not be able to easily undo — never
-   skip this confirmation, even if the user's original request sounded
-   like blanket authorization (e.g. "just publish it"). **Silence, a
-   timeout, or no reply in this conversation is never a yes** — only an
-   actual affirmative reply from the user counts, and if none arrives,
-   stop here without sending. This applies exactly the same way whether
-   the run is an interactive chat or something else (a scheduled or
-   automated trigger, for instance) invoked this skill — there is no
-   framing of "the run itself is standing authorization" that substitutes
-   for a real reply.
+4. **Show a clear, human-readable confirmation before any real send —
+   never a raw JSON dump as the only thing shown — and get explicit user
+   go-ahead.** This step fires an external side effect the user may not
+   be able to easily undo — never skip it, even if the original request
+   sounded like blanket authorization (e.g. "just publish it"). **Silence,
+   a timeout, or no reply in this conversation is never a yes** — only an
+   actual affirmative reply counts, and if none arrives, stop here without
+   sending. This applies exactly the same way whether an interactive chat
+   or something else (a scheduled or automated trigger) invoked this
+   skill — there is no framing of "the run itself is standing
+   authorization" that substitutes for a real reply.
+   - **Single item:** show four labeled lines before anything else —
+     **Account** (which identity this goes out as: the destination
+     automation itself for a webhook handoff, e.g. "your n8n webhook," or
+     the specific platform identity for a direct post, e.g. "dev.to —
+     personal account, not the Organization" or "Instagram Business
+     account linked to [Page]"), **Destination** (URL, subreddit, channel,
+     or recipient), **Attachments** (each asset's type and source, or
+     "none"), and **Final Text** (the actual post/message body, in full,
+     not a summary) — then the JSON payload or script command underneath
+     as the technical detail, not the primary thing being confirmed.
+   - **Batch (more than one item ready at once):** never loop through
+     items one at a time asking "send this? ... send this? ..." — that
+     pattern gets a "yes" to everything without anyone actually reading
+     past the first item or two. Instead list every ready item together,
+     numbered, each with its own Account/Destination/Attachments/Final
+     Text breakout, and require the reply to name specific numbers (e.g.,
+     "1 and 3, yes — skip 2") rather than accepting an unqualified
+     "approve all"/"send them" with no numbers attached — treat an
+     unqualified blanket reply to a numbered list the same as silence for
+     any item it doesn't actually name. Cap a single batch at 10 items; if
+     more than 10 are ready, present them in waves of 10 or fewer instead
+     of one long list, so the format itself never invites skimming.
+   - **Staleness.** For any item sourced from a `state/content-calendar.md`
+     or `state/outreach-log.md` row, compare that row's `Date` to today.
+     Flag anything more than 14 days old (7 days for an outreach-log row,
+     since personalized prospect research ages faster) as **Stale** right
+     in the listing, not in a separate report — a batch mixing fresh and
+     stale items must show the flag per-row so it can't be missed inside a
+     larger "yes to all." Don't refuse to send a stale item outright; just
+     make its age impossible to approve past without seeing it.
    - If the source is a `state/content-calendar.md` row, this is the
      point where — and only where — its Status may move to `Approved`,
      immediately after the affirmative reply and immediately before
-     sending. No skill in this plugin sets `Approved` at any other time;
-     `content-calendar` in particular never writes it.
+     sending, and only for the specific numbers actually named. No skill
+     in this plugin sets `Approved` at any other time; `content-calendar`
+     in particular never writes it.
 
 5. **Send it:**
    - Write the JSON payload to a temporary file (e.g. via `mktemp`).
@@ -234,6 +264,15 @@ either) or the user is supplying their own already-hosted video.
   under `content` rather than renaming existing keys.
 - Never write `Approved` to `state/content-calendar.md` except in step 4,
   immediately after a real human reply, immediately before sending.
+- Never present a raw JSON payload as the only confirmation surface —
+  always break out Account, Destination, Attachments, and Final Text as
+  labeled lines first, for both a single item and every item in a batch.
+- Never list more than 10 items in one batch confirmation, and never treat
+  an unqualified "approve all"/"send them" reply to a numbered list as
+  approval for items it doesn't specifically name — only named numbers
+  move to `Approved`.
+- Never let an item more than 14 days old (7 for an outreach-log row) pass
+  through a confirmation listing without a visible Stale flag on that row.
 - For `youtube`/`instagram`/`tiktok` sends specifically: never report a
   2xx response as "the video is live" — Instagram and TikTok both process
   the video asynchronously after that response, so report exactly what the
@@ -243,7 +282,40 @@ either) or the user is supplying their own already-hosted video.
 
 ## Example output
 
-**Dry run:**
+**Confirmation display, single item** (shown before the dry run below,
+never replaced by it):
+```
+Account: your n8n webhook (automation handoff, not a direct platform post)
+Destination: https://your-n8n-host/webhook/abc123
+Attachments: none
+Final Text:
+  Speed got us here. It won't be the only thing that keeps us here...
+  (full LinkedIn post text)
+
+Reply to confirm this exact send, or say what to change first.
+```
+
+**Confirmation display, batch of three, one stale:**
+```
+Three rows are ready to send. Reply with the numbers to approve (e.g.
+"1 and 3, skip 2") — an unqualified "send them all" won't be treated as
+approving any of these.
+
+1. [Stale — queued 19 days ago] Account: your n8n webhook · Destination:
+   https://your-n8n-host/webhook/abc123 · Attachments: none · Final Text:
+   "Most teams lose an afternoon a month to manual exports..."
+2. Account: dev.to — personal account · Destination: dev.to (tags:
+   showdev, saas) · Attachments: none · Final Text: "I built this because
+   our own export flow was the thing customers complained about most..."
+3. Account: your n8n webhook · Destination: https://your-n8n-host/webhook/abc123
+   · Attachments: 1 image (state/assets/export-diagram.png) · Final Text:
+   "One-click export is live today for every customer..."
+```
+Reported this way regardless of how the request was phrased ("send the
+ready ones," "go ahead with today's batch") — a reply naming specific
+numbers is the only thing that moves those rows to `Approved`.
+
+**Dry run** (the technical payload behind a single confirmed item):
 ```
 $ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/publish_webhook.py --payload-file /tmp/payload.json --dry-run
 === DRY RUN: no request sent ===
