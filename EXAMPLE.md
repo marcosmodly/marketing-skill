@@ -104,8 +104,24 @@ authorization to *run the chain up to this point* — not as a yes on
 sending anything. So instead of sending, it stops and shows the exact
 payload:
 
-> **Claude:** Ready to send the above. Here's the exact payload and
-> destination — reply here to confirm, or tell me what to change first.
+> **Claude:** Ready to send. Here's exactly what's going out before
+> anything actually sends:
+>
+> ```
+> Account: your n8n webhook (automation handoff, not a direct platform post)
+> Destination: https://your-n8n-host/webhook/abc123
+> Attachments: none
+> Final Text:
+>   [linkedin_post] Speed got us here. It won't be the only thing that
+>   keeps us here. We built this platform so teams could stop losing
+>   afternoons to manual workflows...(full post)
+>   [newsletter_blurb] Subject: Fast doesn't have to mean "not yet,
+>   security review pending"...(full blurb)
+>
+> Reply to confirm this exact send, or say what to change first.
+> ```
+>
+> And the payload underneath, for reference:
 >
 > ```
 > === DRY RUN: no request sent ===
