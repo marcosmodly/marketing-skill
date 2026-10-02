@@ -590,11 +590,16 @@ Instagram to finish processing the video, then publish it), which
 **TikTok sits in between, with a real ceiling the other two don't have.**
 Its Content Posting API needs an app approved for the `video.publish`
 scope, and — this is the one to know before promising "just post it" —
-**every post from an app that hasn't passed TikTok's own audit is forced
-to private/self-only visibility, no matter what's requested.** Audit
-review reportedly takes anywhere from a few days to about two weeks;
-until it passes, TikTok posting through this script is useful for testing
-the pipeline, not for actually reaching an audience. Like Instagram, it
+**until your app passes TikTok's own audit, TikTok only accepts posts set
+to private (`SELF_ONLY`), on a creator account that is itself set to
+private. Anything else is rejected outright, not quietly posted as
+private.** Audit review reportedly takes anywhere from a few days to about
+two weeks; until it passes, TikTok posting through this script is useful
+for testing the pipeline, not for actually reaching an audience. Before
+every post, `publish_direct.py` also asks TikTok which privacy levels and
+interaction settings the creator currently allows (TikTok requires this
+step). It stops if `--privacy-level` isn't one of them, and turns off
+duets, comments, or stitching wherever the creator already has. Like Instagram, it
 fetches the video from a URL rather than accepting an upload — that URL's
 domain also has to be pre-verified for your app in TikTok's developer
 portal. And a 2xx response from either Instagram's or TikTok's API means
@@ -640,9 +645,23 @@ rule `visual-brief-generator` follows above.
   accounts get some starter credits free). Being connected doesn't mean
   free generation, the same distinction this plugin's `email-outreach`
   skill already draws about a connected prospecting tool.
+- **Figma Weave** is another option if you have the Figma connector: its
+  `weave_*` tools can run named AI video models (Veo, for example). It
+  spends your Weave credits — the skill shows you the quoted cost and
+  waits for a yes before each run — and it only works once your Figma
+  account is linked to Weave in Weave's own profile settings.
 - **Canva** works here too, the same connector already documented above
   for `visual-brief-generator`.
-- **If neither is connected**, the skill still produces the full script
+- **Listed isn't the same as working.** A connector can appear in your
+  session but still be waiting on authorization (Canva often is), or
+  still need an account linked (Weave). The skill tells you which one and
+  the exact fix, rather than just saying nothing is connected.
+- **Once a clip is generated**, the skill downloads it to a local file
+  right away, because generator links usually expire. That file is what
+  `--platform youtube` uploads. For Instagram or TikTok, re-host it on a
+  URL you control before posting: TikTok only fetches from a domain
+  verified for your own app.
+- **If none of these is connected**, the skill still produces the full script
   and per-platform package, and recommends current free tools to actually
   make the video yourself — **CapCut** is the most confident
   recommendation (genuinely free, no watermark on exports, built for

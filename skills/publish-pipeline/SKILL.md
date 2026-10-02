@@ -192,9 +192,13 @@ step 5) for users who've set up their own platform API credentials.
        is a three-step, several-second-to-minutes process (container
        creation, processing, then publish), not instant.
      - **TikTok** needs an app approved for the `video.publish` scope, and —
-       critically — **every post from an app that hasn't passed TikTok's own
-       audit is forced to private/self-only visibility, no matter what's
-       requested.** Never present a TikTok send as reaching a public
+       critically — **until the app passes TikTok's own audit, TikTok only
+       accepts a private (`SELF_ONLY`) post to a creator account that is
+       itself set to private, and rejects anything else outright** — it
+       doesn't quietly downgrade a public request. The script checks the
+       requested privacy level against the creator's allowed options
+       (TikTok's required creator_info step) before posting, and stops if
+       it isn't one of them. Never present a TikTok send as reaching a public
        audience without the user confirming their app's audit status
        directly in TikTok's developer portal first; a 2xx response only
        means TikTok accepted and queued the request, not that the video is

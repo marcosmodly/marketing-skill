@@ -31,9 +31,9 @@ integration. Before relying on it:
     sitewide Code of Conduct. YouTube, Instagram, and TikTok are a
     different shape again - all three post actual video, not text, and
     each has its own access story: see "youtube", "instagram", and
-    "tiktok" below - TikTok in particular forces every post from an
-    unaudited app to private/self-only visibility, no matter what's
-    requested.
+    "tiktok" below - TikTok in particular rejects every post from an
+    unaudited app unless it's private (SELF_ONLY) to an account that is
+    itself set to private.
   - Confirm the endpoint/version below is still current - check
     developers.linkedin.com, developer.x.com, developers.facebook.com,
     Reddit's own API docs, Discord's own API docs, Slack's own API docs,
@@ -265,23 +265,34 @@ NOTES = {
                  "No separate hashtag field - put hashtags directly in "
                  "--text (the caption), the same as typing them in the "
                  "app.",
-    "tiktok": "Uses TikTok's Content Posting API (POST /v2/post/publish/"
-              "video/init/) with PULL_FROM_URL as the source, so pass "
-              "--video-url rather than a local file - TikTok's own "
-              "servers fetch it from there, and that URL's domain has to "
-              "already be verified for your app in TikTok's developer "
-              "portal or the call is rejected outright. Needs an app "
-              "approved for the video.publish scope, and the specific "
-              "creator has to have authorized that scope for your app - "
-              "getting either of those isn't handled by this script. "
-              "**Every post from an app that hasn't passed TikTok's own "
-              "audit is forced to SELF_ONLY (private, visible only to the "
-              "poster) no matter what --privacy-level is requested** - "
-              "audit review reportedly takes anywhere from a few days to "
+    "tiktok": "Uses TikTok's Content Posting API with PULL_FROM_URL as the "
+              "source, so pass --video-url rather than a local file - "
+              "TikTok's own servers fetch it from there, and that URL's "
+              "domain has to already be verified for your app in TikTok's "
+              "developer portal or the call is rejected outright. Two "
+              "calls per send: first POST /v2/post/publish/creator_info/"
+              "query/, which TikTok requires before every post - "
+              "--privacy-level must be one of the privacy_level_options it "
+              "returns (a public account offers PUBLIC_TO_EVERYONE, "
+              "MUTUAL_FOLLOW_FRIENDS, SELF_ONLY; a private one offers "
+              "FOLLOWER_OF_CREATOR in place of PUBLIC_TO_EVERYONE), and "
+              "duet/comment/stitch are sent as disabled wherever the "
+              "creator has turned them off - then POST /v2/post/publish/"
+              "video/init/. Needs an app approved for the video.publish "
+              "scope, and the specific creator has to have authorized "
+              "that scope for your app - getting either of those isn't "
+              "handled by this script. **Until your app passes TikTok's "
+              "own audit, TikTok only accepts SELF_ONLY (private, visible "
+              "only to the poster), posted to a creator account that is "
+              "itself set to private - anything else is rejected "
+              "(unaudited_client_can_only_post_to_private_accounts), not "
+              "quietly posted as private instead** - TikTok's guidelines "
+              "also cap an unaudited app at 5 posting creators per 24 "
+              "hours. Audit review reportedly takes anywhere from a few days to "
               "about two weeks, and this script has no way to check your "
               "app's audit status for you, so confirm it directly in "
-              "TikTok's developer portal rather than assuming a public "
-              "post will actually be public. A 2xx response here means "
+              "TikTok's developer portal before requesting anything but "
+              "SELF_ONLY. A 2xx response from the second call means "
               "TikTok accepted the request and queued it - fetching and "
               "posting the video happens asynchronously afterward, so "
               "that response is not confirmation the video is actually "
@@ -355,15 +366,16 @@ def parse_args():
                               "there is no default this script will guess on your behalf.")
     parser.add_argument("--privacy-level", default="SELF_ONLY",
                          choices=["SELF_ONLY", "PUBLIC_TO_EVERYONE", "MUTUAL_FOLLOW_FRIENDS", "FOLLOWER_OF_CREATOR"],
-                         help="--platform tiktok only. Defaults to SELF_ONLY (private) since TikTok forces this for "
-                              "every post from an app that hasn't passed its own audit, regardless of what's asked "
-                              "for - see the tiktok note in --help's module docstring reference.")
+                         help="--platform tiktok only. Defaults to SELF_ONLY (private), the only level TikTok accepts "
+                              "until your app passes its audit. Checked against the creator's own allowed options "
+                              "(creator_info) before posting.")
     parser.add_argument("--disable-duet", action="store_true", help="--platform tiktok only. Off (duets allowed) unless passed.")
     parser.add_argument("--disable-comment", action="store_true", help="--platform tiktok only. Off (comments allowed) unless passed.")
     parser.add_argument("--disable-stitch", action="store_true", help="--platform tiktok only. Off (stitching allowed) unless passed.")
     parser.add_argument("--upload-timeout", type=float, default=600,
-                         help="--platform instagram only (default: 600s). How long to keep polling Instagram's "
-                              "media container while it processes the video before giving up.")
+                         help="--platform youtube and instagram (default: 600s). YouTube: timeout for sending "
+                              "the video bytes. Instagram: how long to keep polling the media container while "
+                              "it processes the video before giving up.")
     parser.add_argument("--timeout", type=float, default=15, help="Request timeout in seconds for ordinary (non-upload) calls (default: 15).")
     parser.add_argument("--dry-run", action="store_true", help="Print the request(s) instead of sending them. Never makes a network call.")
     parser.add_argument("--confirmed", action="store_true",
@@ -558,7 +570,10 @@ BUILDERS = {
 def redact(text, secrets):
     for secret in secrets:
         if secret:
-            text = text.replace(secret, "<redacted>")
+            # Form-encoded bodies (meta, instagram) carry the token percent-encoded, so a
+            # token containing '+', '/' or '=' would slip past a raw-string match alone.
+            for form in (secret, urllib.parse.quote_plus(secret), urllib.parse.quote(secret, safe="")):
+                text = text.replace(form, "<redacted>")
     return text
 
 
@@ -576,6 +591,13 @@ def run_youtube(args):
     if not args.title:
         print("--platform youtube requires --title.", file=sys.stderr)
         return 2
+    if len(args.title) > 100:
+        print(
+            f"--title is {len(args.title)} characters; YouTube rejects titles over 100 "
+            "characters outright rather than truncating them. Shorten it before sending.",
+            file=sys.stderr,
+        )
+        return 2
     if args.made_for_kids is None:
         print(
             "--platform youtube requires --made-for-kids true|false. YouTube requires "
@@ -587,6 +609,24 @@ def run_youtube(args):
 
     env = require_env("YOUTUBE_ACCESS_TOKEN")
     description = load_text(args.text)
+    if len(description.encode("utf-8")) > 5000:
+        print(
+            f"Description is {len(description.encode('utf-8'))} bytes; YouTube rejects "
+            "descriptions over 5000 bytes (bytes, not characters - emoji count extra). "
+            "Shorten it before sending.",
+            file=sys.stderr,
+        )
+        return 2
+    # YouTube's videos resource allows any UTF-8 in title/description *except* < and >,
+    # and rejects the whole upload otherwise - easy to hit with hook copy like "old -> new".
+    for field, value in (("--title", args.title), ("the description (--text)", description)):
+        if "<" in value or ">" in value:
+            print(
+                f"YouTube rejects '<' and '>' anywhere in a video's title or description - "
+                f"remove them from {field} (e.g. write '->' as 'to' or '→').",
+                file=sys.stderr,
+            )
+            return 2
     tags = [t.strip() for t in args.tags.split(",") if t.strip()] if args.tags else []
     video_size = os.path.getsize(args.video_path)
 
@@ -695,6 +735,13 @@ def run_instagram(args):
         )
         return 2
     caption = load_text(args.text)
+    if len(caption) > 2200:
+        print(
+            f"Caption is {len(caption)} characters; Instagram rejects captions over 2200 "
+            "characters outright. Shorten it before sending.",
+            file=sys.stderr,
+        )
+        return 2
     secrets = [env["META_PAGE_ACCESS_TOKEN"]]
     base = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{env['IG_USER_ID']}"
     create_url = f"{base}/media"
@@ -803,9 +850,60 @@ def run_instagram(args):
     return 0
 
 
+TIKTOK_UNAUDITED_ERROR = "unaudited_client_can_only_post_to_private_accounts"
+TIKTOK_UNAUDITED_HINT = (
+    "Until your app passes TikTok's audit, TikTok only accepts --privacy-level SELF_ONLY, "
+    "posted to a creator account that is itself set to private - anything else is "
+    f"rejected ({TIKTOK_UNAUDITED_ERROR}), not quietly posted as private instead."
+)
+
+
+def tiktok_post(url, headers, body, timeout, what):
+    """POST to one Content Posting API endpoint. TikTok reports failures in the JSON
+    body's error.code as well as the HTTP status, so both are checked. Returns
+    (payload, None) on success, or (None, exit_code) after printing why it failed."""
+    request = urllib.request.Request(url, data=body, headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            raw = response.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode("utf-8", errors="replace")
+        print(f"TikTok API rejected {what}", file=sys.stderr)
+        print(f"Status: {e.code} {e.reason}", file=sys.stderr)
+        print(f"Response: {raw[:500] or '(empty body)'}", file=sys.stderr)
+        if TIKTOK_UNAUDITED_ERROR in raw:
+            print(TIKTOK_UNAUDITED_HINT, file=sys.stderr)
+        return None, 4
+    except (urllib.error.URLError, OSError) as e:
+        print(f"Failed to reach TikTok's API: {e}", file=sys.stderr)
+        return None, 3
+    try:
+        payload = json.loads(raw)
+        if not isinstance(payload, dict):
+            raise ValueError
+    except ValueError:
+        print(f"TikTok returned a non-JSON response to {what}: {raw[:500] or '(empty body)'}", file=sys.stderr)
+        return None, 4
+    error = payload.get("error") or {}
+    if error.get("code", "ok") != "ok":
+        print(
+            f"TikTok API returned error '{error.get('code')}' for {what}: "
+            f"{error.get('message') or '(no message)'}",
+            file=sys.stderr,
+        )
+        if error.get("code") == TIKTOK_UNAUDITED_ERROR:
+            print(TIKTOK_UNAUDITED_HINT, file=sys.stderr)
+        return None, 4
+    return payload, None
+
+
 def run_tiktok(args):
-    """One real HTTP call - TikTok fetches the video itself (PULL_FROM_URL)
-    and processes/posts it asynchronously after this call returns."""
+    """Two real HTTP calls: query the creator's current posting settings
+    (creator_info - TikTok requires this before every post, and the post must
+    use a privacy level it returns), then init the post. TikTok fetches the
+    video itself (PULL_FROM_URL) and processes/posts it asynchronously after
+    that. --dry-run shows both requests, but Step 2 only as asked for - what
+    Step 1's real answer would change can't be known without sending it."""
     env = require_env("TIKTOK_ACCESS_TOKEN")
     if not args.video_url:
         print(
@@ -817,70 +915,112 @@ def run_tiktok(args):
         )
         return 2
     caption = load_text(args.text)
-    if args.privacy_level != "SELF_ONLY":
+    # TikTok measures this limit in UTF-16 code units, so emoji count double.
+    caption_units = len(caption.encode("utf-16-le")) // 2
+    if caption_units > 2200:
         print(
-            f"Warning: --privacy-level {args.privacy_level} was requested, but TikTok "
-            "forces every post from an unaudited app to SELF_ONLY (private, visible "
-            "only to you) regardless of what's requested here - it only actually "
-            "reaches an audience once your app passes TikTok's audit.",
+            f"Caption is {caption_units} UTF-16 units; TikTok rejects captions over 2200 "
+            "(emoji count as 2 each). Shorten it before sending.",
             file=sys.stderr,
         )
-    url = "https://open.tiktokapis.com/v2/post/publish/video/init/"
+        return 2
+    if args.privacy_level != "SELF_ONLY":
+        print(f"Warning: --privacy-level {args.privacy_level} was requested. {TIKTOK_UNAUDITED_HINT}", file=sys.stderr)
+    info_url = "https://open.tiktokapis.com/v2/post/publish/creator_info/query/"
+    init_url = "https://open.tiktokapis.com/v2/post/publish/video/init/"
     headers = {
         "Authorization": f"Bearer {env['TIKTOK_ACCESS_TOKEN']}",
         "Content-Type": "application/json; charset=UTF-8",
     }
-    body = json.dumps({
-        "post_info": {
-            "title": caption,
-            "privacy_level": args.privacy_level,
-            "disable_duet": args.disable_duet,
-            "disable_comment": args.disable_comment,
-            "disable_stitch": args.disable_stitch,
-        },
-        "source_info": {
-            "source": "PULL_FROM_URL",
-            "video_url": args.video_url,
-        },
-    }).encode("utf-8")
+    post_info = {
+        "title": caption,
+        "privacy_level": args.privacy_level,
+        "disable_duet": args.disable_duet,
+        "disable_comment": args.disable_comment,
+        "disable_stitch": args.disable_stitch,
+    }
+    source_info = {
+        "source": "PULL_FROM_URL",
+        "video_url": args.video_url,
+    }
     secrets = [env["TIKTOK_ACCESS_TOKEN"]]
 
     if args.dry_run:
+        body = json.dumps({"post_info": post_info, "source_info": source_info}).encode("utf-8")
         print("=== DRY RUN: no request sent ===")
         print("Platform: tiktok")
         print(f"Note: {NOTES['tiktok']}")
-        print("Method: POST")
-        print(f"URL: {url}")
-        print("Headers:")
+        print("Step 1/2 - query the creator's current posting settings:")
+        print("  Method: POST")
+        print(f"  URL: {info_url}")
+        print("  Headers:")
         for name, value in headers.items():
-            print(f"  {name}: {redact(value, secrets)}")
-        print(f"Body ({len(body)} bytes):")
-        print(body.decode("utf-8"))
+            print(f"    {name}: {redact(value, secrets)}")
+        print("  Body: (empty)")
+        print(
+            "  A real send stops here unless --privacy-level is one of the "
+            "privacy_level_options this returns, and sends duet/comment/stitch as "
+            "disabled wherever the creator has turned them off. Step 1 wasn't sent "
+            "during --dry-run, so Step 2 below shows the request as you asked for it."
+        )
+        print("Step 2/2 - init the post:")
+        print("  Method: POST")
+        print(f"  URL: {init_url}")
+        print("  Headers:")
+        for name, value in headers.items():
+            print(f"    {name}: {redact(value, secrets)}")
+        print(f"  Body ({len(body)} bytes):")
+        print("  " + body.decode("utf-8"))
         print("=== END DRY RUN ===")
         return 0
 
-    request = urllib.request.Request(url, data=body, headers=headers, method="POST")
-    try:
-        with urllib.request.urlopen(request, timeout=args.timeout) as response:
-            status = response.getcode()
-            reason = response.reason
-            response_body = response.read().decode("utf-8", errors="replace")
-    except urllib.error.HTTPError as e:
-        error_body = e.read().decode("utf-8", errors="replace")
-        print("TikTok API rejected the post", file=sys.stderr)
-        print(f"Status: {e.code} {e.reason}", file=sys.stderr)
-        print(f"Response: {error_body[:500] or '(empty body)'}", file=sys.stderr)
-        return 4
-    except (urllib.error.URLError, OSError) as e:
-        print(f"Failed to reach TikTok's API: {e}", file=sys.stderr)
-        return 3
+    info, failed = tiktok_post(info_url, headers, b"", args.timeout, "the creator_info query (Step 1/2)")
+    if failed:
+        return failed
+    creator = info.get("data") or {}
+    options = creator.get("privacy_level_options") or []
+    if args.privacy_level not in options:
+        print(
+            f"--privacy-level {args.privacy_level} isn't available for this creator right "
+            f"now - TikTok only accepts one of: {', '.join(options) or '(none returned)'}. "
+            "Nothing was posted; rerun with one of those.",
+            file=sys.stderr,
+        )
+        return 2
+    # TikTok only offers PUBLIC_TO_EVERYONE to public accounts (private ones get
+    # FOLLOWER_OF_CREATOR instead), and an unaudited app can't post to a public one.
+    if "PUBLIC_TO_EVERYONE" in options:
+        print(
+            "Note: this creator's TikTok account is public. If your app hasn't passed "
+            "TikTok's audit yet, this post will be rejected - unaudited apps can only "
+            "post to an account set to private.",
+            file=sys.stderr,
+        )
+    for flag, setting, label in (
+        ("disable_duet", "duet_disabled", "duets"),
+        ("disable_comment", "comment_disabled", "comments"),
+        ("disable_stitch", "stitch_disabled", "stitching"),
+    ):
+        if creator.get(setting) and not post_info[flag]:
+            post_info[flag] = True
+            print(f"Note: the creator has {label} turned off in their TikTok settings, so {flag} is sent as true.", file=sys.stderr)
+    max_seconds = creator.get("max_video_post_duration_sec")
+    if max_seconds:
+        print(f"Note: this creator can post videos up to {max_seconds}s - TikTok won't publish a longer one.", file=sys.stderr)
 
+    body = json.dumps({"post_info": post_info, "source_info": source_info}).encode("utf-8")
+    result, failed = tiktok_post(init_url, headers, body, args.timeout, "the post (Step 2/2)")
+    if failed:
+        return failed
+
+    publish_id = (result.get("data") or {}).get("publish_id")
     print("Queued on TikTok (processing happens asynchronously)")
-    print(f"Status: {status} {reason}")
-    print(f"Response: {response_body[:500] or '(empty body)'}")
+    print(f"Publish ID: {publish_id or '(none returned)'}")
+    print(f"Response: {json.dumps(result)[:500]}")
     print(
-        "A 2xx status means TikTok accepted the request, not that the video is live "
-        "yet - confirm via TikTok's status-fetch endpoint or your app's activity log."
+        "This means TikTok accepted the request, not that the video is live yet - "
+        "confirm via TikTok's status-fetch endpoint with the publish ID above, or "
+        "your app's activity log."
     )
     return 0
 
