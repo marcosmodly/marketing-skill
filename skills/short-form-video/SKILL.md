@@ -1,7 +1,7 @@
 ---
 name: short-form-video
-description: "Creates ready-to-post short-form vertical video packages for TikTok, Instagram Reels, and YouTube Shorts: a hook-first script and shot list, plus a per-platform title or caption, hashtags sized to each platform's current norms, and a best-time-to-post window. Generates the actual video with a connected video-generation tool (Higgsfield, Canva, or any other image/video MCP tool) if the user has one and opts in; otherwise recommends free tools such as CapCut and still delivers the full script and packages. Use when the user asks for a TikTok video, an Instagram Reel, a YouTube Short, a short-form or vertical video script, video hooks, or a viral video for social media."
-allowed-tools: Read, Grep, Glob, WebSearch, WebFetch, Write
+description: "Creates ready-to-post short-form vertical video packages for TikTok, Instagram Reels, and YouTube Shorts: a hook-first script and shot list, plus a per-platform title or caption, hashtags sized to each platform's current norms, and a best-time-to-post window. If the user opts in, makes the actual video too: with a connected video-generation tool (Higgsfield, Figma Weave, Canva, or any other image/video MCP tool), or by rendering an animated-text video with an original soundtrack locally; otherwise recommends free tools such as CapCut and still delivers the full script and packages. Use when the user asks for a TikTok video, an Instagram Reel, a YouTube Short, a short-form or vertical video script, video hooks, or a viral video for social media."
+allowed-tools: Read, Grep, Glob, WebSearch, WebFetch, Write, Bash
 ---
 
 # Short-Form Video
@@ -113,8 +113,23 @@ follows.
      connected for this run, but tell the user the exact fix the tool or
      session reported, rather than either retrying it or reporting "no
      tool connected" as if there were nothing to set up.
-   - **If nothing is connected:** say so plainly and recommend current free
-     options instead of blocking on a connector. As of this writing,
+   - **Local rendering (no connector needed):** this plugin's own
+     `${CLAUDE_PLUGIN_ROOT}/scripts/video/render.js` turns an animated HTML
+     page into a finished 9:16 MP4 with an original soundtrack: a lo-fi
+     music bed plus sound effects synced to what's on screen. Be plain about
+     what it makes. It's motion graphics (kinetic text, shapes, UI mockups),
+     not filmed or AI-generated footage, and it has no voiceover. It suits
+     hook-and-text formats, product explainers, and lists, not anything
+     that needs real people or places on camera. Check it's usable with
+     `node --version` (18+), `ffmpeg -version`, and `node -e
+     "require('playwright')"` run from `scripts/video`. If anything is
+     missing, give the user the one-time setup from README's "Rendering a
+     short-form video locally" section rather than installing it unasked.
+     If it's usable, offer it alongside any connected tool. It costs nothing
+     to run.
+   - **If nothing is connected and local rendering isn't set up:** say so
+     plainly and recommend current free options instead of blocking on a
+     connector. As of this writing,
      **CapCut** is the most confident recommendation — a genuinely free
      desktop/mobile editor with no watermark on exports, built with
      Shorts/Reels/TikTok-style vertical editing as a core use case, not an
@@ -147,8 +162,11 @@ follows.
    - **The CTA**, matched to the actual goal (follow, comment a specific
      word, check the link in bio, watch the next one) — one CTA, not
      several competing asks.
-   - **Audio note:** this skill cannot look up what's trending on any
-     platform's sounds/Discover page right now, so it describes the *kind*
+   - **Audio note:** a local render (step 6) carries its own original
+     soundtrack, so it's postable as-is. For everything else, and for
+     anyone who'd rather use a trending sound in-app: this skill cannot
+     look up what's trending on any platform's sounds/Discover page right
+     now, so it describes the *kind*
      of audio that fits (e.g., "upbeat trending-style pop instrumental,"
      "voiceover only, no music," "the creator's own voice over ambient
      background") rather than naming a specific track — say this limit
@@ -186,6 +204,32 @@ follows.
    Most models also cap a single generation well under 30 seconds, so a
    30–45-second script usually means several clips stitched together in
    an editor (CapCut works for this too).
+
+   **Rendering locally instead** (step 3's local option, once the user
+   opts in):
+   - Copy `${CLAUDE_PLUGIN_ROOT}/scripts/video/example.html` to
+     `${CLAUDE_PLUGIN_ROOT}/state/videos/<date>-<slug>.html` and rewrite its
+     scenes to the step 4 script: one scene per beat, the hook readable
+     within the first second, and every line of text inside the `.scene`
+     box (each platform's UI covers the bottom quarter and right edge).
+     Keep the example's colors and type unless `brand-voice.md` says
+     otherwise.
+   - Set `<body data-duration>` to the script's length and `data-drop` to
+     when the hook ends, so the beat drops as the body starts. Put
+     `data-sfx` cues only on moments that should land: words popping in,
+     list items, a checkmark, a button press, a scene change. A sound on
+     everything reads as noise. The comment at the top of `example.html`
+     lists the sounds and attributes.
+   - Preview before the full render, which takes a couple of minutes:
+     `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/render.js <page> --stills
+     <a time per beat>` writes PNGs to a `stills/` folder next to the page.
+     Look at every still and fix anything clipped, overlapping, or outside
+     the safe area.
+   - Render: `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/render.js <page>
+     ${CLAUDE_PLUGIN_ROOT}/state/videos/<date>-<slug>.mp4`. The output is
+     1080×1920, 30fps H.264 with AAC audio mixed to about −14 LUFS, which
+     is what all three platforms expect. That file is what `--platform
+     youtube` uploads directly.
 
 7. **Hand off.** Note the concrete next step for getting this posted:
    - **Manual (the default, always available):** generate or edit the
@@ -298,7 +342,8 @@ aspect ratio/length reminder.
 
 ### Generation Status
 State plainly whether an actual video was generated this run, via which
-tool, and where the downloaded file was saved — or that none was
+tool (or rendered locally, which is motion graphics with an original
+soundtrack, not footage), and where the file was saved — or that none was
 connected/used and this script/package is the deliverable, plus which
 free tool was recommended if nothing was connected, and the exact setup
 fix for any tool that was listed but not usable yet (step 3).

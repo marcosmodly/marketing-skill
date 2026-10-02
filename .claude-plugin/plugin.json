@@ -1,8 +1,8 @@
 {
   "name": "marketing-skill",
   "displayName": "Marketing Skills",
-  "version": "0.4.1",
-  "description": "12 AI marketing skills for Claude Code: competitor research, social media content calendars, LinkedIn/X/newsletter repurposing, SEO content briefs, Meta/Google/LinkedIn ad copy, email drip sequences, personalized cold email outreach, TikTok/Reels/YouTube Shorts scripts, rules-aware Reddit/Product Hunt/Hacker News/Discord posts, visual briefs, and approval-gated publishing to n8n, Make, or platform APIs.",
+  "version": "0.5.0",
+  "description": "12 AI marketing skills for Claude Code: competitor research, social media content calendars, LinkedIn/X/newsletter repurposing, SEO content briefs, Meta/Google/LinkedIn ad copy, email drip sequences, personalized cold email outreach, TikTok/Reels/YouTube Shorts scripts and rendered videos, rules-aware Reddit/Product Hunt/Hacker News/Discord posts, visual briefs, and approval-gated publishing to n8n, Make, or platform APIs.",
   "author": {
     "name": "marcosmodly",
     "url": "https://github.com/marcosmodly"
@@ -30,6 +30,7 @@
     "tiktok",
     "instagram-reels",
     "youtube-shorts",
+    "short-form-video",
     "n8n",
     "marketing-automation",
     "growth-marketing"

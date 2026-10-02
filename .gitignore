@@ -1,2 +1,7 @@
 __pycache__/
 *.pyc
+
+# video renderer (scripts/video): installed deps and rendered output
+node_modules/
+state/videos/*.mp4
+stills/
