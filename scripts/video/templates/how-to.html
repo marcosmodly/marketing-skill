@@ -11,14 +11,14 @@
   and move its .tap ring onto the thing the viewer should tap. To add or
   drop a step, copy or remove a .step-title / .screen pair and shift the
   later --in / --out / --tap times.
-  Page conventions (canvas, safe area, timing vars, data-sfx cues, music
-  styles, assets): see the comment at the top of promo.html.
+  Page conventions (canvas, safe area, timing vars, backgrounds, data-sfx
+  cues, music, assets): see the comment at the top of promo.html.
 -->
 <html>
 <head>
 <meta charset="utf-8">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=block">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=JetBrains+Mono:wght@500&display=block">
 <style>
   :root {
     --bg: #0f0f13;
@@ -73,6 +73,26 @@
   .count::before { content: counter(n); }
   @keyframes countUp { from { --n: 0; } to { --n: var(--to); } }
 
+  /* background media: one photo or clip per scene, behind the text (see promo.html) */
+  .bg { position: absolute; inset: 0; overflow: hidden; isolation: isolate; background: #000;
+        animation: fadeIn .45s ease-out var(--in) both, fadeOut .45s ease-in var(--out, 999s) forwards; }
+  .bg.now { animation: fadeOut .45s ease-in var(--out, 999s) forwards; }
+  .bg:empty { display: none; }
+  .bg-media { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;
+              filter: var(--grade, saturate(.9) contrast(1.05) brightness(.9));
+              animation: var(--kb, kbIn) var(--dur, 8s) linear var(--in) both; }
+  .bg.blur .bg-media { filter: var(--grade, saturate(.9) contrast(1.05) brightness(.9)) blur(var(--blur, 10px)); }
+  @keyframes kbIn    { from { transform: scale(1.02); } to { transform: scale(1.14); } }
+  @keyframes kbOut   { from { transform: scale(1.14); } to { transform: scale(1.02); } }
+  @keyframes kbLeft  { from { transform: scale(1.14) translateX(3%); } to { transform: scale(1.14) translateX(-3%); } }
+  @keyframes kbRight { from { transform: scale(1.14) translateX(-3%); } to { transform: scale(1.14) translateX(3%); } }
+  .bg.tint::before { content: ''; position: absolute; inset: 0; z-index: 1; background: var(--accent); mix-blend-mode: soft-light; opacity: .5; }
+  .bg::after { content: ''; position: absolute; inset: 0; z-index: 2;
+               background: linear-gradient(to bottom, rgba(10,10,14,.72), rgba(10,10,14,.12) 30%, rgba(10,10,14,.22) 62%, rgba(10,10,14,.88)),
+                           rgba(10,10,14,var(--shade, .35)); }
+  body:has(.bg-media) { --muted: #d2d1d8; }
+  body:has(.bg-media) .scene, body:has(.bg-media) .stage { text-shadow: 0 2px 6px rgba(0,0,0,.35), 0 4px 30px rgba(0,0,0,.55); }
+
   .stage { position: absolute; left: 90px; right: 150px; top: 330px; bottom: 470px; }
   .titles { position: relative; height: 200px; }
   .step-title { position: absolute; left: 0; top: 0; right: 0; }
@@ -98,9 +118,15 @@
 
 </style>
 </head>
-<body data-duration="20" data-drop="2.5" data-bpm="120" data-key="D">
+<body data-duration="20" data-drop="2.5" data-music="tech" data-bpm="120" data-key="D" data-mode="major" data-energy="3" data-motif="1 5 3 5 | 6 5 3 2">
   <div class="glow g1"></div>
   <div class="glow g2"></div>
+  <!-- background, 0–2.5s -->
+  <div class="bg now" style="--in:0s; --out:2.3s; --dur:2.95s"></div>
+  <!-- background, 2.5–16s -->
+  <div class="bg" style="--in:2.25s; --out:15.8s; --dur:14.2s"></div>
+  <!-- background, 16–20s -->
+  <div class="bg" style="--in:15.75s; --dur:4.25s"></div>
 
   <!-- 0–2.5s: hook -->
   <div class="scene" style="--out:2.3s">

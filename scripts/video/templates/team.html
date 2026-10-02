@@ -9,14 +9,14 @@
   photo (with their permission):
     <img class="avatar" src="assets/name.jpg" alt="">
   To feature more people, copy a person scene and shift the later times.
-  Page conventions (canvas, safe area, timing vars, data-sfx cues, music
-  styles, assets): see the comment at the top of promo.html.
+  Page conventions (canvas, safe area, timing vars, backgrounds, data-sfx
+  cues, music, assets): see the comment at the top of promo.html.
 -->
 <html>
 <head>
 <meta charset="utf-8">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=block">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=JetBrains+Mono:wght@500&display=block">
 <style>
   :root {
     --bg: #0f0f13;
@@ -71,6 +71,26 @@
   .count::before { content: counter(n); }
   @keyframes countUp { from { --n: 0; } to { --n: var(--to); } }
 
+  /* background media: one photo or clip per scene, behind the text (see promo.html) */
+  .bg { position: absolute; inset: 0; overflow: hidden; isolation: isolate; background: #000;
+        animation: fadeIn .45s ease-out var(--in) both, fadeOut .45s ease-in var(--out, 999s) forwards; }
+  .bg.now { animation: fadeOut .45s ease-in var(--out, 999s) forwards; }
+  .bg:empty { display: none; }
+  .bg-media { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;
+              filter: var(--grade, saturate(.9) contrast(1.05) brightness(.9));
+              animation: var(--kb, kbIn) var(--dur, 8s) linear var(--in) both; }
+  .bg.blur .bg-media { filter: var(--grade, saturate(.9) contrast(1.05) brightness(.9)) blur(var(--blur, 10px)); }
+  @keyframes kbIn    { from { transform: scale(1.02); } to { transform: scale(1.14); } }
+  @keyframes kbOut   { from { transform: scale(1.14); } to { transform: scale(1.02); } }
+  @keyframes kbLeft  { from { transform: scale(1.14) translateX(3%); } to { transform: scale(1.14) translateX(-3%); } }
+  @keyframes kbRight { from { transform: scale(1.14) translateX(-3%); } to { transform: scale(1.14) translateX(3%); } }
+  .bg.tint::before { content: ''; position: absolute; inset: 0; z-index: 1; background: var(--accent); mix-blend-mode: soft-light; opacity: .5; }
+  .bg::after { content: ''; position: absolute; inset: 0; z-index: 2;
+               background: linear-gradient(to bottom, rgba(10,10,14,.72), rgba(10,10,14,.12) 30%, rgba(10,10,14,.22) 62%, rgba(10,10,14,.88)),
+                           rgba(10,10,14,var(--shade, .35)); }
+  body:has(.bg-media) { --muted: #d2d1d8; }
+  body:has(.bg-media) .scene, body:has(.bg-media) .stage { text-shadow: 0 2px 6px rgba(0,0,0,.35), 0 4px 30px rgba(0,0,0,.55); }
+
   .avatar { width: 300px; height: 300px; border-radius: 50%; object-fit: cover; display: grid; place-items: center; overflow: hidden;
             background: linear-gradient(135deg, #6b4b7b, #2b5b4b); border: 6px solid #ffffff22; }
   .avatar svg { width: 100%; height: 100%; }
@@ -81,9 +101,21 @@
 
 </style>
 </head>
-<body data-duration="18" data-drop="2.6" data-bpm="92" data-key="A" data-music="calm">
+<body data-duration="18" data-drop="2.6" data-music="acoustic" data-bpm="92" data-key="A" data-mode="major" data-energy="2" data-motif="1 2 3 5 | 3 2 1 -">
   <div class="glow g1"></div>
   <div class="glow g2"></div>
+  <!-- background, 0–2.6s -->
+  <div class="bg now" style="--in:0s; --out:2.4s; --dur:3.05s"></div>
+  <!-- background, 2.6–5.6s -->
+  <div class="bg" style="--in:2.35s; --out:5.4s; --dur:3.7s"></div>
+  <!-- background, 5.6–8.6s -->
+  <div class="bg" style="--in:5.35s; --out:8.4s; --dur:3.7s"></div>
+  <!-- background, 8.6–11.6s -->
+  <div class="bg" style="--in:8.35s; --out:11.4s; --dur:3.7s"></div>
+  <!-- background, 11.6–15s -->
+  <div class="bg" style="--in:11.35s; --out:14.8s; --dur:4.1s"></div>
+  <!-- background, 15–18s -->
+  <div class="bg" style="--in:14.75s; --dur:3.25s"></div>
 
   <!-- 0–2.6s: hook -->
   <div class="scene" style="--out:2.4s">

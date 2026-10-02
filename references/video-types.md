@@ -160,6 +160,25 @@ and has to work with the sound off.
 - **Made by:** usually Film. Render works for text-led formats ("POV:", "Things nobody tells you about X").
 - **Beats:** the trend's own structure. Check that the trend is still current before making it; this plugin can't look trends up live.
 
+## Backgrounds and sound by type (for local renders)
+
+Backgrounds come from stock photos, stock clips, or AI images
+(`scripts/video/media.js`, or a connected image tool). Sound comes from the
+project's sonic identity in `brand-voice.md` (see `sound-guide.md`).
+
+| Type | Background | Sound |
+|---|---|---|
+| Ad, brand profile, explainer, educational, presentation | A setting or mood that fits each beat; clips for energy | The identity |
+| Product demo, how-to | Real screenshots in the phone frame, over a soft (blurred) setting | The identity |
+| FAQ, myth vs fact | One calm setting, blurred, so the text leads | The identity |
+| Announcement; event, webinar, or live promo | Bold photos or energetic clips | The identity, energy +1 |
+| Testimonial, case study, interview pull-quote | The customer's own photo; otherwise a blurred ambient setting | `calm`, in the identity's key and hook |
+| Meet the team | The team's own photos; their real workspace if supplied, otherwise blurred ambient | The identity, or `calm` |
+| Brand story (text-led) | Wide, atmospheric settings | The identity |
+
+Stock and AI images set the scene; they never stand in for a customer, a
+team member, the product, or a result.
+
 ## Filming notes (for Film types)
 
 When a type needs footage, the skill's Generation Status says so and gives

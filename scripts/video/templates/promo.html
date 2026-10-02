@@ -11,18 +11,34 @@
   - Animate with CSS animations only. render.js pauses and seeks every
     animation frame by frame, so time each one with animation-delay. Here the
     delays come from per-element custom properties like style="--in:3.4s".
-  - <body data-duration> sets the length in seconds. data-drop is when the
-    beat comes in (the music builds tension before it), data-bpm the tempo,
-    and data-key the key (C, D, F#, ...). data-music picks the style: lofi
-    (the default, for promos and launches), calm (no claps, a held bass, for
-    testimonials and team intros), or none (sound effects only).
+  - Backgrounds: every scene has an empty <div class="bg"> slot already timed
+    to it. Put one photo or clip inside and it fills the frame with a slow
+    zoom, a scrim that keeps text readable, and one shared color grade:
+      <img class="bg-media" src="assets/office-1.jpg" alt="">
+      <video class="bg-media" src="assets/city-1.mp4" data-offset="2"></video>
+    data-offset starts a clip that many seconds in; clips loop unless
+    data-loop="false". On the slot, --kb picks the motion (kbIn, kbOut,
+    kbLeft, kbRight, or none), --shade the darkness (default .35), class
+    "blur" softens a busy image, and class "tint" washes it in the accent
+    color. An empty slot shows the gradient glow instead. scripts/video/
+    media.js finds stock photos and clips and writes their credits.
+  - Music comes from <body data-*>: data-music is the genre (pop, house,
+    hiphop, acoustic, cinematic, tech, lofi, calm) or none; data-bpm,
+    data-key (C, F#, ...), data-mode (major or minor), data-energy (1-5),
+    and data-motif, the project's signature hook in scale degrees, e.g.
+    "1 3 5 6 | 5 3 2 -" (references/sound-guide.md). data-drop is when the
+    beat comes in; data-break="8.5-13.5" thins it out under quieter scenes.
+    data-music-src="assets/track.mp3" (with data-music-start, in seconds)
+    uses a licensed track instead. data-duration sets the length.
   - data-sfx="sound:var" plays a sound effect at the time in that element's
     --var (default --in). Several can be listed: data-sfx="swish:in tick:tick".
     Sounds: pop (a note that climbs the chord when words land in quick
     succession), swish, tick (climbs a scale across a run of ticks), whoosh,
     click, chime.
   - Images (screenshots, photos, logos) go in an assets/ folder next to the
-    page and load with a relative src. Use only real ones the user supplied.
+    page and load with a relative src. People, products, and results must be
+    real ones the user supplied; stock and AI images are only for settings
+    and mood.
 -->
 <html>
 <head>
@@ -38,13 +54,13 @@
     --muted: #9a99a4;
     --accent: #e07a55;
     --ok: #3fbf7f;
+    --bad: #e0605a;
     --warn: #e8b04a;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--bg); }
   body { font-family: "Inter", "Liberation Sans", sans-serif; color: var(--text); position: relative; }
 
-  /* ambient background */
   .glow { position: absolute; border-radius: 50%; filter: blur(120px); opacity: .55; }
   .g1 { width: 900px; height: 900px; background: #6b2f1c; left: -300px; top: -200px; animation: drift1 24s linear 0s both; }
   .g2 { width: 800px; height: 800px; background: #1d2a52; right: -320px; bottom: -160px; animation: drift2 24s linear 0s both; }
@@ -57,12 +73,12 @@
            animation: sceneOut .35s ease-in var(--out, 999s) forwards; }
   @keyframes sceneOut { to { opacity: 0; transform: translateY(-60px); } }
 
-  /* entrances */
+  /* entrances; .gone also leaves at its own --out */
   .pop   { animation: popIn .5s cubic-bezier(.2,.9,.3,1.25) var(--in) both; }
   .rise  { animation: riseIn .45s cubic-bezier(.2,.8,.2,1) var(--in) both; }
   .slide { animation: slideIn .4s cubic-bezier(.2,.8,.2,1) var(--in) both; }
   .fade  { animation: fadeIn .4s ease-out var(--in) both; }
-  .gone  { animation: fadeIn .4s ease-out var(--in) both, fadeOut .3s ease-in var(--out) forwards; }
+  .gone  { animation: fadeIn .35s ease-out var(--in) both, fadeOut .3s ease-in var(--out) forwards; }
   @keyframes popIn   { from { opacity: 0; transform: scale(.6) translateY(40px); } to { opacity: 1; transform: none; } }
   @keyframes riseIn  { from { opacity: 0; transform: translateY(70px); } to { opacity: 1; transform: none; } }
   @keyframes slideIn { from { opacity: 0; transform: translateX(160px); } to { opacity: 1; transform: none; } }
@@ -73,8 +89,35 @@
   .big  { font-size: 104px; font-weight: 800; line-height: 1.04; letter-spacing: -3px; }
   .mid  { font-size: 64px;  font-weight: 700; line-height: 1.12; letter-spacing: -1.5px; }
   .small{ font-size: 42px;  font-weight: 500; line-height: 1.3; color: var(--muted); }
+  .label{ font-size: 34px;  font-weight: 700; letter-spacing: 4px; text-transform: uppercase; }
   .accent { color: var(--accent); }
+  .center { text-align: center; align-items: center; }
 
+  /* counts up from 0 to --to, starting at --in: <span class="count" style="--in:3s; --to:40"></span> */
+  @property --n { syntax: '<integer>'; inherits: false; initial-value: 0; }
+  .count { counter-reset: n var(--n); animation: countUp 1.2s cubic-bezier(.2,.8,.2,1) var(--in) both; }
+  .count::before { content: counter(n); }
+  @keyframes countUp { from { --n: 0; } to { --n: var(--to); } }
+
+  /* background media: one photo or clip per scene, behind the text (see promo.html) */
+  .bg { position: absolute; inset: 0; overflow: hidden; isolation: isolate; background: #000;
+        animation: fadeIn .45s ease-out var(--in) both, fadeOut .45s ease-in var(--out, 999s) forwards; }
+  .bg.now { animation: fadeOut .45s ease-in var(--out, 999s) forwards; }
+  .bg:empty { display: none; }
+  .bg-media { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;
+              filter: var(--grade, saturate(.9) contrast(1.05) brightness(.9));
+              animation: var(--kb, kbIn) var(--dur, 8s) linear var(--in) both; }
+  .bg.blur .bg-media { filter: var(--grade, saturate(.9) contrast(1.05) brightness(.9)) blur(var(--blur, 10px)); }
+  @keyframes kbIn    { from { transform: scale(1.02); } to { transform: scale(1.14); } }
+  @keyframes kbOut   { from { transform: scale(1.14); } to { transform: scale(1.02); } }
+  @keyframes kbLeft  { from { transform: scale(1.14) translateX(3%); } to { transform: scale(1.14) translateX(-3%); } }
+  @keyframes kbRight { from { transform: scale(1.14) translateX(-3%); } to { transform: scale(1.14) translateX(3%); } }
+  .bg.tint::before { content: ''; position: absolute; inset: 0; z-index: 1; background: var(--accent); mix-blend-mode: soft-light; opacity: .5; }
+  .bg::after { content: ''; position: absolute; inset: 0; z-index: 2;
+               background: linear-gradient(to bottom, rgba(10,10,14,.72), rgba(10,10,14,.12) 30%, rgba(10,10,14,.22) 62%, rgba(10,10,14,.88)),
+                           rgba(10,10,14,var(--shade, .35)); }
+  body:has(.bg-media) { --muted: #d2d1d8; }
+  body:has(.bg-media) .scene, body:has(.bg-media) .stage { text-shadow: 0 2px 6px rgba(0,0,0,.35), 0 4px 30px rgba(0,0,0,.55); }
   /* scene 2/3: the to-do list */
   .listhead { position: relative; height: 180px; margin-bottom: 28px; }
   .listhead > div { position: absolute; left: 0; bottom: 0; }
@@ -121,12 +164,22 @@
   .termbody .dollar { color: var(--accent); }
   .caret { display: inline-block; width: 20px; height: 40px; background: #d9d8d2; vertical-align: -6px; animation: blink 1s steps(1) 0s infinite; }
   @keyframes blink { 50% { opacity: 0; } }
+
 </style>
 </head>
-<body data-duration="24" data-drop="3" data-bpm="120" data-key="C">
+<body data-duration="24" data-drop="3" data-music="tech" data-bpm="120" data-key="C" data-mode="major" data-energy="3" data-motif="1 5 3 5 | 6 5 3 2">
   <div class="glow g1"></div>
   <div class="glow g2"></div>
-
+  <!-- background, 0–3s -->
+  <div class="bg now" style="--in:0s; --out:2.8s; --dur:3.45s"></div>
+  <!-- background, 3–12.5s -->
+  <div class="bg" style="--in:2.75s; --out:12.3s; --dur:10.2s"></div>
+  <!-- background, 12.5–17.5s -->
+  <div class="bg" style="--in:12.25s; --out:17.3s; --dur:5.7s"></div>
+  <!-- background, 17.5–20.7s -->
+  <div class="bg" style="--in:17.25s; --out:20.5s; --dur:3.9s"></div>
+  <!-- background, 20.7–24s -->
+  <div class="bg" style="--in:20.45s; --dur:3.55s"></div>
   <!-- Scene 1 (0–3s): hook, readable sound-off -->
   <div class="scene" style="--out:2.75s">
     <div class="huge pop" style="--in:.05s" data-sfx="pop">Stop writing</div>
@@ -190,5 +243,6 @@
       <div class="termbody"><span class="dollar">$</span> claude plugin install<br>&nbsp;&nbsp;marketing-skill@marketing-skill<span class="caret"></span></div>
     </div>
   </div>
+
 </body>
 </html>

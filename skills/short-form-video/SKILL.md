@@ -46,7 +46,9 @@ follows.
    types to produce; target audience + tone; default output format — same
    as `/marketing-skill:marketing-setup`) before continuing, then save the
    answers into that file and flip the marker to `CONFIGURED` with today's
-   date. Otherwise, read it for tone, audience, and banned words below.
+   date. Otherwise, read it for tone, audience, and banned words below,
+   and for its Sonic Identity (genre, tempo, key, energy, hook) if a video
+   will be rendered.
 
 2. **Confirm scope.**
    - Source topic, product, or content (paste, file, URL, or "our
@@ -68,6 +70,11 @@ follows.
      testimonial or case study; team photos, names, and roles for a
      team video. Ask for it up front. Never invent it (see "Formatting
      rules").
+   - The look, if the video will be rendered locally: real backgrounds
+     (stock photos, stock video clips, or AI-generated images; see step 3)
+     behind the text, or the plain gradient. Backgrounds are the default
+     when a source is available; they make the video feel produced rather
+     than like a slide.
    - The hook/angle and core message — what should stop the scroll in the
      first second, and what's the one thing a viewer should walk away
      knowing or feeling.
@@ -128,10 +135,12 @@ follows.
      tool connected" as if there were nothing to set up.
    - **Local rendering (no connector needed):** this plugin's own
      `${CLAUDE_PLUGIN_ROOT}/scripts/video/render.js` turns an animated HTML
-     page into a finished 9:16 MP4 with an original soundtrack: a lo-fi
-     music bed plus sound effects synced to what's on screen. Be plain about
-     what it makes. It's motion graphics (kinetic text, shapes, UI mockups),
-     not filmed or AI-generated footage, and it has no voiceover. It suits
+     page into a finished 9:16 MP4 with an original soundtrack in the
+     project's sonic identity, plus sound effects synced to what's on
+     screen. Scenes can sit on stock photos, stock video clips, or AI
+     images. Be plain about what it makes. It's motion graphics (kinetic
+     text, shapes, UI mockups) over those backgrounds, not filmed footage of
+     the user's product or people, and it has no voiceover. It suits
      the types `video-types.md` marks Render or Render + your assets, not
      anything that needs real people or places on camera. Check it's
      usable with `node --version` (18+), `ffmpeg -version`, and `node -e
@@ -140,6 +149,22 @@ follows.
      short-form video locally" section rather than installing it unasked.
      If it's usable, offer it alongside any connected tool. It costs nothing
      to run.
+   - **Background media for a local render:**
+     - **Stock photos and clips:** `${CLAUDE_PLUGIN_ROOT}/scripts/video/media.js`
+       searches Pexels (`PEXELS_API_KEY`) and Pixabay (`PIXABAY_API_KEY`),
+       both free keys, and Openverse (photos only, no key). It downloads
+       into the page's `assets/` folder and records each file's license
+       and required credit in `CREDITS.md` there. With no keys set, say
+       that Openverse is the only source and it has no video clips, and
+       point to the free keys rather than going without.
+     - **AI-generated images:** only with a connected image tool. That's
+       Figma Weave once the user's Figma account is linked (find the model
+       with `weave_find_model`, then `weave_run_model`, which quotes a cost
+       first), or Higgsfield. Show the quoted cost and get an explicit yes
+       before every run, since it spends the user's credits. Download each
+       result into `assets/` and record it with `node
+       ${CLAUDE_PLUGIN_ROOT}/scripts/video/media.js credit <file> --ai
+       "<tool / model>" --prompt "<prompt>"`.
    - **If nothing is connected and local rendering isn't set up:** say so
      plainly and recommend current free options instead of blocking on a
      connector. As of this writing,
@@ -182,7 +207,7 @@ follows.
      word, check the link in bio, watch the next one) — one CTA, not
      several competing asks.
    - **Audio note:** a local render (step 6) carries its own original
-     soundtrack, so it's postable as-is. For everything else, and for
+     soundtrack in the project's sonic identity, so it's postable as-is. For everything else, and for
      anyone who'd rather use a trending sound in-app: this skill cannot
      look up what's trending on any platform's sounds/Discover page right
      now, so it describes the *kind*
@@ -236,24 +261,68 @@ follows.
      box (each platform's UI covers the bottom quarter and right edge).
      Keep the template's colors and type unless `brand-voice.md` says
      otherwise.
+   - **The sound:** set the `<body>` music attributes from the Sonic
+     Identity in `brand-voice.md`: `data-music`, `data-bpm`, `data-key`,
+     `data-mode`, `data-energy`, `data-motif`.
+     - Testimonials and sensitive topics use `data-music="calm"`, keeping
+       the project's key and hook.
+     - An announcement can raise energy one step.
+     - Add `data-break="<start>-<end>"` under a quote or any moment the
+       words should carry alone.
+     - **No identity saved yet:** propose two from
+       `${CLAUDE_PLUGIN_ROOT}/references/sound-guide.md`, each with one line
+       on why it fits. Render a preview of each (`node
+       ${CLAUDE_PLUGIN_ROOT}/scripts/video/render.js --sample <genre>
+       <out.m4a> --motif ... --key ... --mode ... --energy ...`, a few
+       seconds each). Send both to the user to listen to, and save
+       their pick to `brand-voice.md` before rendering. You can't hear
+       audio, so their ear decides.
+     - **The user has a licensed track they'd rather use:** put it in
+       `assets/`, set `data-music-src` and `data-music-start`, and record its
+       license with `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/media.js credit
+       <file> --source ... --license ...`. Don't use a track without a license note.
+   - **The backgrounds:** every scene has an empty `.bg` slot timed to it.
+     - **What to search for:** for each scene, pick a setting or mood that
+       fits the beat and the project's audience (e.g. "small bakery
+       counter morning", "city at night aerial"). Not the product, a
+       person, or a result.
+     - **Fetching:** run `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/media.js
+       search "<query>" --out ${CLAUDE_PLUGIN_ROOT}/state/videos/assets
+       [--type video]` for each, or generate AI images (step 3).
+     - **Placing:** put `<img class="bg-media" src="assets/<file>" alt="">`,
+       or `<video class="bg-media" src="assets/<clip>">`, in the slot.
+     - **Look:** a consistent set reads as produced. Prefer the same
+       light and palette across scenes. Use `class="bg blur"` on busy
+       images, and `class="bg tint"` to pull mismatched ones toward the
+       brand color.
+     - **People and real things:** a testimonial's or team video's person
+       is always their own photo, never stock or AI.
    - Set `<body data-duration>` to the script's length and `data-drop` to
      when the hook ends, so the beat drops as the body starts. Put
      `data-sfx` cues only on moments that should land: words popping in,
      list items, a checkmark, a button press, a scene change. A sound on
      everything reads as noise. The comment at the top of `promo.html`
-     lists the sounds, music styles (`lofi`, `calm`, `none`), and
+     documents the sounds, music settings, background slots, and
      attributes, and each template's own comment says what to replace.
      Replace every bracketed placeholder; never ship one.
    - Preview before the full render, which takes a couple of minutes:
      `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/render.js <page> --stills
      <a time per beat>` writes PNGs to a `stills/` folder next to the page.
      Look at every still and fix anything clipped, overlapping, or outside
-     the safe area.
+     the safe area, and any text that's hard to read over its background.
+     The renderer darkens bright backgrounds automatically; for a busy one,
+     add `blur` or a heavier `--shade` on the slot.
    - Render: `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/render.js <page>
      ${CLAUDE_PLUGIN_ROOT}/state/videos/<date>-<slug>.mp4`. The output is
      1080×1920, 30fps H.264 with AAC audio mixed to about −14 LUFS, which
      is what all three platforms expect. That file is what `--platform
      youtube` uploads directly.
+   - **Credits and labels:** copy the credit line from `assets/CREDITS.md`
+     into every platform's caption or description when it says one is
+     required (Pexels, CC BY photos, some tracks). If any AI image is
+     photorealistic, tell the user to switch on the platform's AI-content
+     label when posting. TikTok, YouTube, and Instagram all ask for it for
+     realistic synthetic scenes.
 
    **Filmed types instead:** deliver a shot list in the Video Script
    section: each beat as a shot (what's in frame, who says what, how long),
@@ -375,7 +444,9 @@ aspect ratio/length reminder.
 ### Generation Status
 State plainly whether an actual video was generated this run, via which
 tool (or rendered locally, which is motion graphics with an original
-soundtrack, not footage), and where the file was saved — or that none was
+soundtrack, not footage), where the file was saved, which backgrounds were
+used (stock, with provider, or AI, with tool) and the sound (genre and hook,
+or the licensed track) — or that none was
 connected/used and this script/package is the deliverable, plus which
 free tool was recommended if nothing was connected, and the exact setup
 fix for any tool that was listed but not usable yet (step 3).
@@ -395,6 +466,13 @@ that applies to this run, per step 7 above.
   account's own analytics should override it once available.
 - Never claim a video was generated, or a post was sent, when no tool call
   actually happened.
+- Stock and AI imagery is setting and mood only. It never stands in for
+  the customer, a team member, the product, a result, or a real event.
+  Never generate an AI image of a real person, and never present an AI
+  image as a photo of something real.
+- When `CREDITS.md` says a credit is required, it goes in every
+  platform's caption or description. Don't drop it to save characters;
+  shorten something else.
 - Never fabricate social proof. A testimonial, case study, interview
   quote, review, star rating, customer name, logo, photo, or result number
   must be real, supplied by the user, and used with the person's

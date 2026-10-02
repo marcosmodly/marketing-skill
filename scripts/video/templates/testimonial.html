@@ -10,14 +10,14 @@
   the avatar with their photo:
     <img class="avatar" src="assets/customer.jpg" alt="">
   Stars are optional; keep them only if they reflect a real rating.
-  Page conventions (canvas, safe area, timing vars, data-sfx cues, music
-  styles, assets): see the comment at the top of promo.html.
+  Page conventions (canvas, safe area, timing vars, backgrounds, data-sfx
+  cues, music, assets): see the comment at the top of promo.html.
 -->
 <html>
 <head>
 <meta charset="utf-8">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=block">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=JetBrains+Mono:wght@500&display=block">
 <style>
   :root {
     --bg: #0f0f13;
@@ -72,6 +72,26 @@
   .count::before { content: counter(n); }
   @keyframes countUp { from { --n: 0; } to { --n: var(--to); } }
 
+  /* background media: one photo or clip per scene, behind the text (see promo.html) */
+  .bg { position: absolute; inset: 0; overflow: hidden; isolation: isolate; background: #000;
+        animation: fadeIn .45s ease-out var(--in) both, fadeOut .45s ease-in var(--out, 999s) forwards; }
+  .bg.now { animation: fadeOut .45s ease-in var(--out, 999s) forwards; }
+  .bg:empty { display: none; }
+  .bg-media { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;
+              filter: var(--grade, saturate(.9) contrast(1.05) brightness(.9));
+              animation: var(--kb, kbIn) var(--dur, 8s) linear var(--in) both; }
+  .bg.blur .bg-media { filter: var(--grade, saturate(.9) contrast(1.05) brightness(.9)) blur(var(--blur, 10px)); }
+  @keyframes kbIn    { from { transform: scale(1.02); } to { transform: scale(1.14); } }
+  @keyframes kbOut   { from { transform: scale(1.14); } to { transform: scale(1.02); } }
+  @keyframes kbLeft  { from { transform: scale(1.14) translateX(3%); } to { transform: scale(1.14) translateX(-3%); } }
+  @keyframes kbRight { from { transform: scale(1.14) translateX(-3%); } to { transform: scale(1.14) translateX(3%); } }
+  .bg.tint::before { content: ''; position: absolute; inset: 0; z-index: 1; background: var(--accent); mix-blend-mode: soft-light; opacity: .5; }
+  .bg::after { content: ''; position: absolute; inset: 0; z-index: 2;
+               background: linear-gradient(to bottom, rgba(10,10,14,.72), rgba(10,10,14,.12) 30%, rgba(10,10,14,.22) 62%, rgba(10,10,14,.88)),
+                           rgba(10,10,14,var(--shade, .35)); }
+  body:has(.bg-media) { --muted: #d2d1d8; }
+  body:has(.bg-media) .scene, body:has(.bg-media) .stage { text-shadow: 0 2px 6px rgba(0,0,0,.35), 0 4px 30px rgba(0,0,0,.55); }
+
   .quote-mark { font-size: 220px; font-weight: 800; line-height: .6; color: var(--accent); height: 110px; }
   .quote { font-size: 92px; font-weight: 800; line-height: 1.08; letter-spacing: -2.5px; }
   .avatar { width: 240px; height: 240px; border-radius: 50%; object-fit: cover; display: grid; place-items: center;
@@ -89,9 +109,19 @@
 
 </style>
 </head>
-<body data-duration="20" data-drop="3" data-bpm="96" data-key="F" data-music="calm">
+<body data-duration="20" data-drop="3" data-music="calm" data-bpm="96" data-key="F" data-mode="major" data-energy="2" data-motif="5 3 2 1 | 2 - 1 -">
   <div class="glow g1"></div>
   <div class="glow g2"></div>
+  <!-- background, 0–3.2s -->
+  <div class="bg now" style="--in:0s; --out:3.0s; --dur:3.65s"></div>
+  <!-- background, 3.2–8s -->
+  <div class="bg" style="--in:2.95s; --out:7.8s; --dur:5.5s"></div>
+  <!-- background, 8–13.5s -->
+  <div class="bg" style="--in:7.75s; --out:13.3s; --dur:6.2s"></div>
+  <!-- background, 13.5–17.5s -->
+  <div class="bg" style="--in:13.25s; --out:17.3s; --dur:4.7s"></div>
+  <!-- background, 17.5–20s -->
+  <div class="bg" style="--in:17.25s; --dur:2.75s"></div>
 
   <!-- 0–3.2s: the result, in their words -->
   <div class="scene" style="--out:3.0s">

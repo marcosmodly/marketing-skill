@@ -59,3 +59,17 @@ style exceptions, or competitor names to avoid naming directly.)
 ## Do / Don't Examples
 - Don't: "Our revolutionary platform will supercharge your workflow!"
 - Do: "The platform cuts manual steps from your workflow."
+
+## Sonic Identity
+Not yet configured. The sound of every video rendered for this project:
+the same genre, tempo, key, and signature hook each time, so viewers start
+to recognize it. `short-form-video` (or `/marketing-skill:marketing-setup`)
+proposes two options with audio previews and saves your pick here; see
+`references/sound-guide.md`. Once set, it looks like:
+
+- Genre: tech
+- Tempo: 112 BPM
+- Key: C major
+- Energy: 3 (of 5)
+- Hook: 1 5 3 5 | 6 5 3 2
+- Why: clean and optimistic, for technical buyers; no hype
