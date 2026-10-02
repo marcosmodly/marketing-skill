@@ -1,6 +1,6 @@
 ---
 name: competitor-research
-description: Writes a structured, analytical competitor-research brief for marketing teams. Use when the user asks to research a competitor, analyze a rival, or build a competitive brief or battlecard.
+description: "Writes a structured competitor analysis brief for marketing and sales teams: company overview, recent moves, messaging and positioning analysis, SWOT, recommendations, and cited sources from live web research. Use when the user asks to research a competitor, run a competitive analysis, analyze a rival's positioning or messaging, or build a competitive brief or sales battlecard."
 allowed-tools: Read, Grep, Glob, WebSearch, WebFetch, Write
 ---
 

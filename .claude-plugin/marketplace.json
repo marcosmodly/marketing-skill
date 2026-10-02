@@ -1,14 +1,39 @@
 {
   "name": "marketing-skill",
-  "description": "Marketplace for the marketing-skill plugin: composable marketing automation skills for Claude Code.",
+  "description": "Marketing skills for Claude Code: AI competitor research, content calendars, social posts, SEO briefs, ad copy, email sequences, cold outreach, short-form video scripts, community posts, and approval-gated publishing.",
   "owner": {
-    "name": "marcosmodly"
+    "name": "marcosmodly",
+    "url": "https://github.com/marcosmodly"
   },
   "plugins": [
     {
       "name": "marketing-skill",
+      "displayName": "Marketing Skills",
       "source": ".",
-      "description": "A suite of composable marketing skills: competitor research, batch content calendaring, multi-platform content repurposing, SEO briefs, ad copy, email sequences, researched and personalized daily cold-outreach emails with a permanent suppression list and monthly strategy refresh, visual generation briefs, ready-to-post short-form video packages for YouTube Shorts/Instagram Reels/TikTok (script, caption, hashtags, best-time-to-post), rules-researched Reddit/Product Hunt/Hacker News/Indie Hackers/dev.to/Discord/Slack/Telegram posts, and a publishing pipeline with n8n/Make webhook handoff or optional direct platform posting."
+      "description": "12 AI marketing skills for Claude Code: competitor research, social media content calendars, LinkedIn/X/newsletter repurposing, SEO content briefs, Meta/Google/LinkedIn ad copy, email drip sequences, personalized cold email outreach, TikTok/Reels/YouTube Shorts scripts, rules-aware Reddit/Product Hunt/Hacker News/Discord posts, visual briefs, and approval-gated publishing to n8n, Make, or platform APIs.",
+      "category": "marketing",
+      "tags": [
+        "marketing",
+        "content-marketing",
+        "social-media",
+        "seo",
+        "copywriting",
+        "ad-copy",
+        "email-marketing",
+        "cold-email",
+        "content-calendar",
+        "competitor-analysis",
+        "short-form-video",
+        "community-marketing",
+        "marketing-automation"
+      ],
+      "author": {
+        "name": "marcosmodly",
+        "url": "https://github.com/marcosmodly"
+      },
+      "homepage": "https://github.com/marcosmodly/marketing-skill",
+      "repository": "https://github.com/marcosmodly/marketing-skill",
+      "license": "MIT"
     }
   ]
 }

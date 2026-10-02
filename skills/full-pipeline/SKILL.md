@@ -1,6 +1,6 @@
 ---
 name: full-pipeline
-description: Chains research, repurposing, visual briefs, and publishing into one run, pausing before the publish step fires. Use for one-shot 'full campaign' or 'do everything' requests.
+description: "Runs an end-to-end marketing campaign from one request: competitor or topic research, repurposed social posts, a visual brief, and publishing via webhook, with a mandatory human approval pause before anything goes live. Use for one-shot 'full campaign', 'do everything', 'research X and publish it', or 'run the whole marketing pipeline end to end' requests."
 allowed-tools: WebSearch, WebFetch, Read, Grep, Glob, Write, Edit, Bash
 ---
 

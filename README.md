@@ -1,20 +1,53 @@
-# marketing-skill
+# Marketing Skills for Claude Code
 
-A Claude Code plugin that packages a marketing workflow as twelve
-composable skills: research a competitor, batch-plan a content calendar,
-repurpose findings across channels (including SEO, paid ads, and email),
-run a steady daily batch of researched, individually personalized cold
-outreach emails (deduplicated against a permanent contact log, with its
-own monthly strategy refresh), brief out a visual asset, turn a topic into
-a ready-to-post short-form vertical video package for YouTube Shorts,
-Instagram Reels, and TikTok (script, caption, hashtags, and best-time-to-
-post guidance for each), research a specific subreddit's, Product Hunt's,
-Hacker News's, Indie Hackers', dev.to's, Discord server's, Slack
-workspace's, or Telegram channel's/group's own rules before drafting a
-post for it (asking you directly for Discord, Slack, and any private
-Telegram target, since those have no public page to check), and hand the
-finished content off to your own automation — or, with real credentials
-you provide, straight to a platform API — for publishing.
+**12 AI marketing skills in one Claude Code plugin:** competitor research,
+social media content calendars, LinkedIn and X posts, SEO content briefs,
+ad copy, email sequences, personalized cold email outreach, TikTok / Reels /
+YouTube Shorts scripts, Reddit and Hacker News posts, and approval-gated
+publishing to n8n, Make, or platform APIs.
+
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-D97757.svg)](#install)
+[![Agent Skills](https://img.shields.io/badge/Agent%20Skills-SKILL.md-555.svg)](skills/)
+
+```
+claude plugin marketplace add marcosmodly/marketing-skill
+claude plugin install marketing-skill@marketing-skill
+```
+
+Every skill is a standard `SKILL.md` in [`skills/`](skills/), shares one
+brand-voice config, and works on its own or chained together. Nothing
+posts or sends without your explicit approval.
+
+## What you can do with it
+
+- **Competitor analysis:** research a rival and get a SWOT, messaging
+  breakdown, and sales battlecard with cited sources.
+- **Social media content calendar:** batch-write a week or month of dated
+  posts for LinkedIn, Twitter/X, newsletters, Reddit, and short-form
+  video, without repeating recent topics.
+- **Content repurposing:** turn one blog post or announcement into a
+  LinkedIn post, an X thread, and a newsletter blurb.
+- **SEO content briefs:** target keyword, search intent, related keywords,
+  outline, and meta title and description, with no made-up search volumes.
+- **Ad copy:** A/B-testable variants for Facebook and Instagram (Meta),
+  Google Search (RSA), and LinkedIn Ads, sized to each platform's limits.
+- **Email marketing:** drip, nurture, and welcome sequences with timing,
+  subject lines, and preview text.
+- **Cold email outreach:** a daily batch of researched, 1:1 personalized
+  prospecting emails, deduplicated against a permanent contact log that
+  syncs replies, bounces, and unsubscribes from Gmail.
+- **Short-form video:** hook-first scripts plus caption, hashtags, and
+  best time to post for TikTok, Instagram Reels, and YouTube Shorts.
+- **Community posts:** Reddit, Product Hunt, Hacker News (Show HN), Indie
+  Hackers, dev.to, Discord, Slack, and Telegram posts written to each
+  community's actual rules, with a Go/No-Go before drafting.
+- **Visual briefs:** shot lists, per-scene image/video prompts, and aspect
+  ratios for any AI image or video generator.
+- **Publishing:** hand finished content to n8n, Make, or any webhook, or
+  post directly to LinkedIn, X, Facebook, Reddit, Discord, Slack,
+  Telegram, dev.to, YouTube, Instagram, or TikTok with your own API
+  credentials.
 
 **[See a full worked run →](EXAMPLE.md)** — one continuous
 `full-pipeline` call from research to the approval checkpoint before
@@ -71,7 +104,7 @@ which branch is checked out:
 ```
 git clone https://github.com/marcosmodly/marketing-skill.git
 cd marketing-skill && git checkout <branch-name>   # if not already on it
-claude plugin marketplace add .
+claude plugin marketplace add ./
 claude plugin install marketing-skill@marketing-skill
 ```
 
@@ -655,6 +688,36 @@ scheduled-send tool to call: the per-prospect "Recommended Send Time" it
 computes (from the prospect's own region, inside your configured
 send-time window) is there for you to act on manually, or by pointing
 Gmail's own scheduled-send feature at that time yourself.
+
+## FAQ
+
+### What are Claude Code skills?
+
+A skill is a folder with a `SKILL.md` file that teaches Claude a
+repeatable task. Claude reads each skill's description and uses it
+automatically when your request matches ("write an SEO brief for…",
+"give me a week of LinkedIn posts"), or you can call one by name, such as
+`/marketing-skill:seo-brief`.
+
+### Do I need API keys or paid tools?
+
+No. Research uses Claude's built-in web search and fetch, and every skill
+produces its full written output with no connector or API key. Gmail, a
+prospecting tool, Higgsfield, Canva, and platform API credentials are
+optional extras, and paid ones are used only when you ask. Actually
+sending content needs your own webhook or credentials.
+
+### Will it post or send emails automatically?
+
+No. Drafts are queued in `state/`, and only `publish-pipeline` sends,
+after you approve specific items in a live conversation.
+`email-outreach` creates drafts and never sends. See
+[Content calendar & approval model](#content-calendar--approval-model).
+
+### Can I use just one skill?
+
+Yes. Ask for what you need and only the matching skill runs. To skip the
+plugin system, copy the skill folders in by hand (see [Install](#install)).
 
 ## Repo layout
 

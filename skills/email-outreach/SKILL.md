@@ -1,6 +1,6 @@
 ---
 name: email-outreach
-description: Runs a steady daily batch of researched, individually personalized 1:1 cold outreach emails — deduplicated against a permanent contact log that updates itself from real Gmail replies/bounces/unsubscribes, timed to each prospect's own local business hours, checked for deliverability/compliance, and A/B-tracked by subject line. Strategy re-confirmed monthly. Queues everything for approval (or drafts directly in Gmail if connected); never sends on its own. Use for cold outreach, prospecting emails, lead-gen emails, or sales outreach to new contacts — distinct from `email-sequence`'s drip/nurture series for an audience that already opted in.
+description: "Writes personalized B2B cold emails at a steady daily volume: researches real prospects against your ideal customer profile (ICP), drafts a genuinely 1:1 email for each, and dedupes against a permanent contact log that updates itself from real Gmail replies, bounces, and unsubscribes. Each email is timed to the prospect's local business hours, checked for deliverability and anti-spam compliance, and A/B-tracked by subject line, with the outreach strategy re-confirmed monthly. Queues everything for approval (or creates Gmail drafts if connected) and never sends on its own. Use for cold email, cold outreach, sales prospecting, lead generation, or sales outreach to new contacts. Not for drip or nurture emails to people who already opted in; that is email-sequence."
 allowed-tools: Read, Grep, Glob, Write, Edit, WebSearch, WebFetch
 ---
 

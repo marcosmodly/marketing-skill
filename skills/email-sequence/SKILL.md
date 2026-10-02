@@ -1,6 +1,6 @@
 ---
 name: email-sequence
-description: Turns one campaign goal or source into a multi-email drip/nurture sequence, each email with send timing, subject line, and a single CTA, sequenced with a narrative arc. Use when the user asks for an email sequence, drip campaign, nurture series, or welcome series.
+description: "Writes a multi-email drip, nurture, or welcome sequence from one campaign goal: each email gets send timing, a subject line plus an A/B alternate, preview text, body, and a single CTA, connected by a narrative arc. Use when the user asks for an email sequence, drip campaign, nurture series, welcome series, onboarding or launch emails, or an email marketing flow for people who already opted in. Cold outreach to new contacts is email-outreach."
 allowed-tools: Read, Grep, Glob, WebFetch, Write
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: short-form-video
-description: Turns a topic, product, or source content into a ready-to-post short-form vertical video package for YouTube Shorts, Instagram Reels, and TikTok in one pass — a hook-first script/shot list, a platform-tuned title/caption for each, hashtags sized to each platform's current norms, and a best-time-to-post window per platform. Generates the actual video via a connected video-generation tool (Higgsfield, Canva, or any other connected image/video MCP tool) if the user has one and wants to generate now; otherwise recommends current free tools and still produces the full script and packages. Use when the user asks for a TikTok video, an Instagram Reel, a YouTube Short, a short-form/vertical video script, or a "viral video" for social.
+description: "Creates ready-to-post short-form vertical video packages for TikTok, Instagram Reels, and YouTube Shorts: a hook-first script and shot list, plus a per-platform title or caption, hashtags sized to each platform's current norms, and a best-time-to-post window. Generates the actual video with a connected video-generation tool (Higgsfield, Canva, or any other image/video MCP tool) if the user has one and opts in; otherwise recommends free tools such as CapCut and still delivers the full script and packages. Use when the user asks for a TikTok video, an Instagram Reel, a YouTube Short, a short-form or vertical video script, video hooks, or a viral video for social media."
 allowed-tools: Read, Grep, Glob, WebSearch, WebFetch, Write
 ---
 
