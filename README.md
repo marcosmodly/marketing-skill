@@ -38,9 +38,10 @@ posts or sends without your explicit approval.
   prospecting emails, deduplicated against a permanent contact log that
   syncs replies, bounces, and unsubscribes from Gmail.
 - **Short-form video:** hook-first scripts plus caption, hashtags, and
-  best time to post for TikTok, Instagram Reels, and YouTube Shorts, and
-  the finished vertical video itself: animated text with an original
-  soundtrack, rendered on your machine.
+  best time to post for TikTok, Instagram Reels, and YouTube Shorts,
+  shaped to the right type of marketing video (how-to, testimonial,
+  launch, FAQ, and more). Also the finished vertical video itself:
+  animated text with an original soundtrack, rendered on your machine.
 - **Community posts:** Reddit, Product Hunt, Hacker News (Show HN), Indie
   Hackers, dev.to, Discord, Slack, and Telegram posts written to each
   community's actual rules, with a Go/No-Go before drafting.
@@ -67,7 +68,7 @@ anything actually publishes.
 | `email-sequence` | "email sequence," "drip campaign," "welcome series" | A multi-email sequence with send timing, subject lines, and a real narrative arc across emails |
 | `email-outreach` | "cold outreach," "prospecting emails," "daily sales outreach," "personalized cold email to [name]" | Researches real prospects against a defined ICP (public-web research by default; a connected prospecting tool only if you ask for verified contact details), checks each one against a permanent contact log so nobody's contacted twice — or ever again once unsubscribed/replied — drafts a genuinely personalized email per prospect, re-confirms strategy monthly, and queues everything for approval (or drafts directly in Gmail if connected); never sends |
 | `visual-brief-generator` | "visual brief," "video brief," "shot list," "image prompts for X" | A structured shot list, per-scene prompts, aspect ratios, and style guide; generates the actual asset only if a visual-gen tool is connected |
-| `short-form-video` | "TikTok video," "Instagram Reel script," "YouTube Short," "short-form/vertical video for..." | A hook-first script/shot list plus a ready-to-post package per platform (YouTube Shorts/Instagram Reels/TikTok) — title/caption, sized hashtags, and a best-time-to-post window; if you opt in, makes the actual video too, either with a connected tool (Higgsfield, Figma Weave, Canva, or similar) or by rendering an animated-text video with an original soundtrack locally (`scripts/video/`), otherwise points to current free tools |
+| `short-form-video` | "TikTok video," "Instagram Reel script," "YouTube Short," "short-form/vertical video for..." | A hook-first script/shot list plus a ready-to-post package per platform (YouTube Shorts/Instagram Reels/TikTok) — title/caption, sized hashtags, and a best-time-to-post window, shaped to one of 23 marketing video types (testimonial, how-to, announcement, and so on); if you opt in, makes the actual video too, either with a connected tool (Higgsfield, Figma Weave, Canva, or similar) or by rendering an animated-text video with an original soundtrack locally (`scripts/video/`), otherwise points to current free tools |
 | `community-post-generator` | "post this to r/[subreddit]," "help me post on Product Hunt," "write a Show HN/Show IH for this," "post this on dev.to," "post this in our Discord/Slack/Telegram" | Live-researches that specific subreddit's, Product Hunt's, Hacker News's, Indie Hackers', dev.to's, or a public Telegram channel's/group's actual rules and typical post style first (verifying each source is actually about that target, not a similarly-named one); for Discord, Slack, and private Telegram targets, asks you for the rules instead, since it can't research those. Gives a plain Go/No-Go either way, and only drafts a post (shaped for that platform — title+body, title+URL+first comment for Show HN, dev.to's title+body+tags, or a single chat message in Discord's, Slack's, or Telegram's own formatting for the chat platforms) if it's actually welcome there, written to read like a person wrote it |
 | `publish-pipeline` | "publish this," "send to n8n/Make," "fire the webhook," "send the queued post for [date]" | Packages finished content/assets into JSON and hands off to your automation via webhook (or, optionally, straight to a platform API) after showing you the exact payload |
 | `full-pipeline` | "run the full pipeline," "research X and publish it," "do the whole thing end to end" | Chains research, repurposing, visual brief, and publish into one run, with a mandatory pause before anything actually publishes |
@@ -708,27 +709,49 @@ npx playwright install chromium   # skip if Google Chrome is installed; it's use
 **Usage:**
 
 ```
-node render.js example.html out.mp4             # full render, ~2 minutes for 24s
-node render.js example.html --stills 1.5,6,12    # preview frames as PNGs first
-node render.js page.html out.mp4 --silent        # silent audio track instead of the soundtrack
+node render.js templates/promo.html out.mp4            # full render, ~2 minutes for 24s
+node render.js templates/promo.html --stills 1.5,6,12  # preview frames as PNGs first
+node render.js page.html out.mp4 --silent              # silent audio track instead of the soundtrack
 ```
 
-`example.html` is a complete 24-second promo for this plugin, and the
-starting point the skill copies from. A comment at its top documents how a
-page works. In short:
+**Templates by video type.** `short-form-video` picks a type from
+[`references/video-types.md`](references/video-types.md), a catalog of 23
+marketing video types with the beats for each and how it gets made. It
+then starts from the matching template in `scripts/video/templates/`:
+
+| Template | Length | For | Music |
+|---|---|---|---|
+| `promo.html` | 24s | Ads, brand profile, explainer, educational lists (it's a promo for this plugin) | lofi |
+| `how-to.html` | 20s | Tutorials, and product demos told as steps on a phone screen | lofi |
+| `testimonial.html` | 20s | Customer testimonials, case studies with counted-up results, interview pull-quotes | calm |
+| `faq.html` | 18s | FAQ replies to a comment, myth vs fact | lofi |
+| `announcement.html` | 18s | Launches, plus event, webinar, and live-stream promos | lofi |
+| `team.html` | 18s | Meet the team, the people side of a company profile | calm |
+
+Types that need real footage (behind the scenes, vlogs, UGC, on-camera
+testimonials) get a phone shot list and edit notes instead; the renderer
+doesn't fake real people or events. The testimonial and team templates
+ship with bracketed placeholders, which the skill replaces only with real,
+permissioned material from you.
+
+A comment at the top of `promo.html` documents how a page works. In short:
 - Animate with CSS animations, timed with `animation-delay`. The renderer
   pauses and seeks every animation frame by frame, so the output is
   frame-exact however slow the machine is.
 - `<body data-duration="24" data-drop="3" data-bpm="120" data-key="C">`
   sets the length, when the beat comes in, the tempo, and the key.
-  `data-music="none"` keeps only the sound effects.
+  `data-music` picks `lofi` (the default), `calm` (no claps, a held
+  bass), or `none` (sound effects only).
 - `data-sfx="swish:in tick:tick"` on an element plays a swish at its
   `--in` time and a tick at its `--tick` time. The sounds are `pop`,
   `swish`, `tick`, `whoosh`, `click`, and `chime`. Pops climb the current
   chord when words land in quick succession, and ticks climb a scale.
 
-The skill saves its pages and renders under `state/videos/`. Rendered
-MP4s are git-ignored.
+- Count-ups, strike-throughs, tap rings, and phone frames are plain CSS
+  in the templates; reuse them by copying from the template that has one.
+
+The skill saves its pages and renders under `state/videos/`, with your
+images in `state/videos/assets/`. Rendered MP4s are git-ignored.
 
 ## Connecting outreach tools (prospecting + Gmail)
 
@@ -809,6 +832,7 @@ commands/
 references/
   brand-voice.md         # shared config every skill reads (hand-edited)
   outreach-strategy.md   # email-outreach's own config: ICP, angle, offer, cadence (hand-edited or guided setup)
+  video-types.md         # 23 marketing video types: goal, short-form beats, and how each gets made (hand-editable)
 state/
   content-calendar.md    # calendar/history index (generated + appended to, hand-editable)
   posts/                  # one file per queued post's full content, linked from the index above
@@ -820,7 +844,7 @@ scripts/
   video/
     render.js            # animated HTML page -> vertical MP4 with an original soundtrack (needs Node, Playwright, ffmpeg)
     soundtrack.js        # the soundtrack synthesizer render.js uses (no dependencies)
-    example.html         # a complete 24s example page, and the template short-form-video starts from
+    templates/           # one starting page per family of video types (promo, how-to, testimonial, faq, announcement, team)
 ```
 
 ## Contributors

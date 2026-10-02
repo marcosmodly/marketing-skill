@@ -1,0 +1,158 @@
+<!doctype html>
+<!--
+  Template: tutorial / how-to, or a product demo told as steps (see
+  references/video-types.md). 20 seconds: a hook, three steps on a phone
+  screen with a tap on each, and a CTA.
+
+  Replace the hook, each step's title, and each phone screen. The screens
+  are placeholder UI drawn in CSS; for a real product, swap a screen's
+  contents for a screenshot (portrait, ideally 1170x2532 or similar):
+    <img class="shot" src="assets/step-1.png" alt="">
+  and move its .tap ring onto the thing the viewer should tap. To add or
+  drop a step, copy or remove a .step-title / .screen pair and shift the
+  later --in / --out / --tap times.
+  Page conventions (canvas, safe area, timing vars, data-sfx cues, music
+  styles, assets): see the comment at the top of promo.html.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=block">
+<style>
+  :root {
+    --bg: #0f0f13;
+    --card: #1b1b22;
+    --line: #2b2b35;
+    --text: #f3f2ee;
+    --muted: #9a99a4;
+    --accent: #e07a55;
+    --ok: #3fbf7f;
+    --bad: #e0605a;
+    --warn: #e8b04a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--bg); }
+  body { font-family: "Inter", "Liberation Sans", sans-serif; color: var(--text); position: relative; }
+
+  .glow { position: absolute; border-radius: 50%; filter: blur(120px); opacity: .55; }
+  .g1 { width: 900px; height: 900px; background: #5a2a1a; left: -300px; top: -200px; animation: drift1 24s linear 0s both; }
+  .g2 { width: 800px; height: 800px; background: #1d2a52; right: -320px; bottom: -160px; animation: drift2 24s linear 0s both; }
+  @keyframes drift1 { from { transform: translate(0,0); } to { transform: translate(260px, 520px); } }
+  @keyframes drift2 { from { transform: translate(0,0); } to { transform: translate(-220px, -600px); } }
+
+  /* scenes: content kept inside the platform-UI safe zone */
+  .scene { position: absolute; left: 90px; right: 150px; top: 330px; bottom: 470px;
+           display: flex; flex-direction: column; justify-content: center;
+           animation: sceneOut .35s ease-in var(--out, 999s) forwards; }
+  @keyframes sceneOut { to { opacity: 0; transform: translateY(-60px); } }
+
+  /* entrances; .gone also leaves at its own --out */
+  .pop   { animation: popIn .5s cubic-bezier(.2,.9,.3,1.25) var(--in) both; }
+  .rise  { animation: riseIn .45s cubic-bezier(.2,.8,.2,1) var(--in) both; }
+  .slide { animation: slideIn .4s cubic-bezier(.2,.8,.2,1) var(--in) both; }
+  .fade  { animation: fadeIn .4s ease-out var(--in) both; }
+  .gone  { animation: fadeIn .35s ease-out var(--in) both, fadeOut .3s ease-in var(--out) forwards; }
+  @keyframes popIn   { from { opacity: 0; transform: scale(.6) translateY(40px); } to { opacity: 1; transform: none; } }
+  @keyframes riseIn  { from { opacity: 0; transform: translateY(70px); } to { opacity: 1; transform: none; } }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(160px); } to { opacity: 1; transform: none; } }
+  @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fadeOut { to { opacity: 0; } }
+
+  .huge { font-size: 132px; font-weight: 800; line-height: 1.02; letter-spacing: -4px; }
+  .big  { font-size: 104px; font-weight: 800; line-height: 1.04; letter-spacing: -3px; }
+  .mid  { font-size: 64px;  font-weight: 700; line-height: 1.12; letter-spacing: -1.5px; }
+  .small{ font-size: 42px;  font-weight: 500; line-height: 1.3; color: var(--muted); }
+  .label{ font-size: 34px;  font-weight: 700; letter-spacing: 4px; text-transform: uppercase; }
+  .accent { color: var(--accent); }
+  .center { text-align: center; align-items: center; }
+
+  /* counts up from 0 to --to, starting at --in: <span class="count" style="--in:3s; --to:40"></span> */
+  @property --n { syntax: '<integer>'; inherits: false; initial-value: 0; }
+  .count { counter-reset: n var(--n); animation: countUp 1.2s cubic-bezier(.2,.8,.2,1) var(--in) both; }
+  .count::before { content: counter(n); }
+  @keyframes countUp { from { --n: 0; } to { --n: var(--to); } }
+
+  .stage { position: absolute; left: 90px; right: 150px; top: 330px; bottom: 470px; }
+  .titles { position: relative; height: 200px; }
+  .step-title { position: absolute; left: 0; top: 0; right: 0; }
+  .step-title .label { color: var(--accent); margin-bottom: 14px; }
+  .phone { position: absolute; left: 195px; top: 230px; width: 450px; height: 890px;
+           border-radius: 64px; background: #050507; border: 3px solid #34343f; padding: 18px;
+           box-shadow: 0 40px 120px #0008;
+           animation: riseIn .5s cubic-bezier(.2,.8,.2,1) var(--in) both, sceneOut .35s ease-in var(--out) forwards; }
+  .notch { position: absolute; left: 50%; top: 30px; width: 120px; height: 30px; margin-left: -60px; border-radius: 15px; background: #000; z-index: 3; }
+  .screen { position: absolute; inset: 18px; border-radius: 48px; overflow: hidden; background: #f4f3ef; color: #17171c; }
+  .shot { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ui-bar { height: 150px; padding: 78px 34px 0; font-size: 34px; font-weight: 800; }
+  .ui-row { margin: 0 28px 18px; height: 86px; border-radius: 20px; background: #fff; display: flex; align-items: center; padding: 0 24px; gap: 18px; font-size: 26px; font-weight: 600; color: #3a3a44; }
+  .ui-row i { width: 44px; height: 44px; border-radius: 12px; background: #e6e3dc; display: block; flex: none; }
+  .ui-row b { flex: 1; height: 16px; border-radius: 8px; background: #e6e3dc; display: block; }
+  .ui-chip { display: inline-block; padding: 16px 24px; border-radius: 20px; background: #fff; border: 3px solid #e6e3dc; font-size: 26px; font-weight: 700; color: #3a3a44; margin-right: 10px; }
+  .ui-chip.on { border-color: var(--accent); color: var(--accent); }
+  .ui-btn { position: absolute; left: 28px; right: 28px; bottom: 48px; height: 96px; border-radius: 26px; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 32px; font-weight: 800; }
+  .ui-fab { position: absolute; right: 34px; bottom: 54px; width: 116px; height: 116px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 64px; font-weight: 500; }
+  .tap { position: absolute; width: 150px; height: 150px; margin: -75px 0 0 -75px; border-radius: 50%; border: 8px solid var(--accent);
+         animation: tapRing .7s ease-out var(--tap) both; opacity: 0; }
+  @keyframes tapRing { 0% { opacity: 0; transform: scale(.3); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(1.4); } }
+
+</style>
+</head>
+<body data-duration="20" data-drop="2.5" data-bpm="120" data-key="D">
+  <div class="glow g1"></div>
+  <div class="glow g2"></div>
+
+  <!-- 0–2.5s: hook -->
+  <div class="scene" style="--out:2.3s">
+    <div class="big pop" style="--in:.05s" data-sfx="pop">How to set up</div>
+    <div class="big pop" style="--in:.4s" data-sfx="pop">recurring invoices</div>
+    <div class="big pop accent" style="--in:.8s" data-sfx="pop">in 3 steps.</div>
+  </div>
+
+  <!-- 2.5–16s: three steps, 4.5s each -->
+  <div class="stage">
+    <div class="titles">
+      <div class="step-title gone" style="--in:2.55s; --out:6.9s" data-sfx="whoosh:out">
+        <div class="label">Step 1 of 3</div><div class="mid">Open Invoices, tap +</div></div>
+      <div class="step-title gone" style="--in:7.1s; --out:11.4s" data-sfx="whoosh:out">
+        <div class="label">Step 2 of 3</div><div class="mid">Pick "Monthly"</div></div>
+      <div class="step-title gone" style="--in:11.6s; --out:15.8s">
+        <div class="label">Step 3 of 3</div><div class="mid">Hit Save</div></div>
+    </div>
+    <div class="phone" style="--in:2.6s; --out:15.8s" data-sfx="whoosh:out">
+      <div class="notch"></div>
+      <div class="screen gone" style="--in:2.6s; --out:6.9s">
+        <div class="ui-bar">Invoices</div>
+        <div class="ui-row"><i></i><b></b></div>
+        <div class="ui-row"><i></i><b></b></div>
+        <div class="ui-row"><i></i><b></b></div>
+        <div class="ui-fab">+</div>
+        <div class="tap" style="--tap:5.0s; left:316px; top:736px" data-sfx="click:tap"></div>
+      </div>
+      <div class="screen gone" style="--in:7.1s; --out:11.4s">
+        <div class="ui-bar">New invoice</div>
+        <div class="ui-row">Client<b></b></div>
+        <div class="ui-row">Amount<b></b></div>
+        <div style="padding: 20px 28px 0; font-size: 26px; font-weight: 700; color: #3a3a44;">Repeat</div>
+        <div style="padding: 16px 28px;"><span class="ui-chip">Weekly</span><span class="ui-chip on">Monthly</span><span class="ui-chip">Yearly</span></div>
+        <div class="tap" style="--tap:9.4s; left:270px; top:461px" data-sfx="click:tap"></div>
+      </div>
+      <div class="screen gone" style="--in:11.6s; --out:15.8s">
+        <div class="ui-bar">Review</div>
+        <div class="ui-row">Repeats monthly, on the 1st</div>
+        <div class="ui-row">Reminder 3 days after due</div>
+        <div class="ui-btn">Save</div>
+        <div class="tap" style="--tap:13.9s; left:204px; top:752px" data-sfx="click:tap"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 16–20s: payoff + CTA -->
+  <div class="scene">
+    <div class="huge pop accent" style="--in:16.1s" data-sfx="chime">Done.</div>
+    <div class="mid rise" style="--in:16.6s; margin-top: 24px">Your invoices now send themselves.</div>
+    <div class="small fade" style="--in:17.4s; margin-top: 40px">Save this for later. Follow for more.</div>
+  </div>
+
+</body>
+</html>

@@ -27,6 +27,16 @@ const PENTATONIC = ['A4', 'C5', 'D5', 'E5', 'G5', 'A5', 'C6', 'D6', 'E6', 'G6'];
 
 const SOUNDS = ['pop', 'swish', 'tick', 'whoosh', 'click', 'chime'];
 
+// Music styles a page picks with <body data-music>. lofi drives promos, ads,
+// and announcements; calm (no claps, held bass, a kick only on the one) sits
+// under testimonials, team intros, and anything where the words should lead.
+const STYLES = {
+  lofi: { pad: 0.6, riser: 0.8, crash: 1.0, kickBeats: [0, 2], extraKick: true, kick: 1.0,
+          clap: 0.9, hatOn: 0.6, hatOff: 1.0, duck: 0.45, heldBass: false },
+  calm: { pad: 0.7, riser: 0.35, crash: 0.35, kickBeats: [0], extraKick: false, kick: 0.6,
+          clap: 0, hatOn: 0, hatOff: 0.35, duck: 0.2, heldBass: true },
+};
+
 function noteFreq(name, transpose) {
   const m = /^([A-G]#?)(-?\d)$/.exec(name);
   const midi = SEMITONES[m[1]] + 12 * (Number(m[2]) + 1) + transpose;
@@ -249,7 +259,7 @@ function click(rng) {
 
 /**
  * @param {Array<{sound: string, time: number}>} cues  sound effects to place, from the page's data-sfx
- * @param {{duration: number, drop?: number, bpm?: number, key?: string, music?: boolean}} opts
+ * @param {{duration: number, drop?: number, bpm?: number, key?: string, music?: 'lofi'|'calm'|'none'}} opts
  * @returns {{L: Float64Array, R: Float64Array, silent: boolean}}
  */
 function buildSoundtrack(cues, opts) {
@@ -267,40 +277,46 @@ function buildSoundtrack(cues, opts) {
   const sfx = new Mix(duration);
   const end = duration - 1.0; // drums stop and the last chord rings out
 
-  if (opts.music !== false) {
+  const style = STYLES[opts.music || 'lofi'];
+  if (style) {
     // pad: the intro chord until the drop, then one chord per bar
     const starts = drop > 0 ? [0] : [];
     for (let s = drop; s <= end + 1e-9; s += bar) starts.push(s);
     starts.forEach((s, i) => {
       const e = i + 1 < starts.length ? starts[i + 1] + 0.3 : duration;
       const freqs = chordAt(s + 0.01).map((n) => note(n) * 2);
-      const gain = s < drop ? 0.45 : 0.6;
+      const gain = s < drop ? 0.45 : style.pad;
       music.add(padVoice(freqs, e - s, -5), s, gain, -0.35);
       music.add(padVoice(freqs, e - s, +5), s, gain, 0.35);
     });
     if (drop >= 1.5) {
-      music.add(riser(rng, 1.5), drop - 1.5, 0.8);
-      music.add(crash(rng), drop, 1.0);
+      music.add(riser(rng, 1.5), drop - 1.5, style.riser);
+      music.add(crash(rng), drop, style.crash);
     }
 
     const kicks = [];
     for (let k = 0, b = drop; b < end - 1e-9; k++, b = drop + k * beat) {
-      if (k % 4 === 0 || k % 4 === 2) kicks.push(b);
-      if (k % 8 === 5) kicks.push(b + beat / 2);
-      if (k % 4 === 1 || k % 4 === 3) music.add(clap(rng), b, 0.9);
-      music.add(hat(rng), b, 0.6, 0.25);
-      music.add(hat(rng), b + beat / 2, 1.0, 0.25);
+      if (style.kickBeats.includes(k % 4)) kicks.push(b);
+      if (style.extraKick && k % 8 === 5) kicks.push(b + beat / 2);
+      if (style.clap && (k % 4 === 1 || k % 4 === 3)) music.add(clap(rng), b, style.clap);
+      if (style.hatOn) music.add(hat(rng), b, style.hatOn, 0.25);
+      if (style.hatOff) music.add(hat(rng), b + beat / 2, style.hatOff, 0.25);
       if (k % 4 === 0) {
         const root = note(chordAt(b + 0.01)[0]);
-        music.add(bass(root, 0.9), b, 0.55);
-        music.add(bass(root, 0.3), b + 1.5 * beat, 0.4);
-        music.add(bass(root, 0.7), b + 2 * beat, 0.5);
-        music.add(bass(root * 2, 0.2), b + 3.5 * beat, 0.3);
+        if (style.heldBass) {
+          music.add(bass(root, 2 * beat), b, 0.5);
+          music.add(bass(root, 2 * beat), b + 2 * beat, 0.35);
+        } else {
+          music.add(bass(root, 0.9), b, 0.55);
+          music.add(bass(root, 0.3), b + 1.5 * beat, 0.4);
+          music.add(bass(root, 0.7), b + 2 * beat, 0.5);
+          music.add(bass(root * 2, 0.2), b + 3.5 * beat, 0.3);
+        }
       }
     }
     if (end > drop) {
       kicks.push(end);
-      music.add(crash(rng, 1.0), end, 0.8);
+      music.add(crash(rng, 1.0), end, 0.8 * style.crash);
     }
 
     // sidechain the bed under each kick for the pumping lo-fi feel, then add the kicks on top
@@ -308,14 +324,14 @@ function buildSoundtrack(cues, opts) {
     for (const kt of kicks) {
       const i0 = Math.round(kt * SR);
       for (let i = i0; i < Math.min(music.n, i0 + samples(0.3)); i++) {
-        duck[i] = Math.min(duck[i], 1 - 0.45 * Math.exp(-(i - i0) / SR / 0.12));
+        duck[i] = Math.min(duck[i], 1 - style.duck * Math.exp(-(i - i0) / SR / 0.12));
       }
     }
     for (let i = 0; i < music.n; i++) {
       music.L[i] *= duck[i];
       music.R[i] *= duck[i];
     }
-    for (const kt of kicks) music.add(kick(rng), kt, 1.0);
+    for (const kt of kicks) music.add(kick(rng), kt, style.kick);
   }
 
   // sound effects, placed on the page's own cues
@@ -393,4 +409,4 @@ function wavBuffer(L, R) {
   return buf;
 }
 
-module.exports = { buildSoundtrack, wavBuffer, SOUNDS, SAMPLE_RATE: SR };
+module.exports = { buildSoundtrack, wavBuffer, SOUNDS, STYLES, SAMPLE_RATE: SR };

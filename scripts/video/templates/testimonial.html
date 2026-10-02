@@ -1,0 +1,150 @@
+<!doctype html>
+<!--
+  Template: customer testimonial or case study, also a pull-quote from an
+  interview (see references/video-types.md). 20 seconds: the result in the
+  customer's words, who they are, before and after, the numbers, and a CTA.
+
+  Every bracketed placeholder must be replaced with the customer's real
+  words, name, role, and numbers, used with their permission. Never invent
+  or polish a quote, and never fill in a number you can't source. Replace
+  the avatar with their photo:
+    <img class="avatar" src="assets/customer.jpg" alt="">
+  Stars are optional; keep them only if they reflect a real rating.
+  Page conventions (canvas, safe area, timing vars, data-sfx cues, music
+  styles, assets): see the comment at the top of promo.html.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=block">
+<style>
+  :root {
+    --bg: #0f0f13;
+    --card: #1b1b22;
+    --line: #2b2b35;
+    --text: #f3f2ee;
+    --muted: #9a99a4;
+    --accent: #e07a55;
+    --ok: #3fbf7f;
+    --bad: #e0605a;
+    --warn: #e8b04a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--bg); }
+  body { font-family: "Inter", "Liberation Sans", sans-serif; color: var(--text); position: relative; }
+
+  .glow { position: absolute; border-radius: 50%; filter: blur(120px); opacity: .55; }
+  .g1 { width: 900px; height: 900px; background: #4a2a3a; left: -300px; top: -200px; animation: drift1 24s linear 0s both; }
+  .g2 { width: 800px; height: 800px; background: #1a3a3a; right: -320px; bottom: -160px; animation: drift2 24s linear 0s both; }
+  @keyframes drift1 { from { transform: translate(0,0); } to { transform: translate(260px, 520px); } }
+  @keyframes drift2 { from { transform: translate(0,0); } to { transform: translate(-220px, -600px); } }
+
+  /* scenes: content kept inside the platform-UI safe zone */
+  .scene { position: absolute; left: 90px; right: 150px; top: 330px; bottom: 470px;
+           display: flex; flex-direction: column; justify-content: center;
+           animation: sceneOut .35s ease-in var(--out, 999s) forwards; }
+  @keyframes sceneOut { to { opacity: 0; transform: translateY(-60px); } }
+
+  /* entrances; .gone also leaves at its own --out */
+  .pop   { animation: popIn .5s cubic-bezier(.2,.9,.3,1.25) var(--in) both; }
+  .rise  { animation: riseIn .45s cubic-bezier(.2,.8,.2,1) var(--in) both; }
+  .slide { animation: slideIn .4s cubic-bezier(.2,.8,.2,1) var(--in) both; }
+  .fade  { animation: fadeIn .4s ease-out var(--in) both; }
+  .gone  { animation: fadeIn .35s ease-out var(--in) both, fadeOut .3s ease-in var(--out) forwards; }
+  @keyframes popIn   { from { opacity: 0; transform: scale(.6) translateY(40px); } to { opacity: 1; transform: none; } }
+  @keyframes riseIn  { from { opacity: 0; transform: translateY(70px); } to { opacity: 1; transform: none; } }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(160px); } to { opacity: 1; transform: none; } }
+  @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fadeOut { to { opacity: 0; } }
+
+  .huge { font-size: 132px; font-weight: 800; line-height: 1.02; letter-spacing: -4px; }
+  .big  { font-size: 104px; font-weight: 800; line-height: 1.04; letter-spacing: -3px; }
+  .mid  { font-size: 64px;  font-weight: 700; line-height: 1.12; letter-spacing: -1.5px; }
+  .small{ font-size: 42px;  font-weight: 500; line-height: 1.3; color: var(--muted); }
+  .label{ font-size: 34px;  font-weight: 700; letter-spacing: 4px; text-transform: uppercase; }
+  .accent { color: var(--accent); }
+  .center { text-align: center; align-items: center; }
+
+  /* counts up from 0 to --to, starting at --in: <span class="count" style="--in:3s; --to:40"></span> */
+  @property --n { syntax: '<integer>'; inherits: false; initial-value: 0; }
+  .count { counter-reset: n var(--n); animation: countUp 1.2s cubic-bezier(.2,.8,.2,1) var(--in) both; }
+  .count::before { content: counter(n); }
+  @keyframes countUp { from { --n: 0; } to { --n: var(--to); } }
+
+  .quote-mark { font-size: 220px; font-weight: 800; line-height: .6; color: var(--accent); height: 110px; }
+  .quote { font-size: 92px; font-weight: 800; line-height: 1.08; letter-spacing: -2.5px; }
+  .avatar { width: 240px; height: 240px; border-radius: 50%; object-fit: cover; display: grid; place-items: center;
+            background: linear-gradient(135deg, #6b3b4b, #2b4b5b); border: 6px solid #ffffff22; overflow: hidden; }
+  .avatar svg { width: 100%; height: 100%; }
+  .stars { display: flex; gap: 14px; margin-top: 36px; }
+  .stars span { font-size: 64px; color: var(--warn); }
+  .ba { border-radius: 30px; padding: 38px 40px; background: var(--card); border: 2px solid var(--line); }
+  .ba .label { margin-bottom: 14px; }
+  .ba .mid { font-size: 54px; }
+  .arrow { font-size: 70px; color: var(--muted); text-align: center; height: 110px; line-height: 110px; }
+  .stat { display: flex; align-items: baseline; gap: 10px; }
+  .stat .num { font-size: 210px; font-weight: 800; letter-spacing: -8px; line-height: 1; color: var(--accent); }
+  .stat .unit { font-size: 90px; font-weight: 800; color: var(--accent); }
+
+</style>
+</head>
+<body data-duration="20" data-drop="3" data-bpm="96" data-key="F" data-music="calm">
+  <div class="glow g1"></div>
+  <div class="glow g2"></div>
+
+  <!-- 0–3.2s: the result, in their words -->
+  <div class="scene" style="--out:3.0s">
+    <div class="quote-mark fade" style="--in:.05s">“</div>
+    <div class="quote pop" style="--in:.15s" data-sfx="pop">[The result,</div>
+    <div class="quote pop" style="--in:.6s" data-sfx="pop">in their own</div>
+    <div class="quote pop accent" style="--in:1.05s" data-sfx="pop">words.]”</div>
+  </div>
+
+  <!-- 3.2–8s: who they are -->
+  <div class="scene" style="--out:7.8s" data-sfx="whoosh:out">
+    <div class="avatar pop" style="--in:3.3s"><svg viewBox="0 0 100 100"><circle cx="50" cy="38" r="18" fill="#ffffff55"/><path d="M18 92c4-20 18-30 32-30s28 10 32 30z" fill="#ffffff55"/></svg></div>
+    <div class="big rise" style="--in:3.7s; margin-top: 44px">[Customer name]</div>
+    <div class="small fade" style="--in:4.0s">[Role], [Company]</div>
+    <div class="stars">
+      <span class="pop" style="--in:4.6s" data-sfx="tick">★</span>
+      <span class="pop" style="--in:4.75s" data-sfx="tick">★</span>
+      <span class="pop" style="--in:4.9s" data-sfx="tick">★</span>
+      <span class="pop" style="--in:5.05s" data-sfx="tick">★</span>
+      <span class="pop" style="--in:5.2s" data-sfx="tick">★</span>
+    </div>
+  </div>
+
+  <!-- 8–13.5s: before and after -->
+  <div class="scene" style="--out:13.3s" data-sfx="whoosh:out">
+    <div class="ba slide" style="--in:8.2s" data-sfx="swish">
+      <div class="label" style="color: var(--bad)">Before</div>
+      <div class="mid">[What it was like before]</div>
+    </div>
+    <div class="arrow fade" style="--in:9.6s">↓</div>
+    <div class="ba slide" style="--in:10.0s; border-color: #2c5a44" data-sfx="swish">
+      <div class="label" style="color: var(--ok)">After</div>
+      <div class="mid">[What changed]</div>
+    </div>
+  </div>
+
+  <!-- 13.5–17.5s: the numbers -->
+  <div class="scene" style="--out:17.3s" data-sfx="whoosh:out">
+    <div class="rise" style="--in:13.6s">
+      <div class="stat"><span class="num count" style="--in:13.7s; --to:6; --land:14.9s" data-sfx="pop:land"></span><span class="unit">hrs</span></div>
+      <div class="small">[saved every week]</div>
+    </div>
+    <div class="rise" style="--in:14.6s; margin-top: 50px">
+      <div class="stat"><span class="num count" style="--in:14.7s; --to:40; --land:15.9s" data-sfx="pop:land"></span><span class="unit">%</span></div>
+      <div class="small">[fewer late payments]</div>
+    </div>
+  </div>
+
+  <!-- 17.5–20s: CTA -->
+  <div class="scene">
+    <div class="big rise" style="--in:17.55s">Read the full story</div>
+    <div class="mid rise accent" style="--in:17.9s; margin-top: 20px">Link in bio</div>
+  </div>
+
+</body>
+</html>

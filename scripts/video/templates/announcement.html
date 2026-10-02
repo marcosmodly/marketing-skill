@@ -1,0 +1,133 @@
+<!doctype html>
+<!--
+  Template: announcement or launch, and promos for an event, webinar, or
+  live stream (see references/video-types.md). 18 seconds: a tease that
+  builds into the drop, the reveal, what's in it, the date, and a CTA.
+
+  Replace the name, tagline, the three items, and the date block. For an
+  event or webinar, the three items become what attendees get (speakers,
+  topics) and the CTA becomes "Register" or "Set a reminder". Drop the
+  date scene for something that's already live.
+  Page conventions (canvas, safe area, timing vars, data-sfx cues, music
+  styles, assets): see the comment at the top of promo.html.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=block">
+<style>
+  :root {
+    --bg: #0f0f13;
+    --card: #1b1b22;
+    --line: #2b2b35;
+    --text: #f3f2ee;
+    --muted: #9a99a4;
+    --accent: #e07a55;
+    --ok: #3fbf7f;
+    --bad: #e0605a;
+    --warn: #e8b04a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--bg); }
+  body { font-family: "Inter", "Liberation Sans", sans-serif; color: var(--text); position: relative; }
+
+  .glow { position: absolute; border-radius: 50%; filter: blur(120px); opacity: .55; }
+  .g1 { width: 900px; height: 900px; background: #5a2a1a; left: -300px; top: -200px; animation: drift1 24s linear 0s both; }
+  .g2 { width: 800px; height: 800px; background: #3a1d52; right: -320px; bottom: -160px; animation: drift2 24s linear 0s both; }
+  @keyframes drift1 { from { transform: translate(0,0); } to { transform: translate(260px, 520px); } }
+  @keyframes drift2 { from { transform: translate(0,0); } to { transform: translate(-220px, -600px); } }
+
+  /* scenes: content kept inside the platform-UI safe zone */
+  .scene { position: absolute; left: 90px; right: 150px; top: 330px; bottom: 470px;
+           display: flex; flex-direction: column; justify-content: center;
+           animation: sceneOut .35s ease-in var(--out, 999s) forwards; }
+  @keyframes sceneOut { to { opacity: 0; transform: translateY(-60px); } }
+
+  /* entrances; .gone also leaves at its own --out */
+  .pop   { animation: popIn .5s cubic-bezier(.2,.9,.3,1.25) var(--in) both; }
+  .rise  { animation: riseIn .45s cubic-bezier(.2,.8,.2,1) var(--in) both; }
+  .slide { animation: slideIn .4s cubic-bezier(.2,.8,.2,1) var(--in) both; }
+  .fade  { animation: fadeIn .4s ease-out var(--in) both; }
+  .gone  { animation: fadeIn .35s ease-out var(--in) both, fadeOut .3s ease-in var(--out) forwards; }
+  @keyframes popIn   { from { opacity: 0; transform: scale(.6) translateY(40px); } to { opacity: 1; transform: none; } }
+  @keyframes riseIn  { from { opacity: 0; transform: translateY(70px); } to { opacity: 1; transform: none; } }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(160px); } to { opacity: 1; transform: none; } }
+  @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fadeOut { to { opacity: 0; } }
+
+  .huge { font-size: 132px; font-weight: 800; line-height: 1.02; letter-spacing: -4px; }
+  .big  { font-size: 104px; font-weight: 800; line-height: 1.04; letter-spacing: -3px; }
+  .mid  { font-size: 64px;  font-weight: 700; line-height: 1.12; letter-spacing: -1.5px; }
+  .small{ font-size: 42px;  font-weight: 500; line-height: 1.3; color: var(--muted); }
+  .label{ font-size: 34px;  font-weight: 700; letter-spacing: 4px; text-transform: uppercase; }
+  .accent { color: var(--accent); }
+  .center { text-align: center; align-items: center; }
+
+  /* counts up from 0 to --to, starting at --in: <span class="count" style="--in:3s; --to:40"></span> */
+  @property --n { syntax: '<integer>'; inherits: false; initial-value: 0; }
+  .count { counter-reset: n var(--n); animation: countUp 1.2s cubic-bezier(.2,.8,.2,1) var(--in) both; }
+  .count::before { content: counter(n); }
+  @keyframes countUp { from { --n: 0; } to { --n: var(--to); } }
+
+  .dot { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); margin-top: 50px;
+         animation: fadeIn .3s ease-out var(--in) both, pulse 1s ease-in-out var(--in) infinite; }
+  @keyframes pulse { 50% { transform: scale(1.5); opacity: .5; } }
+  .reveal { position: relative; }
+  .burst { position: absolute; left: 50%; top: 50%; width: 700px; height: 700px; margin: -350px 0 0 -350px; border-radius: 50%;
+           border: 10px solid var(--accent); animation: burst .9s ease-out var(--in) both; opacity: 0; }
+  @keyframes burst { 0% { opacity: 0; transform: scale(.2); } 8% { opacity: .9; } 100% { opacity: 0; transform: scale(1.3); } }
+  .name { font-size: 170px; font-weight: 800; letter-spacing: -6px; line-height: 1; }
+  .feature { display: flex; align-items: center; gap: 30px; background: var(--card); border: 2px solid var(--line);
+             border-radius: 26px; padding: 30px 34px; margin-top: 22px; font-size: 50px; font-weight: 700; }
+  .feature i { width: 64px; height: 64px; border-radius: 18px; background: var(--accent); flex: none; display: block; opacity: .9; }
+  .cal { width: 380px; border-radius: 40px; overflow: hidden; background: #f4f3ef; color: #17171c; box-shadow: 0 30px 90px #0008; text-align: center; }
+  .cal .mon { background: var(--accent); color: #fff; font-size: 54px; font-weight: 800; letter-spacing: 6px; padding: 18px 0; }
+  .cal .day { font-size: 200px; font-weight: 800; letter-spacing: -8px; line-height: 1.15; padding-bottom: 20px; }
+
+</style>
+</head>
+<body data-duration="18" data-drop="3.5" data-bpm="124" data-key="E">
+  <div class="glow g1"></div>
+  <div class="glow g2"></div>
+
+  <!-- 0–3.5s: tease, building into the drop -->
+  <div class="scene center" style="--out:3.3s">
+    <div class="big pop" style="--in:.2s" data-sfx="pop">Something new</div>
+    <div class="big pop" style="--in:.75s; color: var(--muted)" data-sfx="pop">is coming.</div>
+    <div class="dot" style="--in:1.4s"></div>
+  </div>
+
+  <!-- 3.5–7.5s: the reveal -->
+  <div class="scene center" style="--out:7.3s" data-sfx="whoosh:out">
+    <div class="small fade" style="--in:3.55s">Introducing</div>
+    <div class="reveal">
+      <div class="burst" style="--in:3.7s"></div>
+      <div class="name pop accent" style="--in:3.7s" data-sfx="pop">Autopilot</div>
+    </div>
+    <div class="mid rise" style="--in:4.4s; margin-top: 30px">Invoices that send themselves.</div>
+  </div>
+
+  <!-- 7.5–12s: what's in it -->
+  <div class="scene" style="--out:11.8s" data-sfx="whoosh:out">
+    <div class="label rise accent" style="--in:7.6s">What's new</div>
+    <div class="feature slide" style="--in:7.9s" data-sfx="swish"><i></i>Recurring invoices</div>
+    <div class="feature slide" style="--in:8.5s" data-sfx="swish"><i></i>Automatic reminders</div>
+    <div class="feature slide" style="--in:9.1s" data-sfx="swish"><i></i>One-tap payouts</div>
+  </div>
+
+  <!-- 12–15.5s: the date -->
+  <div class="scene center" style="--out:15.3s" data-sfx="whoosh:out">
+    <div class="cal pop" style="--in:12.1s" data-sfx="pop"><div class="mon">OCT</div><div class="day">14</div></div>
+    <div class="mid rise" style="--in:12.6s; margin-top: 50px">Launch day</div>
+    <div class="small fade" style="--in:12.9s">Tuesday, 10am PT</div>
+  </div>
+
+  <!-- 15.5–18s: CTA -->
+  <div class="scene center">
+    <div class="big rise" style="--in:15.55s" data-sfx="chime">Get early access</div>
+    <div class="mid rise accent" style="--in:15.9s; margin-top: 20px">Link in bio</div>
+  </div>
+
+</body>
+</html>

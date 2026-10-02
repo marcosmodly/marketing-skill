@@ -8,7 +8,7 @@
  * The page animates with CSS animations (or the Web Animations API). This
  * script pauses every animation and seeks it frame by frame in headless
  * Chromium, so the output is frame-exact no matter how slow the machine is.
- * See example.html for the page conventions, and the README section
+ * See templates/promo.html for the page conventions, and the README section
  * "Rendering a short-form video locally".
  *
  * Usage:
@@ -23,7 +23,7 @@ const { spawn, spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { buildSoundtrack, wavBuffer, SOUNDS } = require('./soundtrack');
+const { buildSoundtrack, wavBuffer, SOUNDS, STYLES } = require('./soundtrack');
 
 const WIDTH = 1080;
 const HEIGHT = 1920;
@@ -133,7 +133,7 @@ async function readPage(page) {
       drop: d.drop !== undefined ? parseFloat(d.drop) : undefined,
       bpm: d.bpm !== undefined ? parseFloat(d.bpm) : undefined,
       key: d.key,
-      music: d.music !== 'none',
+      music: d.music || 'lofi',
     };
   }, SOUNDS);
 }
@@ -175,6 +175,10 @@ async function main() {
   await page.goto('file://' + path.resolve(pagePath), { waitUntil: 'networkidle' });
   await page.evaluate(() => document.fonts.ready);
   const settings = await readPage(page);
+  if (settings.music !== 'none' && !STYLES[settings.music]) {
+    settings.problems.push(`unknown data-music="${settings.music}" (use ${Object.keys(STYLES).join(', ')}, or none); using lofi`);
+    settings.music = 'lofi';
+  }
   for (const p of settings.problems) console.warn(`Warning: ${p}`);
 
   if (args.stills) {
@@ -224,7 +228,8 @@ async function main() {
       const counts = {};
       for (const c of settings.cues) counts[c.sound] = (counts[c.sound] || 0) + 1;
       const summary = Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(', ');
-      audio = `soundtrack (${settings.music ? 'music + ' : ''}${summary || 'no sound effects'})`;
+      const music = settings.music === 'none' ? '' : `${settings.music} music + `;
+      audio = `soundtrack (${music}${summary || 'no sound effects'})`;
     }
   } else {
     muxSilence(videoOnly, outPath);

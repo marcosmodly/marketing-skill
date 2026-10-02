@@ -1,0 +1,128 @@
+<!doctype html>
+<!--
+  Template: FAQ, myth vs fact, or an educational answer (see
+  references/video-types.md). 18 seconds: a viewer's question as a comment
+  bubble, the short answer with three supporting points, a myth struck
+  through and the fact, and a CTA.
+
+  Use real questions customers actually ask, and answers that are true
+  for the product today. Replace @username only with a real commenter's
+  handle if you're replying to them (with the platform's reply feature,
+  ideally); otherwise drop the handle line.
+  Page conventions (canvas, safe area, timing vars, data-sfx cues, music
+  styles, assets): see the comment at the top of promo.html.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=block">
+<style>
+  :root {
+    --bg: #0f0f13;
+    --card: #1b1b22;
+    --line: #2b2b35;
+    --text: #f3f2ee;
+    --muted: #9a99a4;
+    --accent: #e07a55;
+    --ok: #3fbf7f;
+    --bad: #e0605a;
+    --warn: #e8b04a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--bg); }
+  body { font-family: "Inter", "Liberation Sans", sans-serif; color: var(--text); position: relative; }
+
+  .glow { position: absolute; border-radius: 50%; filter: blur(120px); opacity: .55; }
+  .g1 { width: 900px; height: 900px; background: #2a3a5a; left: -300px; top: -200px; animation: drift1 24s linear 0s both; }
+  .g2 { width: 800px; height: 800px; background: #5a2a1a; right: -320px; bottom: -160px; animation: drift2 24s linear 0s both; }
+  @keyframes drift1 { from { transform: translate(0,0); } to { transform: translate(260px, 520px); } }
+  @keyframes drift2 { from { transform: translate(0,0); } to { transform: translate(-220px, -600px); } }
+
+  /* scenes: content kept inside the platform-UI safe zone */
+  .scene { position: absolute; left: 90px; right: 150px; top: 330px; bottom: 470px;
+           display: flex; flex-direction: column; justify-content: center;
+           animation: sceneOut .35s ease-in var(--out, 999s) forwards; }
+  @keyframes sceneOut { to { opacity: 0; transform: translateY(-60px); } }
+
+  /* entrances; .gone also leaves at its own --out */
+  .pop   { animation: popIn .5s cubic-bezier(.2,.9,.3,1.25) var(--in) both; }
+  .rise  { animation: riseIn .45s cubic-bezier(.2,.8,.2,1) var(--in) both; }
+  .slide { animation: slideIn .4s cubic-bezier(.2,.8,.2,1) var(--in) both; }
+  .fade  { animation: fadeIn .4s ease-out var(--in) both; }
+  .gone  { animation: fadeIn .35s ease-out var(--in) both, fadeOut .3s ease-in var(--out) forwards; }
+  @keyframes popIn   { from { opacity: 0; transform: scale(.6) translateY(40px); } to { opacity: 1; transform: none; } }
+  @keyframes riseIn  { from { opacity: 0; transform: translateY(70px); } to { opacity: 1; transform: none; } }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(160px); } to { opacity: 1; transform: none; } }
+  @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fadeOut { to { opacity: 0; } }
+
+  .huge { font-size: 132px; font-weight: 800; line-height: 1.02; letter-spacing: -4px; }
+  .big  { font-size: 104px; font-weight: 800; line-height: 1.04; letter-spacing: -3px; }
+  .mid  { font-size: 64px;  font-weight: 700; line-height: 1.12; letter-spacing: -1.5px; }
+  .small{ font-size: 42px;  font-weight: 500; line-height: 1.3; color: var(--muted); }
+  .label{ font-size: 34px;  font-weight: 700; letter-spacing: 4px; text-transform: uppercase; }
+  .accent { color: var(--accent); }
+  .center { text-align: center; align-items: center; }
+
+  /* counts up from 0 to --to, starting at --in: <span class="count" style="--in:3s; --to:40"></span> */
+  @property --n { syntax: '<integer>'; inherits: false; initial-value: 0; }
+  .count { counter-reset: n var(--n); animation: countUp 1.2s cubic-bezier(.2,.8,.2,1) var(--in) both; }
+  .count::before { content: counter(n); }
+  @keyframes countUp { from { --n: 0; } to { --n: var(--to); } }
+
+  .bubble { background: #f4f3ef; color: #17171c; border-radius: 36px 36px 36px 8px; padding: 34px 40px 40px; box-shadow: 0 30px 90px #0007; }
+  .handle { display: flex; align-items: center; gap: 16px; font-size: 30px; font-weight: 700; color: #6a6a74; margin-bottom: 16px; }
+  .handle i { width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #6b3b4b); display: block; }
+  .bubble .q { font-size: 64px; font-weight: 800; line-height: 1.12; letter-spacing: -1.5px; }
+  .point { display: flex; gap: 24px; align-items: center; font-size: 48px; font-weight: 600; margin-top: 26px; }
+  .point i { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); flex: none; display: block; }
+  /* strikes through every wrapped line of the myth at --cut */
+  .myth-text { background: linear-gradient(var(--bad), var(--bad)) no-repeat 0 58% / 0% 10px;
+               -webkit-box-decoration-break: clone; box-decoration-break: clone;
+               animation: strike .45s cubic-bezier(.6,0,.2,1) var(--cut) both, dimDown .4s ease-out var(--cut) forwards; }
+  @keyframes strike { to { background-size: 100% 10px; } }
+  @keyframes dimDown { to { color: var(--muted); } }
+
+</style>
+</head>
+<body data-duration="18" data-drop="2.5" data-bpm="116" data-key="G">
+  <div class="glow g1"></div>
+  <div class="glow g2"></div>
+
+  <!-- 0–2.5s: the question -->
+  <div class="scene" style="--out:2.35s">
+    <div class="bubble pop" style="--in:.1s" data-sfx="pop">
+      <div class="handle"><i></i>Reply to @username</div>
+      <div class="q">Do I need a card to start the free trial?</div>
+    </div>
+  </div>
+
+  <!-- 2.5–8.5s: the answer -->
+  <div class="scene" style="--out:8.3s" data-sfx="whoosh:out">
+    <div class="small rise" style="--in:2.6s">Short answer:</div>
+    <div class="huge pop accent" style="--in:2.9s" data-sfx="pop">No.</div>
+    <div class="point slide" style="--in:4.2s" data-sfx="swish"><i></i>Sign up with just an email</div>
+    <div class="point slide" style="--in:5.0s" data-sfx="swish"><i></i>Every feature, for 14 days</div>
+    <div class="point slide" style="--in:5.8s" data-sfx="swish"><i></i>Add a card only if you stay</div>
+  </div>
+
+  <!-- 8.5–14.5s: myth vs fact -->
+  <div class="scene" style="--out:14.3s" data-sfx="whoosh:out">
+    <div class="label rise" style="--in:8.6s; color: var(--bad)">Myth</div>
+    <div class="rise" style="--in:8.8s; margin-top: 14px">
+      <span class="mid myth-text" style="--cut:10.3s" data-sfx="click:cut">You get charged when the trial ends.</span>
+    </div>
+    <div class="label rise" style="--in:11.2s; color: var(--ok); margin-top: 60px">Fact</div>
+    <div class="mid rise" style="--in:11.4s; margin-top: 14px" data-sfx="pop">Nothing is charged unless you pick a plan.</div>
+  </div>
+
+  <!-- 14.5–18s: CTA -->
+  <div class="scene">
+    <div class="big rise" style="--in:14.55s">Got a question?</div>
+    <div class="mid rise accent" style="--in:14.9s; margin-top: 20px">Drop it in the comments.</div>
+    <div class="small fade" style="--in:15.6s; margin-top: 30px">We answer every one.</div>
+  </div>
+
+</body>
+</html>

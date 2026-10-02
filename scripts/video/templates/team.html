@@ -1,0 +1,136 @@
+<!doctype html>
+<!--
+  Template: meet the team, or the people side of a company profile (see
+  references/video-types.md). 18 seconds: a hook, three people one at a
+  time, the group, and a CTA.
+
+  Replace each bracketed placeholder with the person's real name, role,
+  and a line they actually said or approved, and each avatar with their
+  photo (with their permission):
+    <img class="avatar" src="assets/name.jpg" alt="">
+  To feature more people, copy a person scene and shift the later times.
+  Page conventions (canvas, safe area, timing vars, data-sfx cues, music
+  styles, assets): see the comment at the top of promo.html.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=block">
+<style>
+  :root {
+    --bg: #0f0f13;
+    --card: #1b1b22;
+    --line: #2b2b35;
+    --text: #f3f2ee;
+    --muted: #9a99a4;
+    --accent: #e07a55;
+    --ok: #3fbf7f;
+    --bad: #e0605a;
+    --warn: #e8b04a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--bg); }
+  body { font-family: "Inter", "Liberation Sans", sans-serif; color: var(--text); position: relative; }
+
+  .glow { position: absolute; border-radius: 50%; filter: blur(120px); opacity: .55; }
+  .g1 { width: 900px; height: 900px; background: #3a2a4a; left: -300px; top: -200px; animation: drift1 24s linear 0s both; }
+  .g2 { width: 800px; height: 800px; background: #1a3a2a; right: -320px; bottom: -160px; animation: drift2 24s linear 0s both; }
+  @keyframes drift1 { from { transform: translate(0,0); } to { transform: translate(260px, 520px); } }
+  @keyframes drift2 { from { transform: translate(0,0); } to { transform: translate(-220px, -600px); } }
+
+  /* scenes: content kept inside the platform-UI safe zone */
+  .scene { position: absolute; left: 90px; right: 150px; top: 330px; bottom: 470px;
+           display: flex; flex-direction: column; justify-content: center;
+           animation: sceneOut .35s ease-in var(--out, 999s) forwards; }
+  @keyframes sceneOut { to { opacity: 0; transform: translateY(-60px); } }
+
+  /* entrances; .gone also leaves at its own --out */
+  .pop   { animation: popIn .5s cubic-bezier(.2,.9,.3,1.25) var(--in) both; }
+  .rise  { animation: riseIn .45s cubic-bezier(.2,.8,.2,1) var(--in) both; }
+  .slide { animation: slideIn .4s cubic-bezier(.2,.8,.2,1) var(--in) both; }
+  .fade  { animation: fadeIn .4s ease-out var(--in) both; }
+  .gone  { animation: fadeIn .35s ease-out var(--in) both, fadeOut .3s ease-in var(--out) forwards; }
+  @keyframes popIn   { from { opacity: 0; transform: scale(.6) translateY(40px); } to { opacity: 1; transform: none; } }
+  @keyframes riseIn  { from { opacity: 0; transform: translateY(70px); } to { opacity: 1; transform: none; } }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(160px); } to { opacity: 1; transform: none; } }
+  @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fadeOut { to { opacity: 0; } }
+
+  .huge { font-size: 132px; font-weight: 800; line-height: 1.02; letter-spacing: -4px; }
+  .big  { font-size: 104px; font-weight: 800; line-height: 1.04; letter-spacing: -3px; }
+  .mid  { font-size: 64px;  font-weight: 700; line-height: 1.12; letter-spacing: -1.5px; }
+  .small{ font-size: 42px;  font-weight: 500; line-height: 1.3; color: var(--muted); }
+  .label{ font-size: 34px;  font-weight: 700; letter-spacing: 4px; text-transform: uppercase; }
+  .accent { color: var(--accent); }
+  .center { text-align: center; align-items: center; }
+
+  /* counts up from 0 to --to, starting at --in: <span class="count" style="--in:3s; --to:40"></span> */
+  @property --n { syntax: '<integer>'; inherits: false; initial-value: 0; }
+  .count { counter-reset: n var(--n); animation: countUp 1.2s cubic-bezier(.2,.8,.2,1) var(--in) both; }
+  .count::before { content: counter(n); }
+  @keyframes countUp { from { --n: 0; } to { --n: var(--to); } }
+
+  .avatar { width: 300px; height: 300px; border-radius: 50%; object-fit: cover; display: grid; place-items: center; overflow: hidden;
+            background: linear-gradient(135deg, #6b4b7b, #2b5b4b); border: 6px solid #ffffff22; }
+  .avatar svg { width: 100%; height: 100%; }
+  .row { display: flex; gap: 26px; margin-top: 50px; }
+  .row .avatar { width: 200px; height: 200px; }
+  .more { width: 200px; height: 200px; border-radius: 50%; display: grid; place-items: center; background: var(--card);
+          border: 2px dashed #ffffff33; font-size: 54px; font-weight: 800; color: var(--muted); }
+
+</style>
+</head>
+<body data-duration="18" data-drop="2.6" data-bpm="92" data-key="A" data-music="calm">
+  <div class="glow g1"></div>
+  <div class="glow g2"></div>
+
+  <!-- 0–2.6s: hook -->
+  <div class="scene" style="--out:2.4s">
+    <div class="huge pop" style="--in:.1s" data-sfx="pop">The people</div>
+    <div class="huge pop accent" style="--in:.55s" data-sfx="pop">behind [Brand]</div>
+  </div>
+
+  <!-- 2.6–5.6s: person 1 -->
+  <div class="scene" style="--out:5.4s" data-sfx="whoosh:out">
+    <div class="avatar pop" style="--in:2.65s" data-sfx="pop"><svg viewBox="0 0 100 100"><circle cx="50" cy="38" r="18" fill="#ffffff55"/><path d="M18 92c4-20 18-30 32-30s28 10 32 30z" fill="#ffffff55"/></svg></div>
+    <div class="big rise" style="--in:3.00s; margin-top: 44px">[Name]</div>
+    <div class="small fade" style="--in:3.30s">[Role]</div>
+    <div class="mid rise" style="--in:3.80s; margin-top: 40px">“[One human detail, in their words]”</div>
+  </div>
+
+  <!-- 5.6–8.6s: person 2 -->
+  <div class="scene" style="--out:8.4s" data-sfx="whoosh:out">
+    <div class="avatar pop" style="--in:5.65s" data-sfx="pop"><svg viewBox="0 0 100 100"><circle cx="50" cy="38" r="18" fill="#ffffff55"/><path d="M18 92c4-20 18-30 32-30s28 10 32 30z" fill="#ffffff55"/></svg></div>
+    <div class="big rise" style="--in:6.00s; margin-top: 44px">[Name]</div>
+    <div class="small fade" style="--in:6.30s">[Role]</div>
+    <div class="mid rise" style="--in:6.80s; margin-top: 40px">“[One human detail, in their words]”</div>
+  </div>
+
+  <!-- 8.6–11.6s: person 3 -->
+  <div class="scene" style="--out:11.4s" data-sfx="whoosh:out">
+    <div class="avatar pop" style="--in:8.65s" data-sfx="pop"><svg viewBox="0 0 100 100"><circle cx="50" cy="38" r="18" fill="#ffffff55"/><path d="M18 92c4-20 18-30 32-30s28 10 32 30z" fill="#ffffff55"/></svg></div>
+    <div class="big rise" style="--in:9.00s; margin-top: 44px">[Name]</div>
+    <div class="small fade" style="--in:9.30s">[Role]</div>
+    <div class="mid rise" style="--in:9.80s; margin-top: 40px">“[One human detail, in their words]”</div>
+  </div>
+
+  <!-- 11.6–15s: the group -->
+  <div class="scene" style="--out:14.8s" data-sfx="whoosh:out">
+    <div class="big rise" style="--in:11.7s">One team.</div>
+    <div class="row">
+      <div class="avatar pop" style="--in:12.1s" data-sfx="tick"><svg viewBox="0 0 100 100"><circle cx="50" cy="38" r="18" fill="#ffffff55"/><path d="M18 92c4-20 18-30 32-30s28 10 32 30z" fill="#ffffff55"/></svg></div>
+      <div class="avatar pop" style="--in:12.3s" data-sfx="tick"><svg viewBox="0 0 100 100"><circle cx="50" cy="38" r="18" fill="#ffffff55"/><path d="M18 92c4-20 18-30 32-30s28 10 32 30z" fill="#ffffff55"/></svg></div>
+      <div class="avatar pop" style="--in:12.5s" data-sfx="tick"><svg viewBox="0 0 100 100"><circle cx="50" cy="38" r="18" fill="#ffffff55"/><path d="M18 92c4-20 18-30 32-30s28 10 32 30z" fill="#ffffff55"/></svg></div>
+    </div>
+    <div class="mid rise" style="--in:13.0s; margin-top: 44px">[N] people, [City].</div>
+  </div>
+
+  <!-- 15–18s: CTA -->
+  <div class="scene">
+    <div class="big rise" style="--in:15.05s" data-sfx="chime">We're hiring.</div>
+    <div class="mid rise accent" style="--in:15.4s; margin-top: 20px">Open roles: link in bio</div>
+  </div>
+
+</body>
+</html>

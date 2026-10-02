@@ -55,6 +55,19 @@ follows.
      `content-repurposer`, before asking the user to describe it).
    - Which platform(s) — default to all three (YouTube Shorts, Instagram
      Reels, TikTok) unless the user names only one or two.
+   - The video type. Read `${CLAUDE_PLUGIN_ROOT}/references/video-types.md`
+     and pick the type that fits the goal (an ad, an explainer, a how-to, a
+     testimonial, an announcement, and so on). Use the type the user names
+     if they name one. If the goal doesn't settle it, offer two or three
+     fitting types with a line on each rather than picking silently. The
+     type decides the beat structure in step 4 and how the video can
+     actually get made: rendered from text, rendered with the user's real
+     assets, generated, or filmed.
+   - The real material the type needs, if any: screenshots for a demo or
+     how-to; a customer's actual words, name, role, photo, and numbers for a
+     testimonial or case study; team photos, names, and roles for a
+     team video. Ask for it up front. Never invent it (see "Formatting
+     rules").
    - The hook/angle and core message — what should stop the scroll in the
      first second, and what's the one thing a viewer should walk away
      knowing or feeling.
@@ -119,9 +132,9 @@ follows.
      music bed plus sound effects synced to what's on screen. Be plain about
      what it makes. It's motion graphics (kinetic text, shapes, UI mockups),
      not filmed or AI-generated footage, and it has no voiceover. It suits
-     hook-and-text formats, product explainers, and lists, not anything
-     that needs real people or places on camera. Check it's usable with
-     `node --version` (18+), `ffmpeg -version`, and `node -e
+     the types `video-types.md` marks Render or Render + your assets, not
+     anything that needs real people or places on camera. Check it's
+     usable with `node --version` (18+), `ffmpeg -version`, and `node -e
      "require('playwright')"` run from `scripts/video`. If anything is
      missing, give the user the one-time setup from README's "Rendering a
      short-form video locally" section rather than installing it unasked.
@@ -143,11 +156,17 @@ follows.
      rather than confidently endorsing something unverified, the same
      epistemic bar `community-post-generator` applies to secondhand claims
      about platform rules.
+   - **When the type needs real footage** ("Film" in `video-types.md`, such
+     as behind the scenes, a vlog, UGC, or an on-camera testimonial), no
+     tool can stand in for it. Say so, and plan to deliver a phone shot
+     list and edit notes (step 6) instead of a video. Don't offer to
+     render or generate a fake version of real people or real events.
    - **Either way, continue to step 4.** The script and packages below are
      the deliverable regardless of whether anything gets generated in this
      run — same rule `visual-brief-generator` follows.
 
-4. **Draft the video script / shot list**, hook-first:
+4. **Draft the video script / shot list**, hook-first, following the
+   beats `video-types.md` gives for the chosen type:
    - **The hook (first 1–3 seconds):** a question, a bold claim, an
      on-screen text callout, or a visual surprise — written to work with
      the sound off, since a large share of viewers decide whether to keep
@@ -207,19 +226,24 @@ follows.
 
    **Rendering locally instead** (step 3's local option, once the user
    opts in):
-   - Copy `${CLAUDE_PLUGIN_ROOT}/scripts/video/example.html` to
-     `${CLAUDE_PLUGIN_ROOT}/state/videos/<date>-<slug>.html` and rewrite its
-     scenes to the step 4 script: one scene per beat, the hook readable
+   - Copy the template `video-types.md` names for the type, from
+     `${CLAUDE_PLUGIN_ROOT}/scripts/video/templates/` (`promo`, `how-to`,
+     `testimonial`, `faq`, `announcement`, or `team`), to
+     `${CLAUDE_PLUGIN_ROOT}/state/videos/<date>-<slug>.html`. Put any images
+     the user supplied in `state/videos/assets/`. Rewrite its scenes to the
+     step 4 script: one scene per beat, the hook readable
      within the first second, and every line of text inside the `.scene`
      box (each platform's UI covers the bottom quarter and right edge).
-     Keep the example's colors and type unless `brand-voice.md` says
+     Keep the template's colors and type unless `brand-voice.md` says
      otherwise.
    - Set `<body data-duration>` to the script's length and `data-drop` to
      when the hook ends, so the beat drops as the body starts. Put
      `data-sfx` cues only on moments that should land: words popping in,
      list items, a checkmark, a button press, a scene change. A sound on
-     everything reads as noise. The comment at the top of `example.html`
-     lists the sounds and attributes.
+     everything reads as noise. The comment at the top of `promo.html`
+     lists the sounds, music styles (`lofi`, `calm`, `none`), and
+     attributes, and each template's own comment says what to replace.
+     Replace every bracketed placeholder; never ship one.
    - Preview before the full render, which takes a couple of minutes:
      `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/render.js <page> --stills
      <a time per beat>` writes PNGs to a `stills/` folder next to the page.
@@ -230,6 +254,12 @@ follows.
      1080×1920, 30fps H.264 with AAC audio mixed to about −14 LUFS, which
      is what all three platforms expect. That file is what `--platform
      youtube` uploads directly.
+
+   **Filmed types instead:** deliver a shot list in the Video Script
+   section: each beat as a shot (what's in frame, who says what, how long),
+   plus the filming notes from `video-types.md` and edit notes (cut order,
+   captions, where the hook text goes). Generation Status says plainly that
+   the video still needs to be filmed.
 
 7. **Hand off.** Note the concrete next step for getting this posted:
    - **Manual (the default, always available):** generate or edit the
@@ -323,7 +353,9 @@ finalizing anything for a real campaign, the same caveat
 Use this exact section order, as Markdown `##` headings:
 
 ### Video Script
-Hook (0–3s: visual, on-screen text, whether it works sound-off), then the
+Start with one line naming the type and how it gets made (e.g. "**Type:**
+How-to, rendered locally with your screenshots"). Then the hook (0–3s:
+visual, on-screen text, whether it works sound-off), then the
 full beat-by-beat body with timestamps, on-screen text cues, and VO/spoken
 lines where relevant, then the CTA. One script serves all requested
 platforms unless the user asked for platform-specific edits.
@@ -363,6 +395,13 @@ that applies to this run, per step 7 above.
   account's own analytics should override it once available.
 - Never claim a video was generated, or a post was sent, when no tool call
   actually happened.
+- Never fabricate social proof. A testimonial, case study, interview
+  quote, review, star rating, customer name, logo, photo, or result number
+  must be real, supplied by the user, and used with the person's
+  permission. Don't "tighten" a quote into words they didn't say. If the
+  material isn't available, use a different type or leave the template's
+  placeholder in the draft and say what's missing. Never render or post a
+  placeholder.
 - Show the character count for every length-constrained caption/title/
   description field, the same convention `ad-copy-generator` uses.
 - Apply `references/brand-voice.md`'s banned-words list and tone to every
@@ -384,6 +423,8 @@ that applies to this run, per step 7 above.
 
 ```markdown
 ## Video Script
+**Type:** Explainer (one feature), script only this run.
+
 **Hook (0–2s):** On-screen text over a cluttered desktop: "Exporting
 reports used to take me 20 minutes." No voiceover yet — works sound-off.
 
@@ -433,12 +474,13 @@ matters more than the exact hour.
 **Format:** 9:16, 35s.
 
 ## Generation Status
-No video-generation tool was connected this session, so nothing was
-actually generated — the script above is the deliverable. Recommended
-free option: CapCut (free, no watermark, built for exactly this vertical-
-video edit). If a Higgsfield, Canva, or other connected video-gen tool is
-available in a future session, this skill will offer to generate directly
-from the per-beat descriptions above.
+No video-generation tool was connected this session, and local rendering
+isn't set up (ffmpeg is missing), so nothing was actually generated. The
+script above is the deliverable. Recommended free option: CapCut (free,
+no watermark, built for exactly this vertical-video edit). Install ffmpeg
+and this skill can render it locally next time from `how-to.html` with
+your screenshots; or, with Higgsfield, Canva, or another video tool
+connected, it can generate from the per-beat descriptions above.
 
 ## Next Step
 Nothing has been sent. Generate or edit the clip (CapCut or your tool of

@@ -1,9 +1,11 @@
 <!doctype html>
 <!--
-  Example page for render.js: the 24-second marketing-skill promo. Copy it as
-  the starting point for a new video and rewrite the scenes.
+  Template: promo, ad, brand profile, explainer, or educational list (see
+  references/video-types.md). This one is the 24-second marketing-skill
+  promo. Copy it as the starting point for a new video and rewrite the
+  scenes.
 
-  How a page works:
+  How every template page works (render.js reads all of this):
   - The canvas is 1080x1920 (9:16). Keep text inside the .scene box: TikTok,
     Reels, and Shorts cover the bottom ~25% and the right edge with their UI.
   - Animate with CSS animations only. render.js pauses and seeks every
@@ -11,13 +13,16 @@
     delays come from per-element custom properties like style="--in:3.4s".
   - <body data-duration> sets the length in seconds. data-drop is when the
     beat comes in (the music builds tension before it), data-bpm the tempo,
-    data-key the key (C, D, F#, ...), and data-music="none" leaves only the
-    sound effects.
+    and data-key the key (C, D, F#, ...). data-music picks the style: lofi
+    (the default, for promos and launches), calm (no claps, a held bass, for
+    testimonials and team intros), or none (sound effects only).
   - data-sfx="sound:var" plays a sound effect at the time in that element's
     --var (default --in). Several can be listed: data-sfx="swish:in tick:tick".
     Sounds: pop (a note that climbs the chord when words land in quick
     succession), swish, tick (climbs a scale across a run of ticks), whoosh,
     click, chime.
+  - Images (screenshots, photos, logos) go in an assets/ folder next to the
+    page and load with a relative src. Use only real ones the user supplied.
 -->
 <html>
 <head>
