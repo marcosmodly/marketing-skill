@@ -1,6 +1,6 @@
 ---
 name: publish-pipeline
-description: Packages finished content and asset references into JSON and sends it to n8n, Make, or another automation tool via webhook. Use when the user asks to publish, ship, or send content live.
+description: "Publishes approved marketing content: packages finished posts and asset references into JSON and sends them to n8n, Make, or any other incoming-webhook automation, or optionally straight to a platform API with your own credentials, only after showing the exact payload and getting explicit human approval. Use when the user asks to publish, post, ship, or send content live, trigger the automation, fire the webhook, or send a queued calendar post."
 allowed-tools: Read, Write, Edit, Bash
 ---
 
