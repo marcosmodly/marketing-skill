@@ -27,13 +27,20 @@ const { buildSoundtrack, wavBuffer, SOUNDS, STYLES } = require('./soundtrack');
 
 const WIDTH = 1080;
 const HEIGHT = 1920;
-// -14 LUFS is what YouTube, Instagram, and TikTok normalize to; the limiter
-// shaves the click/pluck transients so the gain needed to get there doesn't
-// push the true peak past -1.5 dBTP. The low-pass goes first: the noise-based
-// sounds carry energy right up to 24 kHz, which makes inter-sample peaks a
-// sample-peak limiter can't see (and phone speakers can't play anyway).
-const LIMITER = 'lowpass=f=16000:poles=2,alimiter=limit=0.25:attack=5:release=60:level=false';
-const LOUDNORM = 'loudnorm=I=-14:TP=-1.5:LRA=11';
+// Audio is mixed to -14 LUFS, what YouTube, Instagram, and TikTok normalize
+// to, with the true peak at or under -1 dBTP so a platform's re-encode
+// doesn't clip it. PRE goes first: a low-pass, because the noise-based
+// sounds carry energy right up to 24 kHz (inter-sample peaks a limiter can't
+// see, and phone speakers can't play), then a limiter that shaves the click
+// and pluck transients so the gain needed for -14 LUFS doesn't push them up
+// with it.
+const PRE = 'lowpass=f=16000:poles=2,alimiter=limit=0.25:attack=5:release=60:level=false';
+const TARGET_LUFS = -14;
+const MAX_TRUE_PEAK = -1;
+// The final limiter runs at 192 kHz (4x) so it catches peaks between
+// samples. AAC encoding can still overshoot unpredictably, so the result is
+// measured and re-encoded with the next lower ceiling until it fits.
+const CEILINGS = [0.79, 0.75, 0.7, 0.63];
 
 function fail(message) {
   console.error(message);
@@ -138,19 +145,34 @@ async function readPage(page) {
   }, SOUNDS);
 }
 
+// Integrated loudness (LUFS) and true peak (dBTP) of a file's audio, via ffmpeg's EBU R128 meter.
+function measureAudio(file, filter = '') {
+  const run = spawnSync('ffmpeg', ['-hide_banner', '-nostats', '-i', file, '-map', '0:a',
+    '-af', `${filter}${filter ? ',' : ''}ebur128=peak=true`, '-f', 'null', '-'], { encoding: 'utf8' });
+  const summary = run.stderr.slice(run.stderr.lastIndexOf('Summary:'));
+  const value = (re) => {
+    const m = re.exec(summary);
+    return m ? (m[1] === '-inf' ? -Infinity : parseFloat(m[1])) : NaN;
+  };
+  return { lufs: value(/I:\s+(-?[\d.]+|-inf) LUFS/), truePeak: value(/Peak:\s+(-?[\d.]+|-inf) dBFS/) };
+}
+
 function muxSoundtrack(videoOnly, wav, out) {
-  const measure = spawnSync(
-    'ffmpeg',
-    ['-hide_banner', '-nostats', '-i', wav, '-af', `${LIMITER},${LOUDNORM}:print_format=json`, '-f', 'null', '-'],
-    { encoding: 'utf8' }
-  );
-  const json = measure.stderr.slice(measure.stderr.lastIndexOf('{'), measure.stderr.lastIndexOf('}') + 1);
-  const m = JSON.parse(json);
-  const filter =
-    `${LIMITER},${LOUDNORM}:measured_I=${m.input_i}:measured_TP=${m.input_tp}:measured_LRA=${m.input_lra}` +
-    `:measured_thresh=${m.input_thresh}:offset=${m.target_offset}:linear=true`;
-  ffmpeg(['-i', videoOnly, '-i', wav, '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-af', filter,
-    '-ar', '48000', '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', out]);
+  const { lufs } = measureAudio(wav, PRE);
+  // capped, so a page with only a few sparse sound effects isn't boosted into a wall of clicks
+  const gain = Number.isFinite(lufs) ? Math.min(20, TARGET_LUFS - lufs).toFixed(2) : '0';
+  let result;
+  for (const ceiling of CEILINGS) {
+    const filter = `${PRE},volume=${gain}dB,aresample=192000,alimiter=limit=${ceiling}:attack=5:release=50:level=false,aresample=48000`;
+    ffmpeg(['-i', videoOnly, '-i', wav, '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-af', filter,
+      '-c:a', 'aac', '-b:a', '192k', '-shortest', '-movflags', '+faststart', out]);
+    result = measureAudio(out);
+    if (result.truePeak <= MAX_TRUE_PEAK) break;
+  }
+  if (!(result.truePeak <= MAX_TRUE_PEAK)) {
+    console.warn(`Warning: the audio's true peak is ${result.truePeak} dBTP, above ${MAX_TRUE_PEAK}; a platform re-encode may clip it slightly.`);
+  }
+  return result;
 }
 
 function muxSilence(videoOnly, out) {
@@ -224,12 +246,12 @@ async function main() {
     } else {
       const wav = path.join(tmp, 'soundtrack.wav');
       fs.writeFileSync(wav, wavBuffer(L, R));
-      muxSoundtrack(videoOnly, wav, outPath);
+      const level = muxSoundtrack(videoOnly, wav, outPath);
       const counts = {};
-      for (const c of settings.cues) counts[c.sound] = (counts[c.sound] || 0) + 1;
+      for (const c of settings.cues.filter((c) => c.time < duration)) counts[c.sound] = (counts[c.sound] || 0) + 1;
       const summary = Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(', ');
       const music = settings.music === 'none' ? '' : `${settings.music} music + `;
-      audio = `soundtrack (${music}${summary || 'no sound effects'})`;
+      audio = `soundtrack (${music}${summary || 'no sound effects'}; ${level.lufs} LUFS, ${level.truePeak} dBTP)`;
     }
   } else {
     muxSilence(videoOnly, outPath);
@@ -238,7 +260,11 @@ async function main() {
   console.log(`Wrote ${outPath}: ${WIDTH}x${HEIGHT}, ${duration}s at ${fps}fps, ${audio}`);
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}
+
+module.exports = { measureAudio, muxSoundtrack };
