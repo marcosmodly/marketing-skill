@@ -362,8 +362,9 @@ def parse_args():
     parser.add_argument("--disable-comment", action="store_true", help="--platform tiktok only. Off (comments allowed) unless passed.")
     parser.add_argument("--disable-stitch", action="store_true", help="--platform tiktok only. Off (stitching allowed) unless passed.")
     parser.add_argument("--upload-timeout", type=float, default=600,
-                         help="--platform instagram only (default: 600s). How long to keep polling Instagram's "
-                              "media container while it processes the video before giving up.")
+                         help="--platform youtube and instagram (default: 600s). YouTube: timeout for sending "
+                              "the video bytes. Instagram: how long to keep polling the media container while "
+                              "it processes the video before giving up.")
     parser.add_argument("--timeout", type=float, default=15, help="Request timeout in seconds for ordinary (non-upload) calls (default: 15).")
     parser.add_argument("--dry-run", action="store_true", help="Print the request(s) instead of sending them. Never makes a network call.")
     parser.add_argument("--confirmed", action="store_true",
@@ -558,7 +559,10 @@ BUILDERS = {
 def redact(text, secrets):
     for secret in secrets:
         if secret:
-            text = text.replace(secret, "<redacted>")
+            # Form-encoded bodies (meta, instagram) carry the token percent-encoded, so a
+            # token containing '+', '/' or '=' would slip past a raw-string match alone.
+            for form in (secret, urllib.parse.quote_plus(secret), urllib.parse.quote(secret, safe="")):
+                text = text.replace(form, "<redacted>")
     return text
 
 
@@ -576,6 +580,13 @@ def run_youtube(args):
     if not args.title:
         print("--platform youtube requires --title.", file=sys.stderr)
         return 2
+    if len(args.title) > 100:
+        print(
+            f"--title is {len(args.title)} characters; YouTube rejects titles over 100 "
+            "characters outright rather than truncating them. Shorten it before sending.",
+            file=sys.stderr,
+        )
+        return 2
     if args.made_for_kids is None:
         print(
             "--platform youtube requires --made-for-kids true|false. YouTube requires "
@@ -587,6 +598,24 @@ def run_youtube(args):
 
     env = require_env("YOUTUBE_ACCESS_TOKEN")
     description = load_text(args.text)
+    if len(description.encode("utf-8")) > 5000:
+        print(
+            f"Description is {len(description.encode('utf-8'))} bytes; YouTube rejects "
+            "descriptions over 5000 bytes (bytes, not characters - emoji count extra). "
+            "Shorten it before sending.",
+            file=sys.stderr,
+        )
+        return 2
+    # YouTube's videos resource allows any UTF-8 in title/description *except* < and >,
+    # and rejects the whole upload otherwise - easy to hit with hook copy like "old -> new".
+    for field, value in (("--title", args.title), ("the description (--text)", description)):
+        if "<" in value or ">" in value:
+            print(
+                f"YouTube rejects '<' and '>' anywhere in a video's title or description - "
+                f"remove them from {field} (e.g. write '->' as 'to' or '→').",
+                file=sys.stderr,
+            )
+            return 2
     tags = [t.strip() for t in args.tags.split(",") if t.strip()] if args.tags else []
     video_size = os.path.getsize(args.video_path)
 
@@ -695,6 +724,13 @@ def run_instagram(args):
         )
         return 2
     caption = load_text(args.text)
+    if len(caption) > 2200:
+        print(
+            f"Caption is {len(caption)} characters; Instagram rejects captions over 2200 "
+            "characters outright. Shorten it before sending.",
+            file=sys.stderr,
+        )
+        return 2
     secrets = [env["META_PAGE_ACCESS_TOKEN"]]
     base = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{env['IG_USER_ID']}"
     create_url = f"{base}/media"
@@ -817,6 +853,15 @@ def run_tiktok(args):
         )
         return 2
     caption = load_text(args.text)
+    # TikTok measures this limit in UTF-16 code units, so emoji count double.
+    caption_units = len(caption.encode("utf-16-le")) // 2
+    if caption_units > 2200:
+        print(
+            f"Caption is {caption_units} UTF-16 units; TikTok rejects captions over 2200 "
+            "(emoji count as 2 each). Shorten it before sending.",
+            file=sys.stderr,
+        )
+        return 2
     if args.privacy_level != "SELF_ONLY":
         print(
             f"Warning: --privacy-level {args.privacy_level} was requested, but TikTok "

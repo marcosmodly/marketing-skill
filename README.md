@@ -640,9 +640,23 @@ rule `visual-brief-generator` follows above.
   accounts get some starter credits free). Being connected doesn't mean
   free generation, the same distinction this plugin's `email-outreach`
   skill already draws about a connected prospecting tool.
+- **Figma Weave** is another option if you have the Figma connector: its
+  `weave_*` tools can run named AI video models (Veo, for example). It
+  spends your Weave credits — the skill shows you the quoted cost and
+  waits for a yes before each run — and it only works once your Figma
+  account is linked to Weave in Weave's own profile settings.
 - **Canva** works here too, the same connector already documented above
   for `visual-brief-generator`.
-- **If neither is connected**, the skill still produces the full script
+- **Listed isn't the same as working.** A connector can appear in your
+  session but still be waiting on authorization (Canva often is), or
+  still need an account linked (Weave). The skill tells you which one and
+  the exact fix, rather than just saying nothing is connected.
+- **Once a clip is generated**, the skill downloads it to a local file
+  right away, because generator links usually expire. That file is what
+  `--platform youtube` uploads. For Instagram or TikTok, re-host it on a
+  URL you control before posting: TikTok only fetches from a domain
+  verified for your own app.
+- **If none of these is connected**, the skill still produces the full script
   and per-platform package, and recommends current free tools to actually
   make the video yourself — **CapCut** is the most confident
   recommendation (genuinely free, no watermark on exports, built for

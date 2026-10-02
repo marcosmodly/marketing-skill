@@ -93,10 +93,26 @@ follows.
      (Customize → Connectors → Add custom connector, using Higgsfield's own
      MCP server URL from their account) rather than guessing at a tool name
      that isn't there.
+   - **Figma Weave:** the Figma connector's `weave_*` tools are easy to miss
+     because their names don't say "video," but `weave_find_model` looks up
+     a named AI model (e.g. "veo 3") and `weave_run_model` runs it, video
+     models included. Same credit rule as Higgsfield — running spends the
+     user's own Weave credits, and `weave_run_model` returns a cost quote
+     first, so show that quote and get an explicit yes before running it;
+     output arrives by polling `weave_get_model_run_output`. It also needs
+     the user's Figma account linked to Weave (in Weave's own profile
+     settings) before any of it works.
    - **Canva or any other connected visual-gen tool:** check the same way
      (per this plugin's existing "Connecting a visual-generation tool"
      README section) — if present, it's also a real option for generating
      or assembling the video.
+   - **Listed but not usable yet:** a tool can show up this session and
+     still not work — a connector waiting on authorization (Canva commonly
+     is), or a call that comes back saying an account isn't linked (Weave
+     does this until the Figma account is linked). Treat that as not
+     connected for this run, but tell the user the exact fix the tool or
+     session reported, rather than either retrying it or reporting "no
+     tool connected" as if there were nothing to set up.
    - **If nothing is connected:** say so plainly and recommend current free
      options instead of blocking on a connector. As of this writing,
      **CapCut** is the most confident recommendation — a genuinely free
@@ -159,7 +175,17 @@ follows.
    connected tool and the user opted in to generating now, do so, and
    report honestly whether generation actually happened — never claim a
    video was generated if no tool call actually happened, the same rule
-   `visual-brief-generator` follows.
+   `visual-brief-generator` follows. If it did, treat the output link as
+   temporary: generators typically return a short-lived download URL on
+   their own domain, so download the clip to a local file straight away
+   (that file is what YouTube's direct-post option uploads) and say in
+   Generation Status where it was saved. Don't pass the generator's URL
+   to Instagram or TikTok as the `--video-url` — it can expire before the
+   platform fetches it, and TikTok only fetches from a domain verified for
+   the user's own app — re-host it somewhere the user controls first.
+   Most models also cap a single generation well under 30 seconds, so a
+   30–45-second script usually means several clips stitched together in
+   an editor (CapCut works for this too).
 
 7. **Hand off.** Note the concrete next step for getting this posted:
    - **Manual (the default, always available):** generate or edit the
@@ -272,9 +298,10 @@ aspect ratio/length reminder.
 
 ### Generation Status
 State plainly whether an actual video was generated this run, via which
-tool, or that none was connected/used and this script/package is the
-deliverable — plus which free tool was recommended if nothing was
-connected.
+tool, and where the downloaded file was saved — or that none was
+connected/used and this script/package is the deliverable, plus which
+free tool was recommended if nothing was connected, and the exact setup
+fix for any tool that was listed but not usable yet (step 3).
 
 ### Next Step
 Manual posting instructions (copy caption + hashtags, post at the
