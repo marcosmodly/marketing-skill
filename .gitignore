@@ -9,3 +9,5 @@ state/videos/assets/*
 !state/videos/assets/CREDITS.md
 !state/videos/assets/credits.json
 .media-cache/
+slides/
+scripts/video/check-report/

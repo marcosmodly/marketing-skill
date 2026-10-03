@@ -14,9 +14,16 @@
  * Usage:
  *   node render.js <page.html> <out.mp4> [--duration 24] [--fps 30] [--silent]
  *   node render.js <page.html> --stills 1.5,6,12 [--outdir dir]   # preview PNGs (default: stills/ next to the page)
+ *   node render.js <page.html> --slides [--outdir dir]             # each scene's settled frame as a PNG, for
+ *                                                                   # TikTok photo mode / Instagram carousels
+ *   node render.js <page.html> --check                             # layout lint over the whole timeline only
  *   node render.js <page.html> <out.m4a> --audio-only              # just the soundtrack, in seconds
  *   node render.js --sample <genre> <out.m4a> [--motif "1 3 5 6 | 5 3 2 -"] [--key C] [--mode major]
  *                  [--bpm 118] [--energy 3] [--duration 12]          # audition a sound with no page at all
+ *
+ * Every run lints the layout: text outside the platforms' safe zone,
+ * overflowing or clipped, or colliding with other text is reported with its
+ * time, which is how copy that runs long gets caught.
  *
  * Needs: Node 18+, ffmpeg (with libx264 and aac) on PATH, and Playwright
  * (`npm install` in this folder, then `npx playwright install chromium`, or
@@ -58,6 +65,8 @@ function parseArgs(argv) {
     const a = argv[i];
     if (a === '--silent') args.silent = true;
     else if (a === '--audio-only') args.audioOnly = true;
+    else if (a === '--check') args.check = true;
+    else if (a === '--slides') args.slides = true;
     else if (['--duration', '--fps', '--stills', '--outdir', '--sample', '--motif', '--key', '--mode', '--bpm', '--energy'].includes(a)) args[a.slice(2)] = argv[++i];
     else if (a === '-h' || a === '--help') args.help = true;
     else args.positional.push(a);
@@ -91,6 +100,56 @@ async function launchBrowser(chromium) {
       fail(`Couldn't start a browser: ${e.message.split('\n')[0]}\nRun \`npx playwright install chromium\` in scripts/video, or install Google Chrome.`);
     }
   }
+}
+
+// Web fonts (Google Fonts) are fetched by Node and cached, not by the browser: renders then
+// work offline after the first run, and behind proxies the bundled Chromium doesn't trust.
+const FONT_HOSTS = /^https:\/\/fonts\.(googleapis|gstatic)\.com\//;
+const FONT_CACHE = path.join(os.homedir(), '.cache', 'marketing-skill', 'fonts');
+
+async function routeFonts(page) {
+  await page.route(FONT_HOSTS, async (route) => {
+    const url = route.request().url();
+    const file = path.join(FONT_CACHE, crypto.createHash('sha1').update(url).digest('hex'));
+    try {
+      if (!fs.existsSync(file)) {
+        const res = await fetch(url, { headers: { 'user-agent': route.request().headers()['user-agent'] } });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const body = Buffer.from(await res.arrayBuffer());
+        fs.mkdirSync(FONT_CACHE, { recursive: true });
+        fs.writeFileSync(`${file}.type`, res.headers.get('content-type') || 'application/octet-stream');
+        fs.writeFileSync(file, body);
+      }
+      await route.fulfill({
+        body: fs.readFileSync(file),
+        contentType: fs.readFileSync(`${file}.type`, 'utf8'),
+        headers: { 'access-control-allow-origin': '*' },
+      });
+    } catch {
+      await route.continue();
+    }
+  });
+}
+
+// Opens a page at the frame size with its fonts loaded. Returns the page and any fonts that
+// failed, since a fallback font changes every line break the layout lint checks.
+async function openPage(browser, pagePath) {
+  const page = await browser.newPage({ viewport: { width: WIDTH, height: HEIGHT }, deviceScaleFactor: 1 });
+  await routeFonts(page);
+  await page.goto('file://' + path.resolve(pagePath), { waitUntil: 'networkidle' });
+  await page.evaluate(() => document.fonts.ready);
+  const failed = await page.evaluate(() => {
+    const out = new Set();
+    for (const f of document.fonts) if (f.status === 'error') out.add(f.family.replace(/"/g, ''));
+    for (const l of document.querySelectorAll('link[rel="stylesheet"]')) {
+      if (/fonts\.googleapis\.com/.test(l.href) && ![...document.fonts].length) out.add('Google Fonts stylesheet');
+    }
+    return [...out];
+  });
+  const problems = failed.length
+    ? [`web fonts didn't load (${failed.join(', ')}), so text uses a fallback font; connect to the internet once so they cache`]
+    : [];
+  return { page, problems };
 }
 
 function requireFfmpeg() {
@@ -156,7 +215,10 @@ function meanLuma(file) {
 // Images are decoded up front. Returns problems to warn about.
 async function prepareMedia(page) {
   const problems = [];
-  const videos = await page.evaluate(() => [...document.querySelectorAll('video')].map((v) => v.currentSrc || v.src || v.querySelector('source')?.src || ''));
+  const videos = await page.evaluate(() => [...document.querySelectorAll('video')].map((v, i) => {
+    v.dataset.renderIndex = String(i);
+    return v.currentSrc || v.src || v.querySelector('source')?.src || '';
+  }));
   const cacheDir = path.join(os.tmpdir(), 'render-video-cache');
   if (videos.length && !hasFfmpeg()) {
     problems.push('ffmpeg is needed to render background videos; they will be blank');
@@ -184,17 +246,16 @@ async function prepareMedia(page) {
       fs.writeFileSync(path.join(dir, 'done'), '');
     }
     const count = fs.readdirSync(dir).filter((f) => f.endsWith('.jpg')).length;
-    // the index of this video among the ones not yet swapped is always 0, since earlier ones are now <img>s
-    await page.evaluate(([framesUrl, n]) => {
-      const v = document.querySelector('video');
+    await page.evaluate(([index, framesUrl, n]) => {
+      const v = document.querySelector(`video[data-render-index="${index}"]`);
       const img = document.createElement('img');
-      for (const { name, value } of v.attributes) if (!['src', 'autoplay', 'loop', 'muted', 'controls', 'playsinline', 'preload'].includes(name)) img.setAttribute(name, value);
+      for (const { name, value } of v.attributes) if (!['src', 'autoplay', 'loop', 'muted', 'controls', 'playsinline', 'preload', 'data-render-index'].includes(name)) img.setAttribute(name, value);
       img.dataset.frames = framesUrl;
       img.dataset.count = String(n);
       img.src = `${framesUrl}/00001.jpg`;
       img.alt = '';
       v.replaceWith(img);
-    }, [pathToFileURL(dir).href, count]);
+    }, [i, pathToFileURL(dir).href, count]);
   }
   // Darken each background just enough for white text: brighter media gets a heavier --shade,
   // unless the page set one on the slot itself.
@@ -221,6 +282,144 @@ async function prepareMedia(page) {
     else if (img.bg && (img.w < 1080 || img.h < 1920)) problems.push(`background ${img.src} is ${img.w}x${img.h}, under 1080x1920; it will look soft`);
   }
   return problems;
+}
+
+// Platform UI covers the top ~150px (tabs), the bottom ~470px (caption, sound), and the
+// right ~120px (like/comment/share); text has to stay clear of all three.
+const SAFE_ZONE = { left: 60, right: 960, top: 150, bottom: 1450 };
+
+// Checks every visible, settled text element at the current moment: inside the safe zone,
+// not overflowing its own box, not clipped by an overflow:hidden ancestor, and not
+// colliding with other text. Text mid-animation is skipped, since it's moving on purpose.
+// Add data-lint="off" to an element to exempt it and everything inside it.
+async function lintLayout(page, seconds) {
+  return page.evaluate(([t, safe]) => {
+    const problems = [];
+    const moving = (el) => {
+      for (let e = el; e; e = e.parentElement) {
+        for (const a of e.getAnimations()) {
+          const c = a.effect.getComputedTiming();
+          if (c.activeDuration === Infinity || c.localTime === null) continue;
+          if (c.localTime > c.delay && c.localTime < c.delay + c.activeDuration) return true;
+        }
+      }
+      return false;
+    };
+    const opacity = (el) => {
+      let o = 1;
+      for (let e = el; e && e !== document.documentElement; e = e.parentElement) {
+        const cs = getComputedStyle(e);
+        if (cs.display === 'none' || cs.visibility === 'hidden') return 0;
+        o *= parseFloat(cs.opacity);
+      }
+      return o;
+    };
+    const snippet = (el) => el.textContent.trim().replace(/\s+/g, ' ').slice(0, 48);
+    const texts = [];
+    for (const el of document.body.querySelectorAll('*')) {
+      if (el.closest('.bg, .bg-media, [data-lint="off"], script, style')) continue;
+      if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+      if (opacity(el) < 0.5 || moving(el)) continue;
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const rects = [...range.getClientRects()].filter((r) => r.width > 1 && r.height > 1);
+      if (!rects.length) continue;
+      const box = {
+        left: Math.min(...rects.map((r) => r.left)), right: Math.max(...rects.map((r) => r.right)),
+        top: Math.min(...rects.map((r) => r.top)), bottom: Math.max(...rects.map((r) => r.bottom)),
+      };
+      // glyph boxes of display type with a tight line-height reach past the line box by design,
+      // so vertical checks allow a third of the font size
+      const slack = Math.max(4, 0.35 * parseFloat(getComputedStyle(el).fontSize));
+      texts.push({ el, box, slack, rects });
+      if (box.left < safe.left - 2 || box.right > safe.right + 2 || box.top < safe.top - slack || box.bottom > safe.bottom + slack) {
+        problems.push({ t, kind: 'outside the safe zone', text: snippet(el),
+          detail: `x ${Math.round(box.left)}-${Math.round(box.right)}, y ${Math.round(box.top)}-${Math.round(box.bottom)}` });
+      }
+      const own = el.getBoundingClientRect();
+      if (box.right > own.right + 4 || box.left < own.left - 4 || box.bottom > own.bottom + slack) {
+        problems.push({ t, kind: 'overflows its box', text: snippet(el) });
+      }
+      for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+        const cs = getComputedStyle(a);
+        if (cs.overflow === 'visible' && cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
+        const r = a.getBoundingClientRect();
+        if (box.left < r.left - 2 || box.right > r.right + 2 || box.top < r.top - slack || box.bottom > r.bottom + slack) {
+          problems.push({ t, kind: 'clipped by its container', text: snippet(el) });
+          break;
+        }
+      }
+    }
+    // text running into a box it isn't part of (a card, phone frame, image, bubble)
+    const boxes = [];
+    for (const el of document.body.querySelectorAll('*')) {
+      if (el.closest('.bg, .bg-media, .glow, [data-lint="off"], script, style')) continue;
+      const cs = getComputedStyle(el);
+      const filled = (cs.backgroundColor && !/rgba\(.*,\s*0(\.0*)?\)$|transparent/.test(cs.backgroundColor)) || cs.backgroundImage !== 'none';
+      const bordered = ['Top', 'Right', 'Bottom', 'Left'].some((side) => parseFloat(cs[`border${side}Width`]) > 0 && !/rgba\(.*,\s*0(\.0*)?\)$|transparent/.test(cs[`border${side}Color`]));
+      if (!(filled || bordered || el.tagName === 'IMG')) continue;
+      if (opacity(el) < 0.5 || moving(el)) continue;
+      boxes.push({ el, r: el.getBoundingClientRect() });
+    }
+    // checked line by line: one covered line is a problem however wide the paragraph is
+    for (const t0 of texts) {
+      const hit = boxes.find((b) => !b.el.contains(t0.el) && !t0.el.contains(b.el) && t0.rects.some((line) => {
+        const w = Math.min(line.right, b.r.right) - Math.max(line.left, b.r.left);
+        const h = Math.min(line.bottom - t0.slack / 2, b.r.bottom) - Math.max(line.top + t0.slack / 2, b.r.top);
+        return w > 30 && h > 6;
+      }));
+      if (hit) problems.push({ t, kind: 'runs into another element', text: snippet(t0.el), detail: `<${hit.el.tagName.toLowerCase()} class="${hit.el.className}">` });
+    }
+
+    for (let i = 0; i < texts.length; i++) {
+      for (let j = i + 1; j < texts.length; j++) {
+        const a = texts[i];
+        const b = texts[j];
+        if (a.el.contains(b.el) || b.el.contains(a.el)) continue;
+        const w = Math.min(a.box.right, b.box.right) - Math.max(a.box.left, b.box.left);
+        const h = Math.min(a.box.bottom - a.slack / 2, b.box.bottom - b.slack / 2) - Math.max(a.box.top + a.slack / 2, b.box.top + b.slack / 2);
+        if (w <= 0 || h <= 0) continue;
+        const smaller = Math.min((a.box.right - a.box.left) * (a.box.bottom - a.box.top), (b.box.right - b.box.left) * (b.box.bottom - b.box.top));
+        if (w * h > 0.2 * smaller) problems.push({ t, kind: 'overlaps other text', text: `${snippet(a.el)} / ${snippet(b.el)}` });
+      }
+    }
+    return problems;
+  }, [seconds, SAFE_ZONE]);
+}
+
+// Lints the page every `step` seconds, and returns each problem once (at its first time).
+async function lintTimeline(page, duration, step = 0.25) {
+  const seen = new Map();
+  for (let t = 0; t <= duration + 1e-6; t += step) {
+    await seek(page, Math.min(t, duration - 0.01));
+    for (const p of await lintLayout(page, Math.min(t, duration - 0.01))) {
+      const key = `${p.kind}|${p.text}`;
+      if (!seen.has(key)) seen.set(key, p);
+    }
+  }
+  return [...seen.values()];
+}
+
+const describeLint = (p) => `${p.t.toFixed(2)}s: "${p.text}" ${p.kind}${p.detail ? ` (${p.detail})` : ''}`;
+
+// The settled moment of each scene, just before it leaves: one per .scene, .gone, or .swap exit,
+// plus the end. <body data-slides="2.6,6.8,..."> overrides. Used for --slides and check.js.
+async function slideTimes(page, duration) {
+  return page.evaluate((d) => {
+    if (document.body.dataset.slides) return document.body.dataset.slides.split(',').map(Number).filter((n) => n >= 0 && n <= d);
+    const toSeconds = (v) => {
+      v = (v || '').trim();
+      return v.endsWith('ms') ? parseFloat(v) / 1000 : parseFloat(v);
+    };
+    const outs = new Set();
+    for (const el of document.querySelectorAll('.scene, .gone, .swap')) {
+      const out = toSeconds(el.style.getPropertyValue('--out'));
+      if (out > 0 && out < d) outs.add(Math.round((out - 0.15) * 100) / 100);
+    }
+    outs.add(Math.round((d - 0.2) * 100) / 100);
+    // exits within 0.3s of each other are the same moment (an item leaving with its scene)
+    return [...outs].sort((a, b) => a - b).filter((t, i, all) => i === all.length - 1 || all[i + 1] - t > 0.3);
+  }, duration);
 }
 
 // Settings from <body data-*>, and sound cues from every [data-sfx] element.
@@ -406,38 +605,62 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.sample) return sample(args);
   const [pagePath, outPath] = args.positional;
-  if (args.help || !pagePath || (!outPath && !args.stills)) {
+  if (args.help || !pagePath || (!outPath && !args.stills && !args.check && !args.slides)) {
     console.log(fs.readFileSync(__filename, 'utf8').split('*/')[0].replace(/^[\s\S]*?\/\*/, '').replace(/^ \* ?/gm, ''));
     process.exit(args.help ? 0 : 2);
   }
   if (!fs.existsSync(pagePath)) fail(`No page found at ${pagePath}`);
-  if (!args.stills) requireFfmpeg();
+  if (!args.stills && !args.check && !args.slides) requireFfmpeg();
 
   const { chromium } = loadPlaywright();
   const browser = await launchBrowser(chromium);
-  const page = await browser.newPage({ viewport: { width: WIDTH, height: HEIGHT }, deviceScaleFactor: 1 });
-  await page.goto('file://' + path.resolve(pagePath), { waitUntil: 'networkidle' });
-  await page.evaluate(() => document.fonts.ready);
+  const { page, problems: fontProblems } = await openPage(browser, pagePath);
   const mediaProblems = await prepareMedia(page);
   const settings = await readPage(page);
-  settings.problems.push(...mediaProblems, ...checkMusic(settings));
+  settings.problems.push(...fontProblems, ...mediaProblems, ...checkMusic(settings));
   for (const p of settings.problems) console.warn(`Warning: ${p}`);
 
   if (args.stills) {
     const outdir = args.outdir || path.join(path.dirname(path.resolve(pagePath)), 'stills');
     fs.mkdirSync(outdir, { recursive: true });
+    const lint = [];
     for (const t of args.stills.split(',').map(Number)) {
       await seek(page, t);
+      lint.push(...await lintLayout(page, t));
       const file = path.join(outdir, `still_${t.toFixed(2)}s.png`);
       await page.screenshot({ path: file });
       console.log(file);
     }
+    for (const p of lint) console.warn(`Layout: ${describeLint(p)}`);
     await browser.close();
     return;
   }
 
   const duration = Number(args.duration || settings.duration);
   if (!(duration > 0)) fail('Set the length with <body data-duration="24"> on the page, or pass --duration.');
+  if (args.check) {
+    const lint = await lintTimeline(page, duration);
+    await browser.close();
+    for (const p of lint) console.warn(`Layout: ${describeLint(p)}`);
+    console.log(lint.length ? `${lint.length} layout problem(s) in ${pagePath}` : `No layout problems in ${pagePath}`);
+    process.exit(lint.length || settings.problems.length ? 1 : 0);
+  }
+  if (args.slides) {
+    const outdir = args.outdir || path.join(path.dirname(path.resolve(pagePath)), 'slides');
+    fs.mkdirSync(outdir, { recursive: true });
+    const lint = [];
+    const times = await slideTimes(page, duration);
+    for (let i = 0; i < times.length; i++) {
+      await seek(page, times[i]);
+      lint.push(...await lintLayout(page, times[i]));
+      const file = path.join(outdir, `slide_${String(i + 1).padStart(2, '0')}.png`);
+      await page.screenshot({ path: file });
+      console.log(file);
+    }
+    for (const p of lint) console.warn(`Layout: ${describeLint(p)}`);
+    await browser.close();
+    return;
+  }
   if (args.audioOnly) {
     await browser.close();
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'render-'));
@@ -455,8 +678,12 @@ async function main() {
     '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-r', String(fps),
     '-movflags', '+faststart', videoOnly], { stdio: ['pipe', 'inherit', 'inherit'] });
   const encoded = new Promise((resolve) => encoder.on('close', resolve));
+  const lintSeen = new Map();
   for (let i = 0; i < frames; i++) {
     await seek(page, i / fps);
+    if (i % 8 === 0) {
+      for (const p of await lintLayout(page, i / fps)) if (!lintSeen.has(`${p.kind}|${p.text}`)) lintSeen.set(`${p.kind}|${p.text}`, p);
+    }
     const png = await page.screenshot({ type: 'png' });
     if (!encoder.stdin.write(png)) await new Promise((r) => encoder.stdin.once('drain', r));
     if (i % fps === 0) process.stderr.write(`\rframe ${i}/${frames}`);
@@ -470,6 +697,7 @@ async function main() {
   if (args.silent) muxSilence(videoOnly, outPath);
   else ({ audio } = writeSoundtrack(settings, duration, tmp, videoOnly, outPath));
   fs.rmSync(tmp, { recursive: true, force: true });
+  for (const p of lintSeen.values()) console.warn(`Layout: ${describeLint(p)}`);
   console.log(`Wrote ${outPath}: ${WIDTH}x${HEIGHT}, ${duration}s at ${fps}fps, ${audio}`);
 }
 
@@ -480,4 +708,7 @@ if (require.main === module) {
   });
 }
 
-module.exports = { measureAudio, muxSoundtrack };
+module.exports = {
+  WIDTH, HEIGHT, loadPlaywright, launchBrowser, openPage, prepareMedia, readPage, checkMusic, seek,
+  lintLayout, lintTimeline, describeLint, slideTimes, writeSoundtrack, measureAudio, muxSoundtrack,
+};

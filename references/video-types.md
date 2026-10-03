@@ -29,7 +29,7 @@ Template names refer to `scripts/video/templates/`.
 
 | Goal | Start with |
 |---|---|
-| Get discovered / build awareness | Ad, educational tips, brand profile, social/trend |
+| Get discovered / build awareness | Ad, educational tips, brand profile, social/trend (`fyp-formats.md`) |
 | Explain what you do | Explainer, product demo, how-to |
 | Answer objections | FAQ, myth vs fact, comparison |
 | Build trust before a purchase | Testimonial, case study, UGC, meet the team |
@@ -155,10 +155,10 @@ and has to work with the sound off.
 - **Made by:** Film.
 - **Beats:** a time-stamped hook ("6:45am, first call with a customer") → four to six moments with on-screen times → a takeaway line.
 
-### Social / trend
-- **Goal:** reach; ride a format the platform is already pushing.
-- **Made by:** usually Film. Render works for text-led formats ("POV:", "Things nobody tells you about X").
-- **Beats:** the trend's own structure. Check that the trend is still current before making it; this plugin can't look trends up live.
+### Social / trend (everyday posts)
+- **Goal:** reach and engagement; the memeable, comment-driven posts that fill a feed between campaigns.
+- **Made by:** Render, from 22 templates for the formats that last (POV, nobody / me, expectation vs reality, tier list, this or that, hot take, text-message skit, notifications, storytime, top-5 countdown, and more). Film for a dance or a trend that needs people on camera.
+- **Beats:** each format's own, in `fyp-formats.md`, which also covers the weekly mix, rotating formats, and writing the copy in the brand's voice. A trend that's peaking this week is checked in the app before making it; this plugin can't see trends live.
 
 ## Backgrounds and sound by type (for local renders)
 
@@ -175,6 +175,7 @@ project's sonic identity in `brand-voice.md` (see `sound-guide.md`).
 | Testimonial, case study, interview pull-quote | The customer's own photo; otherwise a blurred ambient setting | `calm`, in the identity's key and hook |
 | Meet the team | The team's own photos; their real workspace if supplied, otherwise blurred ambient | The identity, or `calm` |
 | Brand story (text-led) | Wide, atmospheric settings | The identity |
+| Social / trend (everyday posts) | The moment itself (a desk, a coffee, a commute); the person's own clips for day in the life | The format's genre, in the identity's key and hook (`sound-guide.md`) |
 
 Stock and AI images set the scene; they never stand in for a customer, a
 team member, the product, or a result.

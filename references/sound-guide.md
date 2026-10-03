@@ -9,7 +9,7 @@ the way a jingle works.
 
 ## The genres
 
-The renderer composes original music in eight genres (`<body data-music>`).
+The renderer composes original music in eleven genres (`<body data-music>`).
 
 | Genre | What it sounds like | Tempo (default) | Mode | Fits |
 |---|---|---|---|---|
@@ -21,6 +21,9 @@ The renderer composes original music in eight genres (`<body data-music>`).
 | `tech` | Clean arpeggios, steady kick, an electric-piano lead | 105–120 (112) | major | B2B SaaS, developer tools, fintech, productivity, explainers |
 | `lofi` | Dusty electric piano, swung boom-bap drums, vinyl crackle | 75–90 (84) | minor | Study and productivity, creators, coffee and cozy brands |
 | `calm` | Soft keys and pad, a held bass, light shaker, a bell lead | 80–96 (88) | major | Testimonials, healthcare, finance, team intros, sensitive topics |
+| `phonk` | Cowbell hook, distorted 808 slides, hard hats with rolls, dark strings | 130–150 (140) | minor | Gen Z and Gen Alpha feeds, gaming, cars, fitness, meme edits |
+| `jersey` | Jersey club's bouncing kick, chopped synth stabs, tom fills | 135–145 (140) | minor | Dance and trend formats, fashion, beauty, nightlife, Gen Z |
+| `funk` | Brazilian funk's tamborzão groove, booming 808, synth stabs, cowbell | 125–135 (130) | minor | High-energy trend formats, sports, streetwear, Gen Z and Alpha |
 
 `data-music="none"` keeps only the sound effects.
 
@@ -32,6 +35,7 @@ the project's README) and match them:
 | Signal in the project | Leans toward |
 |---|---|
 | Young, trend-driven audience (Gen Z, gaming, streetwear) | `hiphop` or `house`, energy 4 |
+| Very online Gen Z or Gen Alpha audience, memes welcome in the voice | `phonk`, `jersey`, or `funk`, energy 4 |
 | Broad consumer audience, playful or upbeat tone | `pop`, energy 3–4 |
 | Professional or technical buyers, "confident, plain-spoken" tone | `tech`, energy 3 |
 | Warm, human, local, or handmade | `acoustic`, energy 2–3 |
@@ -90,6 +94,9 @@ A library to start from (each genre's default is marked):
 | `1 5 3 5 \| 6 5 3 2` | Busy, optimistic (`tech` default) |
 | `3 . 1 5, \| 1 - . .` | Lazy, nostalgic (`lofi` default) |
 | `5 3 2 1 \| 2 - 1 -` | Gentle, reassuring (`calm` default) |
+| `1 1 3 1 \| 4 3 1 5,` | Menacing, chant-like (`phonk` default) |
+| `1 . 1 3 \| 5 . 4 3` | Bouncy, call-and-response (`jersey` default) |
+| `1 3 1 . \| 5, 1 3 .` | Punchy, stop-start (`funk` default) |
 | `1 1 5 5 \| 6 6 5 -` | Playful, sing-song (kids, games) |
 | `5 6 5 3 \| 2 3 1 -` | Confident, jingle-like (retail, food) |
 | `3 5 6 1' \| 6 5 3 -` | Soaring, aspirational (education, travel) |
@@ -97,6 +104,49 @@ A library to start from (each genre's default is marked):
 
 Write your own if none fits. The renderer warns and falls back to the
 genre's default if a hook can't be read.
+
+## Everyday and FYP posts
+
+The everyday formats in `fyp-formats.md` (POV, tier lists, text skits) each
+suggest a genre that suits the format: `phonk` under a "nobody: / me:"
+reveal, `lofi` under a text-message skit. They can borrow that genre, but
+keep the identity's **key and hook**, so the sonic logo at the end still
+sounds like the brand. Stay inside what the brand voice allows: a
+trust-first brand keeps `calm`, `lofi`, or `acoustic` even on a meme
+format, and `phonk`, `jersey`, and `funk` only suit a voice that already
+welcomes memes.
+
+## Sound effects
+
+`data-sfx` cues place these on the page's own timing. All are synthesized
+originals, so there's nothing to license.
+
+| Sound | What it is | Use it for |
+|---|---|---|
+| `pop` | A short note that climbs the chord when cues land close together | Words or items appearing |
+| `swish` | A quick airy sweep | A card or caption sliding in |
+| `whoosh` | A longer sweep | Scene changes, a wipe |
+| `tick` | A tick that climbs a scale across a run | Checklists, timers counting down |
+| `click` | A UI click | A tap or button press |
+| `chime` | Two bell notes in the project's key | A done moment, a soft CTA |
+| `ding` | A clean bell | A right answer, a green flag, an S-tier pick |
+| `buzzer` | A game-show buzzer | A wrong answer, a red flag, a D-tier pick |
+| `boom` | A deep impact with a reverb tail | The punchline, a reveal, a 10/10 |
+| `bass` | A sub drop | Under a big moment, with or instead of `boom` |
+| `scratch` | A record scratch | The turn in expectation vs reality, "wait, what?" |
+| `horn` | An air horn | A hot take, a hype moment; use sparingly |
+| `rimshot` | Ba-dum-tss | The joke's last line |
+| `fail` | A sad-trombone slide down four notes (about 2s) | A plan going wrong |
+| `drumroll` | A 1.5s snare roll | Before a reveal: cue it 1.5s before the hit |
+| `ping` | A message notification | Chat bubbles, notifications, comments |
+| `typing` | A few keyboard taps | Text being typed, renamed, or edited |
+| `shutter` | A camera shutter | Timestamps in a day-in-the-life, photo dumps |
+| `cash` | A ka-ching | Getting paid, a sale, a price |
+| `glitch` | A digital stutter | An error, a crash, a "system overload" bit |
+
+One or two meme cues per video is plenty; the rest should be the quiet
+ones (`pop`, `swish`, `tick`). Every cue is mixed under the music, and the
+whole mix lands at about -14 LUFS, so a cue never jumps out of a feed.
 
 ## Licensed tracks instead
 

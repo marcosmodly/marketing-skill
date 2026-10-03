@@ -40,9 +40,11 @@ posts or sends without your explicit approval.
 - **Short-form video:** hook-first scripts plus caption, hashtags, and
   best time to post for TikTok, Instagram Reels, and YouTube Shorts,
   shaped to the right type of marketing video (how-to, testimonial,
-  launch, FAQ, and more). Also the finished vertical video itself,
-  rendered on your machine: animated text over stock or AI backgrounds,
-  with music composed in your brand's own sound.
+  launch, FAQ, and more) or to an everyday FYP format (POV, tier list,
+  text-message skit, storytime, hot take, and 17 more). Also the finished
+  vertical video itself, rendered on your machine: animated text over
+  stock or AI backgrounds, with music composed in your brand's own sound
+  and meme sound effects.
 - **Community posts:** Reddit, Product Hunt, Hacker News (Show HN), Indie
   Hackers, dev.to, Discord, Slack, and Telegram posts written to each
   community's actual rules, with a Go/No-Go before drafting.
@@ -69,7 +71,7 @@ anything actually publishes.
 | `email-sequence` | "email sequence," "drip campaign," "welcome series" | A multi-email sequence with send timing, subject lines, and a real narrative arc across emails |
 | `email-outreach` | "cold outreach," "prospecting emails," "daily sales outreach," "personalized cold email to [name]" | Researches real prospects against a defined ICP (public-web research by default; a connected prospecting tool only if you ask for verified contact details), checks each one against a permanent contact log so nobody's contacted twice — or ever again once unsubscribed/replied — drafts a genuinely personalized email per prospect, re-confirms strategy monthly, and queues everything for approval (or drafts directly in Gmail if connected); never sends |
 | `visual-brief-generator` | "visual brief," "video brief," "shot list," "image prompts for X" | A structured shot list, per-scene prompts, aspect ratios, and style guide; generates the actual asset only if a visual-gen tool is connected |
-| `short-form-video` | "TikTok video," "Instagram Reel script," "YouTube Short," "short-form/vertical video for..." | A hook-first script/shot list plus a ready-to-post package per platform (YouTube Shorts/Instagram Reels/TikTok) — title/caption, sized hashtags, and a best-time-to-post window, shaped to one of 23 marketing video types (testimonial, how-to, announcement, and so on); if you opt in, makes the actual video too, either with a connected tool (Higgsfield, Figma Weave, Canva, or similar) or by rendering it locally (`scripts/video/`): animated text over stock or AI backgrounds, with music in the project's own saved sound; otherwise points to current free tools |
+| `short-form-video` | "TikTok video," "Instagram Reel script," "YouTube Short," "short-form/vertical video for..." | A hook-first script/shot list plus a ready-to-post package per platform (YouTube Shorts/Instagram Reels/TikTok) — title/caption, sized hashtags, and a best-time-to-post window, shaped to one of 23 marketing video types (testimonial, how-to, announcement, and so on) or 22 everyday FYP formats (POV, tier list, text-message skit, storytime, and so on); if you opt in, makes the actual video too, either with a connected tool (Higgsfield, Figma Weave, Canva, or similar) or by rendering it locally (`scripts/video/`): animated text over stock or AI backgrounds, with music in the project's own saved sound; otherwise points to current free tools |
 | `community-post-generator` | "post this to r/[subreddit]," "help me post on Product Hunt," "write a Show HN/Show IH for this," "post this on dev.to," "post this in our Discord/Slack/Telegram" | Live-researches that specific subreddit's, Product Hunt's, Hacker News's, Indie Hackers', dev.to's, or a public Telegram channel's/group's actual rules and typical post style first (verifying each source is actually about that target, not a similarly-named one); for Discord, Slack, and private Telegram targets, asks you for the rules instead, since it can't research those. Gives a plain Go/No-Go either way, and only drafts a post (shaped for that platform — title+body, title+URL+first comment for Show HN, dev.to's title+body+tags, or a single chat message in Discord's, Slack's, or Telegram's own formatting for the chat platforms) if it's actually welcome there, written to read like a person wrote it |
 | `publish-pipeline` | "publish this," "send to n8n/Make," "fire the webhook," "send the queued post for [date]" | Packages finished content/assets into JSON and hands off to your automation via webhook (or, optionally, straight to a platform API) after showing you the exact payload |
 | `full-pipeline` | "run the full pipeline," "research X and publish it," "do the whole thing end to end" | Chains research, repurposing, visual brief, and publish into one run, with a mandatory pause before anything actually publishes |
@@ -710,12 +712,27 @@ Openverse photos are available (no video clips).
 
 ```
 node render.js templates/promo.html out.mp4             # full render, ~2 minutes for 24s
-node render.js templates/promo.html --stills 1.5,6,12   # preview frames as PNGs first
+node render.js templates/promo.html --check             # lint the layout over the whole timeline, in seconds
+node render.js templates/promo.html --slides            # each scene's settled frame as a PNG (also a carousel)
+node render.js templates/promo.html --stills 1.5,6,12   # preview frames at chosen times
 node render.js templates/promo.html out.m4a --audio-only  # just the soundtrack, in seconds
 node render.js --sample pop out.m4a --motif "1 3 5 3 | 6 5 3 -" --key D   # audition a sound
 node render.js page.html out.mp4 --silent               # silent audio track instead of the soundtrack
 node media.js search "cozy coffee shop morning" --out assets --count 3     # stock photos (+ --type video)
+node check.js                                            # QA every template: layout, cues, fonts, loudness
 ```
+
+Every render lints its layout as it goes: text outside the area the
+platforms' buttons and captions leave clear, text spilling out of its box
+or clipped, and text running into other text or a card all get reported
+with the time they happen. That's what catches rewritten copy that runs
+long. `check.js` runs the same lint over every template (or the pages you
+name), checks every sound cue, the music settings, the fonts, and the
+loudness, and writes a report with a contact sheet per page to look over.
+
+Fonts (Inter, and TikTok Sans for everyday posts) and color emoji come from
+Google Fonts. The renderer fetches and caches them itself, so after the
+first run it works offline, and behind proxies the browser doesn't trust.
 
 ### Backgrounds
 
@@ -752,8 +769,10 @@ photos and screenshots.
 Every video gets music composed for it in your project's **sonic
 identity**: one genre, tempo, key, energy, and signature hook. It's saved
 in `references/brand-voice.md` and used for every video, so your sound
-becomes recognizable the way a jingle does. There are eight genres: `pop`,
-`house`, `hiphop`, `acoustic`, `cinematic`, `tech`, `lofi`, and `calm`.
+becomes recognizable the way a jingle does. There are eleven genres:
+`pop`, `house`, `hiphop`, `acoustic`, `cinematic`, `tech`, `lofi`, `calm`,
+and three for very online Gen Z and Gen Alpha feeds: `phonk`, `jersey`
+(jersey club), and `funk` (Brazilian funk).
 The first time you render, the skill proposes two identities that fit your
 audience and plays you a short preview of each.
 [`references/sound-guide.md`](references/sound-guide.md) explains the
@@ -766,8 +785,11 @@ How a video's soundtrack is put together:
   home on the last beat.
 - **Sound effects:** land on the moments the page marks (words popping
   in, list items, checkmarks, a button press, scene changes), in the
-  music's key.
-- **No licensing:** it's all generated from scratch, so there's nothing
+  music's key. Everyday posts also get the meme cues: a boom, a record
+  scratch, an air horn, a rimshot, a sad trombone, a drumroll, a ding and
+  a buzzer, message pings, typing, a camera shutter, a ka-ching, a glitch,
+  and a sub drop.
+- **No licensing:** it's all synthesized from scratch, so there's nothing
   to license, and it works when posting through an API, where in-app
   trending sounds can't be added.
 - **Your own track instead:** add `data-music-src="assets/track.mp3"`.
@@ -793,6 +815,36 @@ in `scripts/video/templates/`:
 | `team.html` | 18s | Meet the team, the people side of a company profile | acoustic |
 
 The skill swaps each template's default sound for your sonic identity.
+
+### Templates for everyday posts
+
+Most of a feed isn't ads. It's the memeable, comment-driven posts in
+between: POVs, tier lists, text-message skits, storytimes. There are 22
+templates for the formats that have lasted, each 10–18 seconds, written in
+TikTok's own caption style (TikTok Sans, boxed captions, stickers, and
+stamps):
+
+| Group | Templates |
+|---|---|
+| Meme captions | `pov`, `nobody-me` (nobody: / me:), `expectation-reality`, `tell-me-without`, `makes-sense` (things that just make sense), `starter-pack` |
+| Comment bait | `tier-list`, `this-or-that`, `hot-take` (with a poll), `flags` (green / red), `quiz` (guess it in 3 seconds), `rating` |
+| UI skits | `text-chat`, `notifications` (a lock screen filling up), `post-card` (likes and replies), `loading` (a stalled bar and an error) |
+| Story & everyday | `storytime` (word-by-word captions), `countdown` (top 5), `day-in-life`, `reveal` (wait for it), `before-after` (a wipe), `slideshow` (also a photo carousel) |
+
+[`references/fyp-formats.md`](references/fyp-formats.md) covers each one:
+why it gets engagement, its beats, the sound, a line of copy at a playful
+and a professional tone, and when not to use it. It also covers planning a
+week of them: about 70% evergreen formats, 20% trends, and 10%
+experiments, with no format repeated within a week. `content-calendar`
+follows that rotation. The copy follows your brand voice: lowercase,
+slang, and emoji only if `brand-voice.md` allows them.
+
+Skits are always fiction: generic roles ("client", "a friend") with emoji
+avatars, never a real person's name, post, or messages, never a real
+app's look, and never a reply praising the product. There are no
+copyrighted meme images, and the jokes are about situations and habits,
+never about groups of people. Trending sounds are added in the app when
+you post.
 Types that need real footage (behind the scenes, vlogs, UGC, on-camera
 testimonials) get a phone shot list and edit notes instead; the renderer
 doesn't fake real people or events. The testimonial and team templates
@@ -803,8 +855,9 @@ A comment at the top of `promo.html` documents how a page works: CSS
 animations timed with `animation-delay` (the renderer seeks every one
 frame by frame, so output is frame-exact on any machine), the background
 slots, the music settings on `<body>`, and `data-sfx` cues. The templates
-are built from one shared base by `templates/build.py`; edit that and run
-`python3 build.py` rather than hand-editing six copies.
+are built from one shared base by `templates/build.py` (the everyday ones
+are defined in `templates/fyp.py`); edit those and run `python3 build.py`
+rather than hand-editing 28 copies.
 
 The skill saves its pages and renders under `state/videos/`, with media in
 `state/videos/assets/`. Rendered MP4s and downloaded media are git-ignored;
@@ -891,7 +944,8 @@ references/
   brand-voice.md         # shared config every skill reads (hand-edited)
   outreach-strategy.md   # email-outreach's own config: ICP, angle, offer, cadence (hand-edited or guided setup)
   video-types.md         # 23 marketing video types: goal, short-form beats, and how each gets made (hand-editable)
-  sound-guide.md         # music genres, how to pick a project's sonic identity, a hook library, licensed tracks
+  sound-guide.md         # music genres, sound effects, how to pick a project's sonic identity, a hook library, licensed tracks
+  fyp-formats.md         # 22 everyday / FYP formats: why each works, beats, copy at two tones, weekly mix and rotation
 state/
   content-calendar.md    # calendar/history index (generated + appended to, hand-editable)
   posts/                  # one file per queued post's full content, linked from the index above
@@ -904,7 +958,8 @@ scripts/
     render.js            # animated HTML page -> vertical MP4 with an original soundtrack (needs Node, Playwright, ffmpeg)
     soundtrack.js        # the music and sound-effects synthesizer render.js uses (no dependencies)
     media.js             # finds stock photos and clips (Pexels, Pixabay, Openverse) and writes their credits
-    templates/           # one starting page per family of video types, built from templates/build.py
+    check.js             # QA pass over templates: layout lint, cues, fonts, loudness, contact sheets
+    templates/           # 6 marketing + 22 everyday starting pages, built from templates/build.py and fyp.py
 ```
 
 ## Contributors

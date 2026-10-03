@@ -1,6 +1,6 @@
 ---
 name: short-form-video
-description: "Creates ready-to-post short-form vertical video packages for TikTok, Instagram Reels, and YouTube Shorts: a hook-first script and shot list, plus a per-platform title or caption, hashtags sized to each platform's current norms, and a best-time-to-post window. If the user opts in, makes the actual video too: with a connected video-generation tool (Higgsfield, Figma Weave, Canva, or any other image/video MCP tool), or by rendering an animated-text video with an original soundtrack locally; otherwise recommends free tools such as CapCut and still delivers the full script and packages. Use when the user asks for a TikTok video, an Instagram Reel, a YouTube Short, a short-form or vertical video script, video hooks, or a viral video for social media."
+description: "Creates ready-to-post short-form vertical video packages for TikTok, Instagram Reels, and YouTube Shorts, both marketing videos (ads, explainers, how-tos, testimonials, launches) and everyday memeable FYP posts (POV, tier lists, text-message skits, storytimes, hot takes, and more): a hook-first script and shot list, plus a per-platform title or caption, hashtags sized to each platform's current norms, and a best-time-to-post window. If the user opts in, makes the actual video too: with a connected video-generation tool (Higgsfield, Figma Weave, Canva, or any other image/video MCP tool), or by rendering an animated-text video with an original soundtrack and meme sound effects locally; otherwise recommends free tools such as CapCut and still delivers the full script and packages. Use when the user asks for a TikTok video, an Instagram Reel, a YouTube Short, a short-form or vertical video script, video hooks, a meme or trend-style post, everyday content for the feed, or a viral video for social media."
 allowed-tools: Read, Grep, Glob, WebSearch, WebFetch, Write, Bash
 ---
 
@@ -57,14 +57,27 @@ follows.
      `content-repurposer`, before asking the user to describe it).
    - Which platform(s) — default to all three (YouTube Shorts, Instagram
      Reels, TikTok) unless the user names only one or two.
-   - The video type. Read `${CLAUDE_PLUGIN_ROOT}/references/video-types.md`
-     and pick the type that fits the goal (an ad, an explainer, a how-to, a
-     testimonial, an announcement, and so on). Use the type the user names
-     if they name one. If the goal doesn't settle it, offer two or three
-     fitting types with a line on each rather than picking silently. The
-     type decides the beat structure in step 4 and how the video can
-     actually get made: rendered from text, rendered with the user's real
-     assets, generated, or filmed.
+   - Marketing video or everyday post. A marketing video sells or explains
+     something (an ad, an explainer, a how-to, a testimonial, a launch). An
+     everyday post is the memeable, comment-driven content that fills most
+     of a feed between those (a POV, a tier list, a text-message skit, a
+     storytime). "Something for this week's feed", "a meme", "something
+     relatable", or a named format like "a POV" means an everyday post.
+   - The video type. For a marketing video, read
+     `${CLAUDE_PLUGIN_ROOT}/references/video-types.md`; for an everyday post,
+     read `${CLAUDE_PLUGIN_ROOT}/references/fyp-formats.md`. Pick the type or
+     format that fits the goal. Use the one the user names if they name
+     one. If the goal doesn't settle it, offer two or three fitting ones
+     with a line on each rather than picking silently. For everyday posts,
+     prefer a format the account hasn't used this week (check
+     `state/content-calendar.md` if it exists). The type decides the beat
+     structure in step 4 and how the video can actually get made: rendered
+     from text, rendered with the user's real assets, generated, or filmed.
+   - **Trends, optionally.** For an everyday post, a quick WebSearch for
+     what formats or topics are trending this week can suggest an angle.
+     Treat it as a hint only: search results lag the apps, so say it needs
+     checking in the app, and prefer an evergreen format from
+     `fyp-formats.md` with a fresh topic over a trend that may be over.
    - The real material the type needs, if any: screenshots for a demo or
      how-to; a customer's actual words, name, role, photo, and numbers for a
      testimonial or case study; team photos, names, and roles for a
@@ -78,7 +91,9 @@ follows.
    - The hook/angle and core message — what should stop the scroll in the
      first second, and what's the one thing a viewer should walk away
      knowing or feeling.
-   - Target length. Default to 30–45 seconds across all three for one
+   - Target length. Everyday posts follow their template's length (9–18
+     seconds; short loops rewatch). For marketing videos, default to 30–45
+     seconds across all three for one
      script that works everywhere, unless the user wants something
      shorter or platform-specific — if they do, note the real per-platform
      ceilings so the choice is informed: YouTube currently treats any
@@ -191,7 +206,14 @@ follows.
      run — same rule `visual-brief-generator` follows.
 
 4. **Draft the video script / shot list**, hook-first, following the
-   beats `video-types.md` gives for the chosen type:
+   beats `video-types.md` gives for the chosen type, or `fyp-formats.md`
+   for an everyday format. For an everyday post, the copy is the whole
+   joke, so write it in the brand's voice from `brand-voice.md`, following
+   "Writing the copy in the brand's voice" in `fyp-formats.md`: lowercase
+   and slang only if the voice is that casual, emoji only if its emoji rule
+   allows, banned words never, and captions short enough to read in two
+   seconds. Write two options for the key line (the punchline, the take,
+   the last bubble) when it's a close call, and let the user pick.
    - **The hook (first 1–3 seconds):** a question, a bold claim, an
      on-screen text callout, or a visual surprise — written to work with
      the sound off, since a large share of viewers decide whether to keep
@@ -209,8 +231,8 @@ follows.
    - **Audio note:** a local render (step 6) carries its own original
      soundtrack in the project's sonic identity, so it's postable as-is. For everything else, and for
      anyone who'd rather use a trending sound in-app: this skill cannot
-     look up what's trending on any platform's sounds/Discover page right
-     now, so it describes the *kind*
+     see any platform's sounds/Discover page, and a web search lags it,
+     so it describes the *kind*
      of audio that fits (e.g., "upbeat trending-style pop instrumental,"
      "voiceover only, no music," "the creator's own voice over ambient
      background") rather than naming a specific track — say this limit
@@ -251,22 +273,33 @@ follows.
 
    **Rendering locally instead** (step 3's local option, once the user
    opts in):
-   - Copy the template `video-types.md` names for the type, from
-     `${CLAUDE_PLUGIN_ROOT}/scripts/video/templates/` (`promo`, `how-to`,
-     `testimonial`, `faq`, `announcement`, or `team`), to
-     `${CLAUDE_PLUGIN_ROOT}/state/videos/<date>-<slug>.html`. Put any images
-     the user supplied in `state/videos/assets/`. Rewrite its scenes to the
-     step 4 script: one scene per beat, the hook readable
+   - Copy the template `video-types.md` or `fyp-formats.md` names, from
+     `${CLAUDE_PLUGIN_ROOT}/scripts/video/templates/`, to
+     `${CLAUDE_PLUGIN_ROOT}/state/videos/<date>-<slug>.html`. There are six
+     marketing templates (`promo`, `how-to`, `testimonial`, `faq`,
+     `announcement`, `team`) and 22 everyday ones (`pov`, `tier-list`,
+     `text-chat`, `storytime`, and the rest listed in `fyp-formats.md`).
+     Put any images the user supplied in `state/videos/assets/`. Rewrite its
+     scenes to the step 4 script: one scene per beat, the hook readable
      within the first second, and every line of text inside the `.scene`
      box (each platform's UI covers the bottom quarter and right edge).
      Keep the template's colors and type unless `brand-voice.md` says
-     otherwise.
+     otherwise. Everyday templates use TikTok Sans, the platform's own
+     caption font, and the shared pieces (captions, stickers, stamps, chat
+     and notification mockups, tier lists, polls, timers) documented at the
+     top of `promo.html`.
    - **The sound:** set the `<body>` music attributes from the Sonic
      Identity in `brand-voice.md`: `data-music`, `data-bpm`, `data-key`,
      `data-mode`, `data-energy`, `data-motif`.
      - Testimonials and sensitive topics use `data-music="calm"`, keeping
        the project's key and hook.
      - An announcement can raise energy one step.
+     - An everyday post can take its template's genre (`phonk` under a
+       "nobody: / me:", `lofi` under a text skit), keeping the identity's
+       key and hook, within what the brand voice allows (see "Everyday and
+       FYP posts" in `sound-guide.md`). Its meme cues (`scratch`, `boom`,
+       `rimshot`, `ding`, `buzzer`, and the rest) are listed there; one or
+       two per video is plenty.
      - Add `data-break="<start>-<end>"` under a quote or any moment the
        words should carry alone.
      - **No identity saved yet:** propose two from
@@ -306,12 +339,21 @@ follows.
      attributes, and each template's own comment says what to replace.
      Replace every bracketed placeholder; never ship one.
    - Preview before the full render, which takes a couple of minutes:
-     `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/render.js <page> --stills
-     <a time per beat>` writes PNGs to a `stills/` folder next to the page.
-     Look at every still and fix anything clipped, overlapping, or outside
-     the safe area, and any text that's hard to read over its background.
-     The renderer darkens bright backgrounds automatically; for a busy one,
-     add `blur` or a heavier `--shade` on the slot.
+     - `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/render.js <page> --check`
+       lints the whole timeline in seconds: text outside the safe area,
+       spilling out of its box, clipped, or running into other text or a
+       card. Fix everything it lists (usually by shortening the line) and
+       run it again until it's clean.
+     - `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/render.js <page> --slides`
+       writes each scene's settled frame as a PNG to a `slides/` folder next
+       to the page (`--stills <times>` picks the moments instead). Look at
+       every one for what a lint can't judge: legibility over the
+       background, emoji, and whether the joke reads.
+     - The renderer darkens bright backgrounds automatically; for a busy
+       one, add `blur` or a heavier `--shade` on the slot.
+     - Those `--slides` PNGs double as a photo carousel (TikTok photo mode,
+       an Instagram carousel). Offer that for `slideshow` and any list-style
+       post.
    - Render: `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/render.js <page>
      ${CLAUDE_PLUGIN_ROOT}/state/videos/<date>-<slug>.mp4`. The output is
      1080×1920, 30fps H.264 with AAC audio mixed to about −14 LUFS, which
@@ -363,6 +405,8 @@ Trigger on requests like:
 - "I need a YouTube Short for..."
 - "Give me a short-form video / vertical video script for..."
 - "Help me go viral with a video about..."
+- "Make a POV / tier list / text-message skit / storytime about..."
+- "We need something memeable / relatable for the feed this week"
 
 **Do not** trigger on a request for a long-form video brief, a static
 image brief, or a platform other than these three — that's
@@ -422,8 +466,9 @@ finalizing anything for a real campaign, the same caveat
 Use this exact section order, as Markdown `##` headings:
 
 ### Video Script
-Start with one line naming the type and how it gets made (e.g. "**Type:**
-How-to, rendered locally with your screenshots"). Then the hook (0–3s:
+Start with one line naming the type or everyday format and how it gets
+made (e.g. "**Type:** How-to, rendered locally with your screenshots" or
+"**Format:** Tier list (everyday post), rendered locally"). Then the hook (0–3s:
 visual, on-screen text, whether it works sound-off), then the
 full beat-by-beat body with timestamps, on-screen text cues, and VO/spoken
 lines where relevant, then the CTA. One script serves all requested
@@ -461,6 +506,20 @@ that applies to this run, per step 7 above.
 - Never fabricate a specific "trending sound" or claim to know current
   platform trends live — name the kind of audio that fits and point to
   checking the platform's own trending page at posting time instead.
+  Trending audio is added in the app at posting time; never put a popular
+  song in a render.
+- Skits are fiction. Chats, notifications, social posts, and replies use
+  generic roles ("client", "a friend") and emoji or animal avatars, never a
+  real person's name, handle, photo, post, or message, and never a real
+  app's look. Replies and comments in a skit never praise the product
+  (that's a fake review), and a poll shows real results or none.
+- No borrowed property in everyday posts: no copyrighted meme images,
+  characters, celebrity photos, or other brands' logos. The format is the
+  meme; the content is the brand's own.
+- Joke about situations, habits, and the work, never about people's
+  identity, appearance, health, tragedy, or politics. Starter packs, flags,
+  ratings, and tier lists are about roles, behaviors, and things, never
+  groups of people or competitors.
 - Never present the posting-time guidance as this account's own data —
   always label it as general benchmark guidance and note that the
   account's own analytics should override it once available.

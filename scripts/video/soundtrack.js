@@ -1,15 +1,16 @@
 'use strict';
 /*
  * Synthesizes an original soundtrack for a rendered video: music in one of
- * eight genres, built around the project's signature hook, plus sound effects
- * placed on the page's own animation cues. It's all generated from scratch
+ * eleven genres, built around the project's signature hook, plus sound effects
+ * (UI sounds and meme cues) placed on the page's own animation cues. It's all generated from scratch
  * and deterministic: the same page always sounds the same, there's nothing
  * to license, and it works when posting through an API, where in-app sounds
  * can't be added.
  *
  * The music, from <body data-*> (references/sound-guide.md explains how to
  * pick these per project):
- * - data-music: pop, house, hiphop, acoustic, cinematic, tech, lofi, calm, or none
+ * - data-music: pop, house, hiphop, acoustic, cinematic, tech, lofi, calm, phonk,
+ *   jersey, funk, or none
  * - data-bpm, data-key (C, F#, Bb, ...), data-mode (major or minor), data-energy (1-5)
  * - data-motif: the project's signature hook, two bars of scale degrees,
  *   e.g. "1 3 5 6 | 5 3 2 -". Each bar's tokens share it equally; ' and ,
@@ -27,7 +28,11 @@
 
 const SR = 48000;
 const TAU = 2 * Math.PI;
-const SOUNDS = ['pop', 'swish', 'tick', 'whoosh', 'click', 'chime'];
+const SOUNDS = [
+  'pop', 'swish', 'tick', 'whoosh', 'click', 'chime',
+  // meme sounds, all synthesized here (no samples)
+  'boom', 'scratch', 'horn', 'rimshot', 'fail', 'drumroll', 'ding', 'buzzer', 'ping', 'typing', 'shutter', 'cash', 'glitch', 'bass',
+];
 // average level of the music bed, relative to the sound effects (about -19 dBFS RMS)
 const MUSIC_RMS = 0.11;
 
@@ -267,8 +272,8 @@ function bass(freq, dur, type = 'sine') {
   return scale(out, adsr(n, 0.006, 0.2, 0.75, 0.06, dur));
 }
 
-// 808: a sine that drops into pitch, long tail, driven into soft clipping.
-function sub808(freq, dur) {
+// 808: a sine that drops into pitch, long tail, driven into soft clipping (harder for phonk).
+function sub808(freq, dur, drive = 2.2) {
   const n = len(dur + 0.1);
   const out = new Float64Array(n);
   let p = 0;
@@ -276,7 +281,26 @@ function sub808(freq, dur) {
     const t = i / SR;
     p += TAU * freq * (1 + 1.2 * Math.exp(-t / 0.03)) / SR;
     const env = Math.min(1, t / 0.002) * Math.exp(-t / Math.max(0.25, dur * 0.8)) * (t > dur ? Math.max(0, 1 - (t - dur) / 0.1) : 1);
-    out[i] = Math.tanh(2.2 * Math.sin(p)) * env;
+    out[i] = Math.tanh(drive * Math.sin(p)) * env / Math.tanh(drive);
+  }
+  return out;
+}
+
+// Pitched 808-style cowbell: two squares a ratio of ~1.48 apart, band-passed. Phonk's lead.
+function cowbell(freq, dur) {
+  const n = len(Math.max(dur, 0.12) + 0.2);
+  const x = new Float64Array(n);
+  let p1 = 0;
+  let p2 = 0;
+  for (let i = 0; i < n; i++) {
+    p1 = (p1 + freq / SR) % 1;
+    p2 = (p2 + (freq * 1.481) / SR) % 1;
+    x[i] = (p1 < 0.5 ? 1 : -1) + 0.7 * (p2 < 0.5 ? 1 : -1);
+  }
+  const out = filter(x, 'bp', freq * 2.2, 1.4);
+  for (let i = 0; i < n; i++) {
+    const t = i / SR;
+    out[i] *= Math.min(1, t / 0.001) * (0.6 * Math.exp(-t / 0.06) + 0.4 * Math.exp(-t / 0.22));
   }
   return out;
 }
@@ -441,6 +465,225 @@ function click(rng) {
   return out;
 }
 
+// ---- meme sounds: original syntheses of the classic comedic beats ----
+
+// A deep, distorted impact with a long room tail (the punchline hit).
+function boom(rng) {
+  const n = len(2.4);
+  const dry = new Float64Array(n);
+  let p = 0;
+  for (let i = 0; i < n; i++) {
+    const t = i / SR;
+    p += TAU * (40 + 110 * Math.exp(-t / 0.05)) / SR;
+    dry[i] = (Math.tanh(3.2 * Math.sin(p)) * Math.exp(-t / 0.55) + rng.n() * Math.exp(-t / 0.004) * 0.4) * 0.8;
+  }
+  const wet = reverb(dry, dry, { room: 0.88, damp: 0.25 });
+  for (let i = 0; i < n; i++) dry[i] += (wet.L[i] + wet.R[i]) * 0.9;
+  return dry;
+}
+
+// Record scratch: noise and a tone dragged back and forth in pitch.
+function scratch(rng) {
+  const n = len(0.5);
+  const out = new Float64Array(n);
+  const f = new SVF();
+  let p = 0;
+  for (let i = 0; i < n; i++) {
+    const t = i / SR;
+    const drag = Math.abs(Math.sin(TAU * 5.5 * t)) ** 1.4;
+    f.step(rng.n(), 400 + 3200 * drag, 3);
+    p += TAU * (180 + 700 * drag) / SR;
+    out[i] = (f.bp * 0.9 + Math.sin(p) * 0.35) * Math.sin(Math.PI * t / 0.5) ** 0.5;
+  }
+  return out;
+}
+
+// Airhorn: three blasts of detuned, driven saws.
+function horn(rng) {
+  const blasts = [[0, 0.14], [0.19, 0.14], [0.38, 0.55]];
+  const n = len(1.0);
+  const x = new Float64Array(n);
+  for (const f0 of [466, 470, 698]) addSaw(x, f0, rng.u(), 1 / 3);
+  const out = filter(x, 'bp', 1500, 0.9);
+  for (let i = 0; i < n; i++) {
+    const t = i / SR;
+    let env = 0;
+    for (const [a, d] of blasts) if (t >= a && t < a + d) env = Math.min(1, (t - a) / 0.01, (a + d - t) / 0.03);
+    out[i] = Math.tanh(3 * out[i]) * env;
+  }
+  return out;
+}
+
+// Ba-dum-tss.
+function rimshot(rng) {
+  const n = len(1.4);
+  const out = new Float64Array(n);
+  const put = (sig, t0, g) => { const o = len(t0); for (let i = 0; i < sig.length && i + o < n; i++) out[i + o] += sig[i] * g; };
+  put(snare(rng, { decay: 0.09 }), 0, 0.8);
+  put(tom(rng, 130), 0.17, 0.8);
+  put(crash(rng, 1.1), 0.34, 1.6);
+  return out;
+}
+
+// Sad trombone: four descending notes, the last one wobbling.
+function fail(rng) {
+  const notes = [[293.7, 0, 0.32], [277.2, 0.36, 0.32], [261.6, 0.72, 0.32], [246.9, 1.08, 1.0]];
+  const n = len(2.2);
+  const out = new Float64Array(n);
+  for (const [f0, t0, d] of notes) {
+    const m = len(d + 0.1);
+    const x = new Float64Array(m);
+    let p = 0;
+    for (let i = 0; i < m; i++) {
+      const t = i / SR;
+      const vib = d > 0.5 ? 1 + 0.025 * Math.sin(TAU * 5 * Math.max(0, t - 0.2)) : 1;
+      p = (p + f0 * vib * (1 - 0.03 * Math.min(1, t / d)) / SR) % 1;
+      x[i] = 2 * p - 1;
+    }
+    // the "wah": a filter that opens and closes on each note
+    const y = filter(x, 'lp', (t) => 500 + 1700 * Math.sin(Math.PI * Math.min(1, t / d)), 2);
+    const o = len(t0);
+    for (let i = 0; i < m && i + o < n; i++) out[i + o] += y[i] * Math.min(1, i / SR / 0.02, (d + 0.1 - i / SR) / 0.1) * 0.8;
+  }
+  return out;
+}
+
+// A snare roll that builds for 1.5s (pair it with a boom or chime on the reveal).
+function drumroll(rng) {
+  const n = len(1.5);
+  const out = new Float64Array(n);
+  for (let t0 = 0; t0 < 1.45; t0 += 0.045) {
+    const s = snare(rng, { decay: 0.05 });
+    const g = 0.15 + 0.85 * (t0 / 1.45) ** 1.5;
+    const o = len(t0);
+    for (let i = 0; i < s.length && i + o < n; i++) out[i + o] += s[i] * g * 0.6;
+  }
+  return out;
+}
+
+// Correct: two bright bell notes going up.
+function ding() {
+  const n = len(1.2);
+  const out = new Float64Array(n);
+  const a = bell(1318.5, 1.0);
+  const b = bell(1760, 1.1);
+  for (let i = 0; i < n; i++) out[i] = (a[i] || 0) * 0.5 + (i >= len(0.1) ? (b[i - len(0.1)] || 0) * 0.6 : 0);
+  return out;
+}
+
+// Wrong: a low, buzzing square.
+function buzzer() {
+  const n = len(0.65);
+  const out = new Float64Array(n);
+  let p1 = 0;
+  let p2 = 0;
+  for (let i = 0; i < n; i++) {
+    const t = i / SR;
+    p1 = (p1 + 110 / SR) % 1;
+    p2 = (p2 + 116.5 / SR) % 1;
+    out[i] = Math.tanh(2 * ((p1 < 0.5 ? 1 : -1) + (p2 < 0.5 ? 1 : -1)) * 0.5) * Math.min(1, t / 0.01, (0.65 - t) / 0.05) * 0.6;
+  }
+  return filter(out, 'lp', 2500, 0.7);
+}
+
+// A message notification: two soft rising blips.
+function ping() {
+  const n = len(0.6);
+  const out = new Float64Array(n);
+  for (const [f0, t0] of [[1046.5, 0], [1568, 0.09]]) {
+    const o = len(t0);
+    for (let i = o; i < n; i++) {
+      const t = (i - o) / SR;
+      out[i] += Math.sin(TAU * f0 * t) * Math.exp(-t / 0.12) * Math.min(1, t / 0.003) * 0.5;
+    }
+  }
+  return out;
+}
+
+// A short burst of keyboard typing.
+function typing(rng) {
+  const n = len(0.9);
+  const out = new Float64Array(n);
+  let t0 = 0;
+  while (t0 < 0.8) {
+    const o = len(t0);
+    const tone = 2500 + rng.u() * 1500;
+    for (let i = 0; i < len(0.025) && i + o < n; i++) {
+      const t = i / SR;
+      out[i + o] += (rng.n() * 0.6 + Math.sin(TAU * tone * t) * 0.3) * Math.exp(-t / 0.004) * (0.6 + 0.4 * rng.u());
+    }
+    t0 += 0.06 + rng.u() * 0.09;
+  }
+  return filter(out, 'hp', 1200, 0.7);
+}
+
+// Camera shutter: two mechanical clicks and a breath of noise.
+function shutter(rng) {
+  const n = len(0.25);
+  const out = new Float64Array(n);
+  for (const t0 of [0, 0.045]) {
+    const o = len(t0);
+    for (let i = 0; i < len(0.03) && i + o < n; i++) out[i + o] += rng.n() * Math.exp(-i / SR / 0.006) * 0.8;
+  }
+  return filter(out, 'hp', 1500, 0.7);
+}
+
+// Ka-ching: a metallic hit, then coins.
+function cash(rng) {
+  const n = len(1.1);
+  const out = new Float64Array(n);
+  const hit = bell(2093, 0.9);
+  for (let i = 0; i < hit.length && i < n; i++) out[i] += hit[i] * 0.5;
+  for (let k = 0; k < 9; k++) {
+    const o = len(0.12 + rng.u() * 0.5);
+    const f0 = 3000 + rng.u() * 3000;
+    for (let i = 0; i < len(0.25) && i + o < n; i++) {
+      const t = i / SR;
+      out[i + o] += Math.sin(TAU * f0 * t) * Math.exp(-t / 0.05) * 0.18;
+    }
+  }
+  return out;
+}
+
+// Glitch: a stuttering, bit-crushed burst.
+function glitch(rng) {
+  const n = len(0.45);
+  const out = new Float64Array(n);
+  let held = 0;
+  let p = 0;
+  for (let i = 0; i < n; i++) {
+    const t = i / SR;
+    p += TAU * (220 + 1800 * rng.u() * (Math.floor(t * 18) % 2)) / SR;
+    if (i % 24 === 0) held = Math.round((Math.sin(p) * 0.6 + rng.n() * 0.3) * 4) / 4; // sample-and-hold + 3-bit crush
+    const gate = Math.floor(t * 30) % 3 !== 2 ? 1 : 0;
+    out[i] = held * gate * 0.7;
+  }
+  return out;
+}
+
+// Sub drop: a sine sliding down into the floor.
+function subDrop() {
+  const n = len(1.4);
+  const out = new Float64Array(n);
+  let p = 0;
+  for (let i = 0; i < n; i++) {
+    const t = i / SR;
+    p += TAU * (95 * Math.exp(-t / 0.5) + 30) / SR;
+    out[i] = Math.tanh(1.8 * Math.sin(p)) * Math.min(1, t / 0.005) * Math.exp(-t / 0.9);
+  }
+  return out;
+}
+
+// cue name -> [synth, gain, start offset in seconds]
+// (gains balanced so punchline hits land a little above the existing effects and small UI
+// sounds a little below, all within about 8 dB)
+const MEME = {
+  boom: [boom, 0.65, 0], scratch: [scratch, 0.7, 0], horn: [horn, 0.63, 0], rimshot: [rimshot, 0.7, 0],
+  fail: [fail, 0.55, 0], drumroll: [drumroll, 1.29, 0], ding: [ding, 0.6, 0], buzzer: [buzzer, 0.5, 0],
+  ping: [ping, 0.85, 0], typing: [typing, 1.38, 0], shutter: [shutter, 1.44, 0], cash: [cash, 0.73, 0],
+  glitch: [glitch, 0.67, 0], bass: [subDrop, 0.5, 0],
+};
+
 // ---------- mixing ----------
 
 class Bus {
@@ -571,6 +814,33 @@ const GENRES = {
     chords: { sound: 'keys', pattern: 'x.......x.......', size: 3 }, pad: 0.45,
     lead: 'bell', duck: 0, verb: 0.32,
   },
+  // drift phonk: cowbell plays the hook over a hard, distorted 808 and half-time drums
+  phonk: {
+    bpm: 140, mode: 'minor', motif: '1 1 3 1 | 4 3 1 5,', swing: 0,
+    progressions: [[0, 5, 6, 4], [0, 3, 5, 4], [0, 0, 5, 6]],
+    drums: { kick: 'x......x..x.....', clap: '........x.......', hat: 'x.x.x.x.x.x.x.x.', roll: true },
+    bass: { type: '808', pattern: 'R------R--R-----', drive: 4 },
+    chords: { sound: 'strings', pattern: 'x...............', size: 3 }, pad: 0,
+    lead: 'cowbell', duck: 0.3, verb: 0.12,
+  },
+  // jersey club: the bouncing 3-3-2 kick, stabbed chords, tom fills
+  jersey: {
+    bpm: 140, mode: 'minor', motif: '1 . 1 3 | 5 . 4 3', swing: 0,
+    progressions: [[0, 5, 2, 6], [0, 3, 4, 3], [0, 6, 5, 4]],
+    drums: { kick: 'x..x..x.x..x..x.', clap: '....x.......x...', hat: '..o...o...o...o.', open: '......x.......x.' },
+    bass: { type: 'saw', pattern: 'R..R..R.R..R..R.' },
+    chords: { sound: 'stab', pattern: '..x...x...x..x..', size: 3 }, pad: 0,
+    lead: 'pluck', duck: 0.35, verb: 0.12, toms: true,
+  },
+  // Brazilian funk: the tamborzao groove, sliding 808 under cowbell and stabs
+  funk: {
+    bpm: 130, mode: 'minor', motif: '1 3 1 . | 5, 1 3 .', swing: 0,
+    progressions: [[0, 0, 5, 4], [0, 5, 3, 4], [0, 3, 0, 4]],
+    drums: { kick: 'x..x..x...x..x..', clap: '....x.......x..x', hat: 'x.o.x.o.x.o.x.o.' },
+    bass: { type: '808', pattern: 'R..R..R...R..R..', drive: 3 },
+    chords: { sound: 'stab', pattern: 'x.....x.....x...', size: 3 }, pad: 0,
+    lead: 'cowbell', duck: 0.3, verb: 0.1,
+  },
 };
 
 // Picks the progression whose chords contain the most hook notes on strong beats.
@@ -697,6 +967,7 @@ function buildMusic(opts, key) {
       if (vel(hit(d.shaker, s))) drums.add(shaker(rng), t, 0.35 * vel(hit(d.shaker, s)), 0.3);
       if (vel(hit(d.boom, s))) { drums.add(kick(rng, { pitch: 38, punch: 60, decay: 0.5 }), t, 0.9); kicks.push(t); }
       if (vel(hit(d.tom, s)) && energy >= 2) drums.add(tom(rng, [110, 98, 82][s % 3]), t, 0.45, s % 2 ? 0.3 : -0.3);
+      if (g.toms && lastBar && s >= 10 && s % 2 === 0) drums.add(tom(rng, [196, 165, 147, 131][(s - 10) / 2 % 4]), t, 0.45, s % 4 ? 0.3 : -0.3);
       // a small fill closing every fourth bar
       if (lastBar && energy >= 3 && s >= 13 && (d.snare || d.clap)) drums.add(snare(rng, { decay: 0.07 }), t, 0.25 + 0.1 * (s - 13));
 
@@ -707,7 +978,7 @@ function buildMusic(opts, key) {
         while (s + holdSteps < 16 && g.bass.pattern[s + holdSteps] === '-') holdSteps++;
         const m = bc === 'O' ? rootMidi + 12 : bc === 'F' ? rootMidi + 7 : rootMidi;
         const dur = holdSteps * stepDur * (g.bass.type === '808' ? 1 : 0.9);
-        const sig = g.bass.type === '808' ? sub808(mtof(m), dur) : bass(mtof(m), dur, g.bass.type);
+        const sig = g.bass.type === '808' ? sub808(mtof(m), dur, g.bass.drive) : bass(mtof(m), dur, g.bass.type);
         low.add(sig, t, g.bass.type === '808' ? 0.55 : 0.5);
       }
 
@@ -747,6 +1018,7 @@ function buildMusic(opts, key) {
             gain = 0.22;
             break;
           }
+          case 'stab': sig = supersaw(rng, key.chord(chordDeg, 3, 1), Math.min(dur, beat * 0.4), { bright: 7000, dark: 500, fall: 0.05, voices: 5 }); gain = 0.4; break;
           default: sig = new Float64Array(1);
         }
         harm.add(sig, t, gain, s % 2 ? 0.15 : -0.15);
@@ -762,6 +1034,7 @@ function buildMusic(opts, key) {
         for (const note of phrase) {
           const t = barStart + note.start * beat;
           if (t >= end - 2 * beat) continue; // leave room for the sonic logo
+          if (inWindow(t, breaks)) continue; // a phrase that started before a break stops at it
           playLead(lead, send, rng, g.lead, key.midi(note.deg, 1), note.dur * beat, t, energy);
         }
       }
@@ -783,7 +1056,7 @@ function buildMusic(opts, key) {
   const finalChord = strings(rng, key.chord(0, 4, 0), opts.duration - end, { cutoff: 1800, attack: 0.02 });
   harm.add(finalChord, end, 0.35);
   send.add(finalChord, end, 0.4);
-  low.add(g.bass.type === '808' ? sub808(mtof(key.midi(0) - 24), 0.9) : bass(mtof(key.midi(0) - 24), 0.9, 'sine'), end, 0.5);
+  low.add(g.bass.type === '808' ? sub808(mtof(key.midi(0) - 24), 0.9, g.bass.drive) : bass(mtof(key.midi(0) - 24), 0.9, 'sine'), end, 0.5);
   if (end > drop) {
     drums.add(kick(rng), end, 0.9);
     kicks.push(end);
@@ -822,6 +1095,7 @@ function playLead(lead, send, rng, sound, midi, dur, t, energy) {
     case 'keys': sig = epiano(mtof(midi), Math.max(dur, 0.2), { index: 2.2, decay: 1.2 }); gain = 0.36; break;
     case 'harp': sig = pluckString(rng, mtof(midi), Math.max(dur, 0.25) + 0.6, { bright: 0.75, decay: 0.997 }); gain = 0.5; break;
     case 'strings': sig = strings(rng, [midi], dur, { cutoff: 2600, attack: 0.12 }); gain = 0.42; break;
+    case 'cowbell': sig = cowbell(mtof(midi), Math.max(dur, 0.12)); gain = 0.5; break;
     default: return;
   }
   lead.add(sig, t, gain);
@@ -907,6 +1181,9 @@ function buildSoundtrack(cues, opts) {
     } else if (sound === 'chime') {
       sfx.add(bell(mtof(key.midi(4, 1))), time, 0.3);
       sfx.add(bell(mtof(key.midi(7, 1))), time + 0.09, 0.34);
+    } else if (MEME[sound]) {
+      const [make, gain, offset] = MEME[sound];
+      sfx.add(make(rng), time + offset, gain);
     }
   }
 

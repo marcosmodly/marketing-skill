@@ -1,14 +1,13 @@
 <!doctype html>
 <!--
-  Template: FAQ, myth vs fact, or an educational answer (see
-  references/video-types.md). 18 seconds: a viewer's question as a comment
-  bubble, the short answer with three supporting points, a myth struck
-  through and the fact, and a CTA.
-
-  Use real questions customers actually ask, and answers that are true
-  for the product today. Replace @username only with a real commenter's
-  handle if you're replying to them (with the platform's reply feature,
-  ideally); otherwise drop the handle line.
+  Template: social post skit (references/fyp-formats.md, UI skits). 13
+  seconds: "POV" setup, a post whose likes count up while replies roll in,
+  and a payoff line.
+  Skits are fiction: never use a real person's name, handle, photo, post,
+  or messages, and never write a fake review.
+  The post card is generic, not any real app's design. Likes and replies
+  are part of the skit, so keep the POV framing, and never show replies
+  praising the product (that reads as a fake review).
   Page conventions (canvas, safe area, timing vars, backgrounds, data-sfx
   cues, music, assets): see the comment at the top of promo.html.
 -->
@@ -34,8 +33,8 @@
   body { font-family: "Inter", "Liberation Sans", "Noto Color Emoji", sans-serif; color: var(--text); position: relative; }
 
   .glow { position: absolute; border-radius: 50%; filter: blur(120px); opacity: .55; }
-  .g1 { width: 900px; height: 900px; background: #2a3a5a; left: -300px; top: -200px; animation: drift1 24s linear 0s both; }
-  .g2 { width: 800px; height: 800px; background: #5a2a1a; right: -320px; bottom: -160px; animation: drift2 24s linear 0s both; }
+  .g1 { width: 900px; height: 900px; background: #8f3865; left: -300px; top: -200px; animation: drift1 24s linear 0s both; }
+  .g2 { width: 800px; height: 800px; background: #32658f; right: -320px; bottom: -160px; animation: drift2 24s linear 0s both; }
   @keyframes drift1 { from { transform: translate(0,0); } to { transform: translate(260px, 520px); } }
   @keyframes drift2 { from { transform: translate(0,0); } to { transform: translate(-220px, -600px); } }
 
@@ -280,65 +279,43 @@
                    36% { transform: scale(1.09) translate(-8px, -4px); } 48% { transform: scale(1.07) translate(6px, 6px); } 100% { transform: scale(1.05); } }
 
 
-  .bubble { background: #f4f3ef; color: #17171c; border-radius: 36px 36px 36px 8px; padding: 34px 40px 40px; box-shadow: 0 30px 90px #0007; }
-  .handle { display: flex; align-items: center; gap: 16px; font-size: 30px; font-weight: 700; color: #6a6a74; margin-bottom: 16px; }
-  .handle i { width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #6b3b4b); display: block; }
-  .bubble .q { font-size: 64px; font-weight: 800; line-height: 1.12; letter-spacing: -1.5px; }
-  .point { display: flex; gap: 24px; align-items: center; font-size: 48px; font-weight: 600; margin-top: 26px; }
-  .point i { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); flex: none; display: block; }
-  /* strikes through every wrapped line of the myth at --cut */
-  .myth-text { background: linear-gradient(var(--bad), var(--bad)) no-repeat 0 58% / 0% 10px;
-               -webkit-box-decoration-break: clone; box-decoration-break: clone;
-               animation: strike .45s cubic-bezier(.6,0,.2,1) var(--cut) both, dimDown .4s ease-out var(--cut) forwards; }
-  @keyframes strike { to { background-size: 100% 10px; } }
-  @keyframes dimDown { to { color: var(--muted); } }
-
 </style>
 </head>
-<body data-duration="18" data-drop="2.5" data-music="pop" data-bpm="116" data-key="G" data-mode="major" data-energy="3" data-motif="1 3 5 3 | 6 5 3 -">
+<body class="fyp" data-duration="13" data-drop="3.0" data-music="pop" data-bpm="118" data-key="D" data-mode="major" data-energy="3" data-motif="1 3 5 3 | 6 5 3 -">
   <div class="glow g1"></div>
   <div class="glow g2"></div>
-  <!-- background, 0–2.5s -->
-  <div class="bg now" style="--in:0s; --out:2.3s; --dur:2.95s"></div>
-  <!-- background, 2.5–8.5s -->
-  <div class="bg" style="--in:2.25s; --out:8.3s; --dur:6.7s"></div>
-  <!-- background, 8.5–14.5s -->
-  <div class="bg" style="--in:8.25s; --out:14.3s; --dur:6.7s"></div>
-  <!-- background, 14.5–18s -->
-  <div class="bg" style="--in:14.25s; --dur:3.75s"></div>
+  <!-- background, 0–3s -->
+  <div class="bg now" style="--in:0s; --out:2.8s; --dur:3.45s"></div>
+  <!-- background, 3–11s -->
+  <div class="bg" style="--in:2.75s; --out:10.8s; --dur:8.7s"></div>
+  <!-- background, 11–13s -->
+  <div class="bg" style="--in:10.75s; --dur:2.25s"></div>
 
-  <!-- 0–2.5s: the question -->
-  <div class="scene" style="--out:2.35s">
-    <div class="bubble pop" style="--in:.1s" data-sfx="pop">
-      <div class="handle"><i></i>Reply to @username</div>
-      <div class="q">Do I need a card to start the free trial?</div>
+  <!-- 0–3s: the setup -->
+  <div class="scene center" style="--out:2.8s">
+    <div class="sticker pop" style="--in:.1s" data-sfx="pop">POV</div>
+    <div class="cap pop" style="--in:.5s; margin-top: 30px" data-sfx="swish"><span>you finally raised your rates</span></div>
+  </div>
+
+  <!-- 3–11s: the post -->
+  <div class="scene top" style="--out:10.8s">
+    <div class="post rise" style="--in:3.05s" data-sfx="whoosh">
+      <div class="post-head"><i class="av">🦊</i><div><b>you</b><small>just now</small></div></div>
+      <div class="post-text">new rates start today. that's the post.</div>
+      <div class="post-bar">
+        <span style="--like:4.4s" data-sfx="pop:like"><svg class="heart" viewBox="0 0 24 24"><path d="M12 20.3s-7.4-4.5-9.2-9.1C1.5 7.9 3.5 4.6 6.9 4.6c2.1 0 3.6 1.1 5.1 2.9 1.5-1.8 3-2.9 5.1-2.9 3.4 0 5.4 3.3 4.1 6.6-1.8 4.6-9.2 9.1-9.2 9.1z"/></svg><b class="count" style="--in:4.4s; --to:1204; --for:2.4s"></b></span>
+        <span><svg viewBox="0 0 24 24"><path d="M4 5.5h16v10H9.5L5.5 19v-3.5H4z" fill="none" stroke="#6a6a74" stroke-width="2.2" stroke-linejoin="round"/></svg><b class="count" style="--in:5.6s; --to:86; --for:2s"></b></span>
+      </div>
     </div>
+    <div class="reply pop" style="--in:5.8s" data-sfx="ping"><i class="av">🐼</i><div><b>a friend</b><p>proud of you 👏</p></div></div>
+    <div class="reply pop" style="--in:7.0s" data-sfx="ping"><i class="av">🐸</i><div><b>another freelancer</b><p>doing this tomorrow</p></div></div>
+    <div class="reply pop" style="--in:8.4s; --rim:9.1s" data-sfx="ping rimshot:rim"><i class="av">🙂</i><div><b>a client</b><p>can I still get the old price?</p></div></div>
   </div>
 
-  <!-- 2.5–8.5s: the answer -->
-  <div class="scene" style="--out:8.3s" data-sfx="whoosh:out">
-    <div class="small rise" style="--in:2.6s">Short answer:</div>
-    <div class="huge pop accent" style="--in:2.9s" data-sfx="pop">No.</div>
-    <div class="point slide" style="--in:4.2s" data-sfx="swish"><i></i>Sign up with just an email</div>
-    <div class="point slide" style="--in:5.0s" data-sfx="swish"><i></i>Every feature, for 14 days</div>
-    <div class="point slide" style="--in:5.8s" data-sfx="swish"><i></i>Add a card only if you stay</div>
-  </div>
-
-  <!-- 8.5–14.5s: myth vs fact -->
-  <div class="scene" style="--out:14.3s" data-sfx="whoosh:out">
-    <div class="label rise" style="--in:8.6s; color: var(--bad)">Myth</div>
-    <div class="rise" style="--in:8.8s; margin-top: 14px">
-      <span class="mid myth-text" style="--cut:10.3s" data-sfx="click:cut">You get charged when the trial ends.</span>
-    </div>
-    <div class="label rise" style="--in:11.2s; color: var(--ok); margin-top: 60px">Fact</div>
-    <div class="mid rise" style="--in:11.4s; margin-top: 14px" data-sfx="pop">Nothing is charged unless you pick a plan.</div>
-  </div>
-
-  <!-- 14.5–18s: CTA -->
-  <div class="scene">
-    <div class="big rise" style="--in:14.55s">Got a question?</div>
-    <div class="mid rise accent" style="--in:14.9s; margin-top: 20px">Drop it in the comments.</div>
-    <div class="small fade" style="--in:15.6s; margin-top: 30px">We answer every one.</div>
+  <!-- 11–13s: the payoff -->
+  <div class="scene center">
+    <div class="cap hl pop" style="--in:11.05s" data-sfx="chime"><span>your rates. your rules. 💸</span></div>
+    <div class="small fade" style="--in:11.5s; margin-top: 24px">follow for more freelancer life</div>
   </div>
 
 </body>
