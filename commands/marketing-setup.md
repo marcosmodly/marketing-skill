@@ -15,6 +15,11 @@ you invoke a skill.
 
 ## Process
 
+**Plugin root:** if `CLAUDE_PLUGIN_ROOT` below is unexpanded (e.g. in
+Codex), use the output of `printenv CLAUDE_PLUGIN_ROOT`, else the nearest
+folder above this file that contains `references/brand-voice.md`, else
+ask the user.
+
 1. Read `${CLAUDE_PLUGIN_ROOT}/references/brand-voice.md`.
 2. If its first line is already
    `<!-- MARKETING-SKILL:CONFIGURED (last updated: ...) -->`, show the
@@ -48,7 +53,7 @@ you invoke a skill.
    can hear previews the first time `short-form-video` renders, or right
    away if they run the `--sample` commands from that guide. If they pick
    one, save it; if they'd rather wait, leave the section's placeholder.
-5. Write the answers into `references/brand-voice.md`:
+5. Write the answers into that same file:
    - Keep the exact heading structure already in the file (`## Priority
      Task`, `## Content Types`, `## Target Audience`, `## Brand Voice &
      Tone`, `## Default Output Format`, `## Banned Words & Phrases`, `##
