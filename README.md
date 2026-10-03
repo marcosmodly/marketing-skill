@@ -17,7 +17,8 @@ claude plugin install marketing-skill@marketing-skill
 
 Every skill is a standard `SKILL.md` in [`skills/`](skills/), shares one
 brand-voice config, and works on its own or chained together. Nothing
-posts or sends without your explicit approval.
+posts or sends without your explicit approval. Using OpenAI Codex? See
+[Using with Codex](#using-with-codex).
 
 ## What you can do with it
 
@@ -120,11 +121,65 @@ cp -r skills/* ~/.claude/skills/        # personal, all projects
 cp -r skills/* /your/project/.claude/skills/   # project-scoped
 ```
 
-The manual copy skips the setup command and `${CLAUDE_PLUGIN_ROOT}`
-path substitution — see "Configure" below for the equivalent manual step,
-and swap `${CLAUDE_PLUGIN_ROOT}` for the actual absolute path in
-`scripts/publish_webhook.py` references inside each skill if you go this
-route.
+The manual copy skips the setup command (see "Configure" below for the
+equivalent manual step) and `${CLAUDE_PLUGIN_ROOT}` path substitution.
+Copied skills can't find `references/`, `state/`, or `scripts/` on their
+own, so set `CLAUDE_PLUGIN_ROOT` to your clone of this repo before
+starting Claude Code (`export CLAUDE_PLUGIN_ROOT=/path/to/marketing-skill`);
+otherwise each skill asks you where the plugin lives.
+
+## Using with Codex
+
+OpenAI's Codex reads Claude Code's plugin files (`.claude-plugin/`), so
+the same repo installs there too:
+
+```
+codex plugin marketplace add marcosmodly/marketing-skill
+codex plugin add marketing-skill@marketing-skill
+```
+
+To try a branch, add `--ref <branch-name>` to the first command, or pass
+the path to a local clone instead of `marcosmodly/marketing-skill`.
+
+All 12 skills load as-is; Codex ignores the `allowed-tools` line. A few
+things differ from Claude Code:
+
+- **Setup command:** Codex turns `/marketing-skill:marketing-setup` into
+  a skill, so ask Codex to "run the marketing setup" instead of typing
+  the slash command. Codex only converts commands under 4 KB, so keep
+  `commands/marketing-setup.md` short when editing it.
+- **Plugin folder:** Codex doesn't fill in `${CLAUDE_PLUGIN_ROOT}`. Each
+  skill works out the plugin folder itself (from the `CLAUDE_PLUGIN_ROOT`
+  environment variable, or by finding the folder that holds
+  `references/brand-voice.md`). Setting the variable is the reliable
+  option, and it keeps your brand voice and queued posts in a folder you
+  control rather than in Codex's installed copy:
+
+  ```
+  export CLAUDE_PLUGIN_ROOT=/path/to/marketing-skill   # your clone
+  codex
+  ```
+- **Sandbox:** in its usual `workspace-write` mode, Codex only writes
+  inside the folder you started it in and blocks network access from
+  shell commands. If the plugin folder is somewhere else, add it to
+  `writable_roots` (or approve the writes when asked). Publishing
+  (`publish_webhook.py`, `publish_direct.py`) needs network access. Both
+  settings go in `~/.codex/config.toml`:
+
+  ```toml
+  [sandbox_workspace_write]
+  writable_roots = ["/path/to/marketing-skill"]
+  network_access = true
+  ```
+- **Live research:** `competitor-research`, `seo-brief`,
+  `community-post-generator`, `content-calendar`, `email-outreach`,
+  `short-form-video`, and `full-pipeline` research the web as they run.
+  Set `web_search = "live"` in `~/.codex/config.toml` so results are
+  current rather than cached.
+- **Connected tools:** Gmail drafts, prospecting tools, and video tools
+  (Higgsfield, Figma Weave, Canva) work once the matching MCP server is
+  set up in Codex. Without one, each skill falls back the same way it
+  does in Claude Code.
 
 ## Configure
 
@@ -802,7 +857,7 @@ plugin system, copy the skill folders in by hand (see [Install](#install)).
 ```
 .claude-plugin/
   plugin.json         # plugin metadata
-  marketplace.json     # lets this repo install itself via `marketplace add`
+  marketplace.json     # lets this repo install itself via `marketplace add` (Claude Code and Codex)
 skills/                 # the 12 skills, one SKILL.md each
 commands/
   marketing-setup.md    # the /marketing-skill:marketing-setup command

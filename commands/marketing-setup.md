@@ -15,6 +15,11 @@ you invoke a skill.
 
 ## Process
 
+**Plugin root:** if `CLAUDE_PLUGIN_ROOT` below is unexpanded (e.g. in
+Codex), use the output of `printenv CLAUDE_PLUGIN_ROOT`, else the nearest
+folder above this file that contains `references/brand-voice.md`, else
+ask the user.
+
 1. Read `${CLAUDE_PLUGIN_ROOT}/references/brand-voice.md`.
 2. If its first line is already
    `<!-- MARKETING-SKILL:CONFIGURED (last updated: ...) -->`, show the
@@ -41,7 +46,7 @@ you invoke a skill.
 4. Optionally ask if they want to customize the banned-words list or
    formatting constraints; if they decline or don't answer, leave the
    existing placeholder values in place.
-5. Write the answers into `references/brand-voice.md`:
+5. Write the answers into that same file:
    - Keep the exact heading structure already in the file (`## Priority
      Task`, `## Content Types`, `## Target Audience`, `## Brand Voice &
      Tone`, `## Default Output Format`, `## Banned Words & Phrases`, `##
