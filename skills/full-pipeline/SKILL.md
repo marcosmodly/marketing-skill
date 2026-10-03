@@ -14,6 +14,15 @@ want the whole thing done in one shot rather than one skill at a time.
 
 ## Step-by-step process
 
+**Plugin root:** if a path below still shows an unexpanded
+`CLAUDE_PLUGIN_ROOT` placeholder (Claude Code fills it in; other agents
+such as Codex don't), resolve it before using any of them: take the
+output of `printenv CLAUDE_PLUGIN_ROOT` if it prints a path, otherwise
+walk up from this file's folder to the first folder that contains
+`references/brand-voice.md`, and if neither works, ask the user where
+this plugin lives. Use that absolute path in every file path and shell
+command below.
+
 1. **Check onboarding status (once, up front).** Read
    `${CLAUDE_PLUGIN_ROOT}/references/brand-voice.md`. If it doesn't exist,
    or its first line is `<!-- MARKETING-SKILL:UNCONFIGURED -->`, ask the
