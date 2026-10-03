@@ -46,11 +46,19 @@ ask the user.
 4. Optionally ask if they want to customize the banned-words list or
    formatting constraints; if they decline or don't answer, leave the
    existing placeholder values in place.
+   If their content types include video, also offer to set a **sonic
+   identity** now: read `${CLAUDE_PLUGIN_ROOT}/references/sound-guide.md`,
+   and propose two options that fit the audience and tone they just gave
+   (genre, tempo, key and mode, energy, hook, and one line on why). They
+   can hear previews the first time `short-form-video` renders, or right
+   away if they run the `--sample` commands from that guide. If they pick
+   one, save it; if they'd rather wait, leave the section's placeholder.
 5. Write the answers into that same file:
    - Keep the exact heading structure already in the file (`## Priority
      Task`, `## Content Types`, `## Target Audience`, `## Brand Voice &
      Tone`, `## Default Output Format`, `## Banned Words & Phrases`, `##
-     Formatting Constraints`, `## Do / Don't Examples`) so every skill's
+     Formatting Constraints`, `## Do / Don't Examples`, `## Sonic
+     Identity`) so every skill's
      reads keep working — replace the placeholder body text under each
      heading with the user's actual answer, don't add or rename sections.
    - Replace the first line of the file with
@@ -58,7 +66,8 @@ ask the user.
      using today's date.
 6. Confirm back what was saved as a short summary, not a formatted report:
    `Saved: priority=<...>, content_types=<...>, audience=<...>, tone=<...>,
-   format=<...>`. Note that they can re-run this command anytime, or
+   format=<...>` (plus `sound=<genre, key, hook>` if a sonic identity was
+   chosen). Note that they can re-run this command anytime, or
    hand-edit the file directly.
 
 ## Formatting rules

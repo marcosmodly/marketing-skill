@@ -113,6 +113,16 @@ command below.
      produces the hook-first script, the platform caption/title, sized
      hashtags, and a best-time-to-post window in one pass, which is what
      this slot actually needs to be postable, not just a shot list.
+     Most short-form slots in a recurring cadence are everyday posts
+     rather than marketing videos: plan them from
+     `${CLAUDE_PLUGIN_ROOT}/references/fyp-formats.md`, about 70% evergreen
+     formats, 20% trends (checked in the app nearer the date), and 10%
+     experiments. Rotate formats so none repeats within a week (check the
+     existing calendar rows too), move between its four groups (meme
+     captions, comment bait, UI skits, story and everyday), and name the
+     format in that row's `Notes` (e.g. `format: tier-list`) so the next
+     batch can see what was used. Save the marketing types (an
+     announcement, a testimonial) for the dates they belong to.
    - Reddit / Product Hunt / Hacker News / Indie Hackers / dev.to / Discord
      / Slack / Telegram slots: hand off to
      `${CLAUDE_PLUGIN_ROOT}/skills/community-post-generator/SKILL.md`
@@ -148,7 +158,8 @@ command below.
      character; escape it as `\|` if the hook itself contains one),
      `Source` (what generated it — usually `content-calendar`), and a
      `Notes` column that **always includes the post file's path** from
-     step 5 (e.g. `state/posts/2026-09-28-linkedin.md`).
+     step 5 (e.g. `state/posts/2026-09-28-linkedin.md`), plus `format:
+     <name>` for a short-form slot (step 4).
    - **Status is always `Drafted` or `Ready for Approval` for every row
      this skill writes — never `Approved`.** This holds no matter how the
      request was phrased ("go ahead and post these," "just schedule the
