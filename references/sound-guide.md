@@ -145,10 +145,16 @@ originals, so there's nothing to license.
 | `glitch` | A digital stutter | An error, a crash, a "system overload" bit |
 
 One or two meme cues per video is plenty; the rest should be the quiet
-ones (`pop`, `swish`, `tick`). Every cue is mixed under the music, and the
+ones (`pop`, `swish`, `tick`). Under a voiceover, use fewer still: scene
+changes and one or two key moments, about one every 3 seconds at most. Every cue is mixed under the music, and the
 whole mix lands at about -14 LUFS, so a cue never jumps out of a feed.
 
 ## Licensed tracks instead
+
+The generated music is written for 10 to 30 second videos: it repeats the
+same few bars, which works in a short and wears thin past about 45
+seconds. For anything longer, use a licensed track; the renderer warns
+when a long video doesn't.
 
 For real produced music, put the file in the page's `assets/` folder and
 set `<body data-music-src="assets/track.mp3" data-music-start="12">`
@@ -182,3 +188,30 @@ video, even if the clip is short.
 **Trending sounds** only exist inside each app. If the user would rather
 post with one, they add it in the app and turn the video's own audio down.
 Posting through an API can't add one.
+
+## Voiceover
+
+A voice goes on top of the music and effects. Only use the user's own
+recording, or a voice they generate with a service they have their own
+key for. Never imitate a real person's voice without their permission, and
+if the voice is AI-generated, check whether the platform asks for an
+AI-content label.
+
+- **One line per file:** record each line of the script separately
+  (`voice-1.m4a`, `voice-2.m4a`, ...), put them in `assets/`, and add
+  `data-voice="assets/voice-1.m4a"` to the element the line belongs to.
+  It plays at that element's `--voice` time, or `--in`. A flubbed line is
+  then one quick re-record, and each scene can be timed to its line.
+- **One continuous take:** `<body data-voice-src="assets/voice.m4a"
+  data-voice-start="0.5">`.
+- **What the renderer does:** trims the silence before each line (it
+  starts on its cue), filters low rumble, compresses lightly, and levels
+  every line to the same loudness. The music and effects sit about 7 dB
+  under the voice and duck about 10 dB more while someone is speaking.
+  The whole mix still lands at -14 LUFS.
+- **Recording:** a quiet room (a closet full of clothes works well), the
+  phone about 20 cm away and a little off to the side, and the phone's
+  voice memo app. Any format ffmpeg reads is fine.
+- **Timing:** read each file's length (`ffprobe`) and give its scene that
+  long plus a beat. The renderer warns when lines overlap or run past the
+  end.

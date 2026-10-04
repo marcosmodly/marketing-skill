@@ -239,6 +239,25 @@ command below.
      - Any minimum account age or karma — this skill has no way to check
        the user's actual account against it, so surface the requirement
        and ask the user to confirm they clear it, rather than assuming.
+       **If they don't clear it, or say their posts keep getting
+       auto-removed** (often AutoMod quietly filtering new or low-karma
+       accounts), don't stop at "you don't qualify." Lay out the real
+       options, in this order:
+       1. Message the subreddit's mods (modmail) before posting: say what
+          they want to share and ask whether it's welcome, or, if a post
+          was auto-removed, ask for it to be approved. Mods can approve a
+          filtered post by hand. Offer to draft that message.
+       2. Build a real history in that community first, by answering
+          questions and commenting where they can actually help. Not
+          karma farming: karma-farming subreddits and upvote swaps get
+          accounts banned.
+       3. A related community without the gate, researched the same way as
+          the original target.
+       4. A platform with no karma minimum at all: Show HN, Indie Hackers,
+          or dev.to, each through its own section of this skill.
+       Never suggest getting around the gate itself (a second account, a
+       bought or borrowed aged account, asking for upvotes); under
+       Reddit's own rules that's ban evasion or vote manipulation.
      - The subreddit's actual list of available post flairs, not just
        whether one is required — self-service flairs are choosable at
        submit time even when optional, so pull the real list (the submit
@@ -698,7 +717,8 @@ Use this exact section order, as Markdown `##` headings:
      for a process this skill doesn't manage end-to-end, not a single
      ready-to-paste post.
 4. **Compliance Checklist** — the specific things only the user can verify
-   (their account clears any age/karma minimum or, for Hacker News and
+   (their account clears any age/karma minimum, and if it doesn't, the
+   options from step 3 instead of posting anyway; or, for Hacker News and
    Indie Hackers, has a genuine participation history rather than being
    promotion-only; they're posting from the right account; any mod
    pre-approval was actually obtained; for Discord or Slack, that the

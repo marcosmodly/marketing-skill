@@ -164,7 +164,8 @@ command below.
      screen. Scenes can sit on stock photos, stock video clips, or AI
      images. Be plain about what it makes. It's motion graphics (kinetic
      text, shapes, UI mockups) over those backgrounds, not filmed footage of
-     the user's product or people, and it has no voiceover. It suits
+     the user's product or people, and the only voiceover is one the user
+     records or supplies. It suits
      the types `video-types.md` marks Render or Render + your assets, not
      anything that needs real people or places on camera. Check it's
      usable with `node --version` (18+), `ffmpeg -version`, and `node -e
@@ -323,6 +324,24 @@ command below.
        `assets/`, set `data-music-src` and `data-music-start`, and record its
        license with `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/media.js credit
        <file> --source ... --license ...`. Don't use a track without a license note.
+     - **Longer than about 45 seconds:** the generated music repeats the
+       same few bars and wears thin, so ask for a licensed track instead.
+       The renderer warns about it.
+     - **A voiceover:** only the user's own recording, or a voice they
+       generate with a service they have their own key for. Write the
+       script line by line, ask them to record each line as its own file
+       (`voice-1.m4a`, `voice-2.m4a`, ...), and put the files in `assets/`.
+       Add `data-voice="assets/voice-1.m4a"` to the element each line
+       belongs to; it plays at that element's `--voice` time, or `--in`.
+       For one continuous take, use `<body data-voice-src="..."
+       data-voice-start="...">` instead. Time each scene to its line's
+       length (`ffprobe` the file). The renderer trims the silence before
+       each line, levels the lines to match, and ducks the music and
+       effects under the voice. Under a voice, keep sound effects to scene
+       changes; the renderer warns past one every 3 seconds. Never imitate
+       a real person's voice without their permission, and if the voice
+       is AI-generated, have the user check whether the platform asks for
+       an AI-content label.
    - **The backgrounds:** every scene has an empty `.bg` slot timed to it.
      - **What to search for:** for each scene, pick a setting or mood that
        fits the beat and the project's audience (e.g. "small bakery

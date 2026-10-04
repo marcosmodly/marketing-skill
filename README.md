@@ -744,8 +744,8 @@ in, `short-form-video` writes the page from its own script and renders
 it. You can also run the renderer yourself.
 
 **What it makes:** motion graphics (kinetic text, shapes, UI mockups) over
-real backgrounds, with music composed for your project. It doesn't film
-your product or people, and there's no voiceover. The output is 1080×1920
+real backgrounds, with music composed for your project, and a voiceover if
+you record one. It doesn't film your product or people. The output is 1080×1920
 (9:16), 30fps H.264 with AAC audio mixed to about −14 LUFS, which is what
 YouTube Shorts, Instagram Reels, and TikTok all expect.
 
@@ -851,6 +851,15 @@ How a video's soundtrack is put together:
   The renderer trims it, fades it, and dips it under the sound effects.
   `sound-guide.md` lists where to get licensed tracks; never use a
   popular song without a license.
+- **Longer videos:** the generated music is written for shorts and
+  repeats the same few bars, so for anything over about 45 seconds use
+  your own track. The renderer warns when a long video doesn't.
+- **A voiceover:** record each line of the script on your phone, put the
+  files in `assets/`, and add `data-voice="assets/voice-1.m4a"` to the
+  element each line belongs to (or `<body data-voice-src>` for one
+  continuous take). The renderer trims the silence before each line,
+  evens out their levels, and ducks the music and effects under your
+  voice.
 
 ### Templates by video type
 
