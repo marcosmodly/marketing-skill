@@ -12,6 +12,8 @@
  *   node render.js explainer.html --stills 5,12.5,40 [--outdir stills]
  *   node render.js explainer.html --sheet [--every 2] [--outdir stills]   # a contact sheet of the whole timeline
  *   node render.js explainer.html out.mp4 --from 30 --to 45                  # a preview of one stretch (silent)
+ *   node render.js explainer.html --check [--min-text 40]                   # any visible text under 40px, over the whole timeline
+ *   node render.js --voice-lengths assets                                    # LINES for the page, from assets/voice-1.m4a ... voice-N.m4a
  *
  * Needs the same setup as scripts/video/render.js: Node 18+, ffmpeg, and Playwright.
  */
@@ -29,11 +31,37 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--sheet') args.sheet = true;
+    else if (a === '--check') args.check = true;
+    else if (a === '--voice-lengths') args.voiceLengths = argv[++i];
     else if (a === '--silent') args.silent = true;
-    else if (['--fps', '--workers', '--stills', '--outdir', '--from', '--to', '--every', '--crf'].includes(a)) args[a.slice(2)] = argv[++i];
+    else if (['--fps', '--workers', '--stills', '--outdir', '--from', '--to', '--every', '--crf', '--min-text'].includes(a)) args[a.slice(2)] = argv[++i];
     else args.positional.push(a);
   }
   return args;
+}
+
+// Visible text smaller than `min` px: on a phone a 1920px-wide video shows at about a fifth of
+// its size, so small type stops being readable at all.
+async function smallText(page, t, min) {
+  return page.evaluate(([time, minPx]) => {
+    const found = [];
+    for (const el of document.body.querySelectorAll('*')) {
+      if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+      let o = 1;
+      for (let e = el; e && e !== document.documentElement; e = e.parentElement) {
+        const cs = getComputedStyle(e);
+        if (cs.display === 'none' || cs.visibility === 'hidden') { o = 0; break; }
+        o *= parseFloat(cs.opacity);
+      }
+      if (o < 0.5) continue;
+      const r = el.getBoundingClientRect();
+      if (r.right < 0 || r.left > 1920 || r.bottom < 0 || r.top > 1080) continue;
+      // scaled-down ancestors shrink text too
+      const size = parseFloat(getComputedStyle(el).fontSize) * (r.height ? Math.min(1, r.height / el.offsetHeight || 1) : 1);
+      if (size < minPx - 0.5) found.push({ t: time, size: Math.round(size), text: el.textContent.trim().replace(/\s+/g, ' ').slice(0, 40) });
+    }
+    return found;
+  }, [t, min]);
 }
 
 async function open(browser, pagePath) {
@@ -67,10 +95,33 @@ async function renderSegment(chromium, pagePath, first, last, fps, crf, file, pr
   if (code !== 0) throw new Error(`ffmpeg failed on ${file}`);
 }
 
+// How long each recorded line actually speaks: from the first sound to the last, ignoring the
+// silence a phone recording starts and ends with. The page's LINES takes these numbers.
+function voiceLengths(dir) {
+  const files = fs.readdirSync(dir).filter((f) => /^voice-\d+\.\w+$/.test(f)).sort((a, b) => parseInt(a.slice(6), 10) - parseInt(b.slice(6), 10));
+  if (!files.length) throw new Error(`no voice-1.m4a, voice-2.m4a, ... in ${dir}`);
+  const lengths = files.map((f) => {
+    const file = path.join(dir, f);
+    const run = spawnSync('ffmpeg', ['-hide_banner', '-nostats', '-i', file, '-af', 'highpass=f=80,silencedetect=n=-45dB:d=0.25', '-f', 'null', '-'], { encoding: 'utf8' });
+    const total = parseFloat(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', file], { encoding: 'utf8' }).stdout);
+    const starts = [...run.stderr.matchAll(/silence_start: ([\d.]+)/g)].map((m) => parseFloat(m[1]));
+    const ends = [...run.stderr.matchAll(/silence_end: ([\d.]+)/g)].map((m) => parseFloat(m[1]));
+    const begin = starts[0] !== undefined && starts[0] < 0.05 && ends[0] !== undefined ? ends[0] : 0;
+    // trailing silence: the last one, if it runs to the end of the file (ffmpeg closes it at EOF)
+    const lastStart = starts[starts.length - 1];
+    const lastEnd = ends[starts.length - 1];
+    const last = lastStart !== undefined && lastStart > begin && (lastEnd === undefined || lastEnd >= total - 0.1) ? lastStart : total;
+    console.log(`${f}: ${total.toFixed(2)}s file, speech ${begin.toFixed(2)}-${last.toFixed(2)}s`);
+    return +(last - begin).toFixed(2);
+  });
+  console.log(`const LINES = [${lengths.join(', ')}];`);
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  if (args.voiceLengths) return voiceLengths(args.voiceLengths);
   const [pagePath, outPath] = args.positional;
-  if (!pagePath || (!outPath && !args.stills && !args.sheet)) {
+  if (!pagePath || (!outPath && !args.stills && !args.sheet && !args.check)) {
     console.log(fs.readFileSync(__filename, 'utf8').split('*/')[0].replace(/^[\s\S]*?\/\*/, '').replace(/^ \* ?/gm, ''));
     process.exit(2);
   }
@@ -81,6 +132,20 @@ async function main() {
   settings.problems.push(...problems, ...video.checkMusic(settings));
   for (const p of settings.problems) console.warn(`Warning: ${p}`);
   const duration = settings.duration;
+  for (const p of video.checkMix(settings, duration)) console.warn(`Warning: ${p}`);
+
+  if (args.check) {
+    const min = Number(args['min-text'] || 40);
+    const seen = new Map();
+    for (let t = 0; t < duration; t += 0.25) {
+      await video.seek(page, t);
+      for (const f of await smallText(page, t, min)) if (!seen.has(f.text)) seen.set(f.text, f);
+    }
+    await browser.close();
+    for (const f of seen.values()) console.warn(`Small text: ${f.t.toFixed(2)}s "${f.text}" at ${f.size}px`);
+    console.log(seen.size ? `${seen.size} text element(s) under ${min}px` : `No visible text under ${min}px`);
+    process.exit(seen.size ? 1 : 0);
+  }
 
   if (args.stills || args.sheet) {
     const outdir = args.outdir || path.join(path.dirname(path.resolve(pagePath)), 'stills');

@@ -1,468 +1,183 @@
 <!doctype html>
 <!--
-  Marketing Skills for Claude Code: a 1920x1080 explainer of this plugin.
+  Marketing Skills for Claude Code, explainer v2 (1920x1080).
+
+  v2 answers the feedback on v1: the music is a licensed track instead of the
+  generated loop, there is a voiceover, every scene shows real output instead
+  of mock screens, and nothing on screen is smaller than 40px, so it reads on
+  a phone.
+
+  Timing follows the voiceover. LINES holds how long each spoken line runs;
+  each scene starts LEAD seconds before its line and holds TAIL seconds after
+  it. Set VOICE and MUSIC once the files are in assets/ (see
+  voiceover-script.md); until then it previews silent with estimated lengths.
 
   Rendered with ./render.js, which reuses scripts/video/render.js: every
-  animation below is a Web Animation with an absolute start time, so the
-  renderer can pause and seek it frame by frame. Times are in seconds and
-  laid out on the soundtrack's grid (112 BPM, so a bar is 2.143s): the beat
-  drops at bar 0, and every scene starts on a downbeat.
-
-  The music is the plugin's own synthesized soundtrack (tech genre, the
-  default sonic identity in references/brand-voice.md). Sound effects are
-  cued with sfx(name, time), which writes the same data-sfx markers the
-  short-form templates use.
+  animation is a Web Animation with an absolute start time, so the renderer
+  can pause and seek it frame by frame.
 -->
 <html>
 <head>
 <meta charset="utf-8">
 <title>Marketing Skills for Claude Code</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=block">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@500;600;700;800&family=JetBrains+Mono:wght@500;700&display=block">
 <style>
   :root {
-    --bg: #0c0c11;
-    --card: #16161d;
-    --card2: #1d1d26;
-    --line: #2c2c38;
-    --line2: #3a3a48;
-    --text: #f3f2ee;
-    --muted: #9c9ba6;
-    --dim: #6b6a76;
-    --accent: #e07a55;
-    --accent2: #f4a382;
-    --indigo: #7d8cff;
-    --ok: #3fbf7f;
-    --bad: #e8615a;
-    --warn: #e8b04a;
-    --li: #4f8fea;
+    --paper: #f3ede3;
+    --paper2: #ebe3d6;
+    --card: #fffdf9;
+    --ink: #16130f;
+    --ink2: #5c554b;
+    --line: #d9cebd;
+    --accent: #d2603a;
+    --accent-soft: #f6d6c6;
+    --ok: #2c8a56;
+    --bad: #c4433b;
+    --warn: #a8741a;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
-  body { font-family: "Inter", "Liberation Sans", sans-serif; color: var(--text); position: relative;
-         -webkit-font-smoothing: antialiased; }
-  .mono { font-family: "JetBrains Mono", monospace; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--paper); }
+  body { font-family: "Inter", "Liberation Sans", sans-serif; color: var(--ink); position: relative; -webkit-font-smoothing: antialiased; }
   .abs { position: absolute; }
-  svg { display: block; overflow: visible; }
-  .ico { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-
-  /* ---------- background ---------- */
-  #bg { position: absolute; inset: 0; overflow: hidden; }
-  .glow { position: absolute; border-radius: 50%; }
-  #glowA { width: 1500px; height: 1500px; left: -500px; top: -700px;
-           background: radial-gradient(closest-side, rgba(224,122,85,.30), rgba(224,122,85,.10) 55%, rgba(224,122,85,0)); }
-  #glowB { width: 1600px; height: 1600px; left: 900px; top: 200px;
-           background: radial-gradient(closest-side, rgba(96,110,235,.24), rgba(96,110,235,.08) 55%, rgba(96,110,235,0)); }
-  #dots { position: absolute; left: -120px; top: -120px; width: 2200px; height: 1340px;
-          background-image: radial-gradient(circle, rgba(255,255,255,.075) 1.6px, transparent 1.8px);
-          background-size: 44px 44px;
-          -webkit-mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 30%, transparent 100%);
-                  mask-image: radial-gradient(ellipse 60% 60% at 50% 50%, #000 30%, transparent 100%); }
-  #vig { position: absolute; inset: 0; background: radial-gradient(ellipse 75% 75% at 50% 50%, transparent 55%, rgba(0,0,0,.55)); }
-
-  /* ---------- chrome: chapter crumb, progress, flash ---------- */
-  #crumb { position: absolute; left: 64px; top: 44px; display: flex; align-items: center; gap: 14px;
-           font: 500 22px/30px "JetBrains Mono"; color: var(--dim); z-index: 6; }
-  #crumb .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 18px var(--accent); }
-  #crumb .root { color: var(--muted); }
-  #crumb .chapwrap { position: relative; height: 30px; width: 360px; overflow: hidden; }
-  #crumb .chap { position: absolute; left: 0; top: 0; color: var(--text); white-space: nowrap; }
-  #prog { position: absolute; left: 0; bottom: 0; width: 1920px; height: 4px; z-index: 6;
-          background: linear-gradient(90deg, var(--accent), var(--accent2)); transform-origin: 0 50%; }
-  #flash { position: absolute; inset: 0; background: #fff; z-index: 9; pointer-events: none; }
-  #black { position: absolute; inset: 0; background: #000; z-index: 10; }
-
-  /* ---------- type ---------- */
-  .scene { position: absolute; inset: 0; transform-origin: 50% 50%; }
-  .eyebrow { font: 600 22px/1 "JetBrains Mono"; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
-  .h1 { font-weight: 800; font-size: 76px; line-height: 1.04; letter-spacing: -.035em; }
-  .h2 { font-weight: 800; font-size: 62px; line-height: 1.06; letter-spacing: -.03em; }
-  .sub { font-size: 30px; line-height: 1.42; color: var(--muted); font-weight: 500; }
-  .center { text-align: center; }
-  .mask { display: block; overflow: hidden; padding: .06em 0 .16em; margin: -.06em 0 -.16em; }
+  .serif { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; letter-spacing: -.01em; }
+  .mono { font-family: "JetBrains Mono", monospace; }
+  .ico { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: inline-block; vertical-align: -0.12em; }
+  .scene { position: absolute; inset: 0; }
+  .mask { display: block; overflow: hidden; padding: .04em 0 .14em; margin: -.04em 0 -.14em; }
   .mask > span { display: inline-block; white-space: nowrap; }
-  .card { background: var(--card); border: 1.5px solid var(--line); border-radius: 22px;
-          box-shadow: 0 40px 90px -40px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.04); }
-  .pill { display: inline-flex; align-items: center; gap: 10px; border-radius: 999px; white-space: nowrap; }
-  .skel { height: 12px; border-radius: 6px; background: #2a2a35; }
   .hl { color: var(--accent); }
-
-  /* typed mono text: width animates in ch with steps() */
+  .card { background: var(--card); border: 2px solid var(--line); border-radius: 28px; box-shadow: 0 30px 60px -40px rgba(60,40,20,.35); }
+  .pill { display: inline-flex; align-items: center; gap: 14px; border-radius: 999px; white-space: nowrap; }
   .typed { display: inline-block; overflow: hidden; white-space: pre; vertical-align: bottom; }
-  .caret { display: inline-block; width: .58em; height: 1.05em; background: var(--accent); vertical-align: -0.16em;
-           margin-left: 2px; animation: blink 1.07s steps(1) infinite; }
-  @keyframes blink { 50% { opacity: 0; } }
 
-  /* ---------- 0 cold open ---------- */
-  .chore-pos { position: absolute; }
-  .chore { display: inline-flex; align-items: center; gap: 12px; padding: 14px 24px; border-radius: 999px;
-           background: rgba(29,29,38,.9); border: 1.5px solid var(--line); color: var(--muted);
-           font: 600 28px/1 "Inter"; white-space: nowrap; transform: translate(-50%, -50%); }
-  .chore i { width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--accent)); }
-  .word { position: absolute; left: 0; right: 0; top: 400px; text-align: center; font-size: 190px; font-weight: 900;
-          letter-spacing: -.05em; line-height: 1.1; }
+  /* paper texture: a faint dot grid, nothing that glows */
+  #grain { position: absolute; inset: -40px; background-image: radial-gradient(circle, rgba(22,19,15,.06) 1.4px, transparent 1.6px); background-size: 36px 36px; }
+  #wipeA, #wipeB { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; z-index: 8; }
+  #wipeA { background: var(--accent); }
+  #wipeB { background: var(--ink); }
+  #prog { position: absolute; left: 0; bottom: 0; width: 1920px; height: 8px; background: var(--accent); transform-origin: 0 50%; z-index: 9; }
+  #black { position: absolute; inset: 0; background: var(--paper); z-index: 10; }
 
-  /* ---------- skills (dots in the logo ring, then the grid cards) ---------- */
-  .sk { position: absolute; overflow: hidden; z-index: 3; border: 1.5px solid transparent; }
-  .sk-in { position: absolute; left: 0; top: 0; width: 405px; height: 212px; padding: 24px 28px; }
-  .sk-top { display: flex; justify-content: space-between; align-items: center; }
-  .sk-num { font: 700 20px/1 "JetBrains Mono"; color: var(--accent); }
-  .sk-ico { font-size: 34px; color: var(--muted); }
-  .sk-name { font: 700 23px/1.2 "JetBrains Mono"; margin-top: 16px; white-space: nowrap; }
-  .sk-desc { font-size: 21px; line-height: 1.38; color: var(--muted); margin-top: 10px; }
-  #ringCore { position: absolute; left: 932px; top: 272px; width: 56px; height: 56px; border-radius: 50%; z-index: 3;
-              background: radial-gradient(circle at 35% 30%, #ffb999, var(--accent) 60%, #c4573a);
-              box-shadow: 0 0 60px rgba(224,122,85,.65); }
-  .shock { position: absolute; left: 960px; top: 300px; width: 200px; height: 200px; margin: -100px 0 0 -100px;
-           border-radius: 50%; border: 3px solid var(--accent); z-index: 2; }
-
-  /* ---------- terminal ---------- */
-  .term { position: absolute; overflow: hidden; }
-  .term-bar { height: 54px; display: flex; align-items: center; gap: 10px; padding: 0 22px; border-bottom: 1.5px solid var(--line);
-              background: #1a1a22; }
-  .term-bar b { width: 14px; height: 14px; border-radius: 50%; background: #3a3a46; }
-  .term-bar span { flex: 1; text-align: center; font: 500 19px/1 "JetBrains Mono"; color: var(--dim); margin-right: 60px; }
-  .tl { font: 500 30px/62px "JetBrains Mono"; white-space: pre; height: 62px; }
-  .tl .p { color: var(--accent); }
-  .tl.c { color: var(--dim); }
-
-  /* ---------- brand voice ---------- */
-  .qa { position: absolute; left: 120px; display: flex; align-items: center; gap: 16px; }
-  .qa .av { width: 46px; height: 46px; border-radius: 14px; background: #2a1f1b; color: var(--accent); display: grid; place-items: center; font-size: 26px; }
-  .qa .bub { background: var(--card2); border: 1.5px solid var(--line); border-radius: 18px 18px 18px 6px; padding: 14px 22px;
-             font-size: 26px; font-weight: 500; white-space: nowrap; }
-  .doc-row { position: absolute; left: 40px; right: 40px; }
-  .doc-k { font: 500 19px/1 "JetBrains Mono"; color: var(--accent); }
-  .doc-v { font-size: 27px; font-weight: 600; margin-top: 12px; white-space: nowrap; }
-  .ban { display: inline-block; position: relative; font: 500 21px/1 "JetBrains Mono"; color: var(--muted); padding: 9px 14px;
-         border: 1.5px solid var(--line); border-radius: 10px; margin-right: 10px; }
-  .ban s { position: absolute; left: 8px; right: 8px; top: 50%; height: 3px; margin-top: -1.5px; background: var(--bad); transform-origin: 0 50%; }
-  .node-label { position: absolute; transform: translate(-50%, -50%); font: 600 21px/1 "JetBrains Mono"; color: var(--text);
-                padding: 12px 18px; border-radius: 12px; background: rgba(22,22,29,.95); border: 1.5px solid var(--line); white-space: nowrap; }
-
-  /* ---------- spotlights ---------- */
-  .left { position: absolute; left: 120px; top: 0; bottom: 0; width: 760px; display: flex; flex-direction: column; justify-content: center; }
-  .count { font: 700 24px/1 "JetBrains Mono"; color: var(--accent); }
-  .count span { color: var(--dim); }
-  .sname { font: 500 28px/1 "JetBrains Mono"; color: var(--muted); margin-top: 14px; }
-  .left .h1 { margin-top: 34px; }
-  .left .sub { margin-top: 30px; max-width: 660px; }
-  .viz { position: absolute; left: 940px; top: 140px; width: 860px; height: 800px; }
-  .lbl { font: 500 17px/1 "JetBrains Mono"; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
-  .stamp { position: absolute; font: 900 74px/1 "Inter"; letter-spacing: -.02em; padding: 10px 26px 14px; border: 7px solid currentColor;
-           border-radius: 18px; transform-origin: 50% 50%; }
-  .chk { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 22px; flex: none; }
-  .chk.ok { background: rgba(63,191,127,.16); color: var(--ok); }
-  .chk.no { background: rgba(232,97,90,.16); color: var(--bad); }
-  .row { display: flex; align-items: center; gap: 16px; }
-  .meter { position: absolute; height: 10px; border-radius: 5px; background: #262631; overflow: hidden; }
-  .meter i { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: 5px; background: var(--ok); transform-origin: 0 50%; }
-  .tab { font: 700 18px/1 "JetBrains Mono"; padding: 8px 14px; border-radius: 9px; border: 1.5px solid var(--line); color: var(--dim); }
-
-  /* phone */
-  .phone { position: absolute; border-radius: 52px; background: #050507; border: 3px solid #2c2c38;
-           box-shadow: 0 50px 120px -30px rgba(0,0,0,.9), 0 0 0 10px #15151c; overflow: hidden; }
-  .scr { position: absolute; inset: 12px; border-radius: 40px; overflow: hidden;
-         background: linear-gradient(160deg, #3b1d14 0%, #1a1530 60%, #0e1830 100%); }
-  .ttcap { display: inline-block; background: #fff; color: #111; font: 800 30px/1.15 "Inter"; padding: 6px 14px 8px; border-radius: 8px; }
-  .eq { position: absolute; width: 9px; bottom: 0; border-radius: 5px; background: linear-gradient(180deg, var(--accent2), var(--accent));
-        transform-origin: 50% 100%; }
-
-  /* pipeline */
-  .pnode { position: absolute; width: 270px; height: 176px; margin: -88px 0 0 -135px; display: flex; flex-direction: column;
-           align-items: center; justify-content: center; gap: 12px; }
-  .pnode .ic { width: 66px; height: 66px; border-radius: 20px; display: grid; place-items: center; font-size: 34px;
-               background: #23232d; color: var(--muted); }
-  .pnode .t { font-size: 27px; font-weight: 700; }
-  .pnode .d { font: 500 16px/1 "JetBrains Mono"; color: var(--dim); }
-  .bubble { position: absolute; border-radius: 22px; padding: 22px 26px; }
-  .code { font: 500 18px/1.65 "JetBrains Mono"; color: #d9d8d3; background: #0f0f15; border: 1.5px solid var(--line); border-radius: 14px;
-          padding: 16px 20px; white-space: pre; margin-top: 16px; }
-  .code b { color: var(--dim); font-weight: 500; }
-
-  /* status track */
-  .st { position: absolute; top: 520px; height: 70px; border-radius: 999px; display: grid; place-items: center;
-        font-size: 26px; font-weight: 600; background: var(--card); border: 2px solid var(--line); color: var(--muted); white-space: nowrap; }
-
-  /* destinations */
-  .dest { position: absolute; transform: translate(-50%, -50%); font: 600 23px/1 "JetBrains Mono"; padding: 14px 22px; border-radius: 999px;
-          background: var(--card); border: 2px solid var(--line); white-space: nowrap; }
-  .dest.auto { color: var(--indigo); border-color: rgba(125,140,255,.4); }
+  /* 1 */
+  .big { font-size: 150px; line-height: 1.02; }
+  /* 2 */
+  .tree { font: 500 46px/1 "JetBrains Mono"; }
+  .tree div { height: 76px; display: flex; align-items: center; white-space: nowrap; }
+  .tree i { font-style: normal; color: var(--accent); margin-right: 22px; }
+  /* 3 */
+  .head { font: 700 40px/1 "JetBrains Mono"; color: var(--accent); }
+  .ban { display: inline-block; position: relative; font: 600 48px/1 "Inter"; padding: 18px 28px; border: 2px solid var(--line); border-radius: 18px; background: var(--card); margin: 0 18px 18px 0; }
+  .ban s { position: absolute; left: 14px; right: 14px; top: 50%; height: 6px; margin-top: -3px; background: var(--bad); border-radius: 3px; transform-origin: 0 50%; }
+  /* 4 */
+  .rule { display: flex; align-items: center; gap: 26px; font-size: 42px; font-weight: 600; height: 72px; white-space: nowrap; }
+  .rule b { font: 700 40px/1 "JetBrains Mono"; color: var(--ink2); width: 40px; }
+  .stamp { position: absolute; font: 800 150px/1 "Inter"; letter-spacing: -.02em; padding: 14px 44px 26px; border: 12px solid currentColor; border-radius: 30px; color: var(--ok); transform-origin: 50% 50%; }
+  .bubble { position: absolute; border-radius: 34px; padding: 30px 40px; font-size: 44px; font-weight: 600; line-height: 1.3; }
+  /* 5 */
+  .phone { position: absolute; width: 300px; height: 533px; border-radius: 40px; overflow: hidden; border: 8px solid var(--ink); background: var(--ink); box-shadow: 0 40px 60px -30px rgba(40,25,10,.45); }
+  .phone img { width: 100%; height: 100%; display: block; }
+  /* 6 */
+  .st { position: absolute; top: 850px; height: 96px; border-radius: 999px; display: grid; place-items: center; font-size: 42px; font-weight: 700;
+        background: var(--card); border: 3px solid var(--line); color: var(--ink2); white-space: nowrap; }
+  /* 7 */
+  .cmd { font: 500 44px/1 "JetBrains Mono"; height: 92px; display: flex; align-items: center; white-space: pre; }
+  .cmd .p { color: var(--accent); }
 </style>
 </head>
-<body data-duration="121" data-music="tech" data-bpm="112" data-key="C" data-mode="major" data-energy="3"
-      data-motif="1 5 3 5 | 6 5 3 2" data-drop="4.2857" data-break="25.714-30.0, 87.857-92.143">
+<body data-music="none">
 
-<div id="bg">
-  <div class="glow" id="glowA"></div>
-  <div class="glow" id="glowB"></div>
-  <div id="dots"></div>
-  <div id="vig"></div>
-</div>
+<div id="grain"></div>
 
-<!-- ================= 0. cold open ================= -->
-<div class="scene" id="s-open">
-  <div id="chores"></div>
-  <div class="word" id="w0">Research.</div>
-  <div class="word" id="w1">Write.</div>
-  <div class="word" id="w2">Design.</div>
-  <div class="word" id="w3">Schedule.</div>
-  <div class="word" id="w4">Publish.</div>
-  <div class="word" id="w5"><span class="hl">Repeat.</span></div>
-</div>
-
-<!-- ================= 1. title ================= -->
-<div class="shock" id="shock1"></div>
-<div class="shock" id="shock2"></div>
-<div class="scene" id="s-title">
-  <div class="abs center" style="left:0;right:0;top:418px;font-size:150px;font-weight:900;letter-spacing:-.05em;line-height:1.1" id="titleMain">Marketing Skills</div>
-  <div class="abs center hl" style="left:0;right:0;top:600px;font-size:74px;font-weight:800;letter-spacing:-.03em" data-lines="for Claude Code" id="titleFor"></div>
-  <div class="abs center sub" style="left:0;right:0;top:724px;font-size:36px" id="titleSub">12 AI marketing skills in one plugin.</div>
-  <div class="abs" style="left:0;right:0;top:812px;display:flex;justify-content:center;gap:16px" id="badges">
-    <span class="pill mono" style="padding:12px 20px;border:1.5px solid var(--line);font-size:21px;color:var(--muted)">MIT license</span>
-    <span class="pill mono" style="padding:12px 20px;border:1.5px solid rgba(224,122,85,.5);font-size:21px;color:var(--accent2)">Claude Code plugin</span>
-    <span class="pill mono" style="padding:12px 20px;border:1.5px solid var(--line);font-size:21px;color:var(--muted)">Agent Skills · SKILL.md</span>
-  </div>
-</div>
-<div id="ringCore"></div>
-<div id="skills"></div>
-
-<!-- ================= 2. grid heading ================= -->
-<div class="scene" id="s-grid">
-  <div class="abs center" style="left:0;right:0;top:78px">
-    <div class="h2" data-lines="12 skills. Each one is a plain SKILL.md." id="gridHead"></div>
-  </div>
-  <div class="abs center sub" style="left:0;right:0;top:922px" id="gridCap">Use one on its own, or chain them together.</div>
-</div>
-
-<!-- ================= 3. install ================= -->
-<div class="scene" id="s-install">
-  <div class="abs center" style="left:0;right:0;top:150px">
-    <div class="eyebrow" id="instEye">Install</div>
-    <div class="h1" style="margin-top:22px" data-lines="Two commands and you're in." id="instHead"></div>
-  </div>
-  <div class="term card" id="term" style="left:300px;top:370px;width:1320px;height:372px">
-    <div class="term-bar"><b></b><b></b><b></b><span>~/your-product</span></div>
-    <div style="padding:26px 40px">
-      <div class="tl" id="tl1"><span class="typed" data-type>$ claude plugin marketplace add marcosmodly/marketing-skill</span><span class="caret" id="c1"></span></div>
-      <div class="tl" id="tl2"><span class="typed" data-type>$ claude plugin install marketing-skill@marketing-skill</span><span class="caret" id="c2"></span></div>
-      <div class="tl c" id="tl3"># then, once, inside Claude Code:</div>
-      <div class="tl" id="tl4"><span class="typed hl" data-type>&gt; /marketing-skill:marketing-setup</span><span class="caret" id="c4"></span></div>
-    </div>
-  </div>
-  <div class="abs center sub" style="left:0;right:0;top:790px;font-size:28px" id="instNote">Using OpenAI Codex? Same repo, same skills.</div>
-</div>
-
-<!-- ================= 4. brand voice ================= -->
-<div class="scene" id="s-voice">
-  <div id="voiceLeft">
-    <div class="abs" style="left:120px;top:150px">
-      <div class="eyebrow" id="voEye">Set up once</div>
-      <div class="h1" style="margin-top:22px;font-size:66px" data-lines="Tell it your voice.|Every skill listens." id="voHead"></div>
-    </div>
-    <div class="abs card" id="voCmd" style="left:120px;top:400px;width:720px;height:76px;border-radius:16px;padding:0 26px;display:flex;align-items:center;font:500 26px/1 'JetBrains Mono'">
-      <span class="typed hl" data-type>&gt; /marketing-skill:marketing-setup</span>
-    </div>
-    <div class="qa" id="q1" style="top:508px"><div class="av"><svg class="ico" viewBox="0 0 24 24" data-icon="spark"></svg></div><div class="bub">Which task should it take on first?</div></div>
-    <div class="qa" id="q2" style="top:590px"><div class="av"><svg class="ico" viewBox="0 0 24 24" data-icon="spark"></svg></div><div class="bub">What do you want to make?</div></div>
-    <div class="qa" id="q3" style="top:672px"><div class="av"><svg class="ico" viewBox="0 0 24 24" data-icon="spark"></svg></div><div class="bub">Who is it for, and what tone?</div></div>
-    <div class="qa" id="q4" style="top:754px"><div class="av"><svg class="ico" viewBox="0 0 24 24" data-icon="spark"></svg></div><div class="bub">What format by default?</div></div>
-  </div>
-  <svg id="voiceRays" class="abs" style="left:0;top:0" width="1920" height="1080" viewBox="0 0 1920 1080"></svg>
-  <div id="voiceNodes"></div>
-  <div class="card abs" id="doc" style="left:980px;top:150px;width:820px;height:790px;transform-origin:50% 50%">
-    <div style="position:relative;height:62px;display:flex;align-items:center;gap:14px;padding:0 28px;border-bottom:1.5px solid var(--line);font:500 21px/1 'JetBrains Mono';color:var(--muted)">
-      <svg class="ico" viewBox="0 0 24 24" data-icon="file" style="font-size:24px"></svg>references/brand-voice.md
-      <span style="flex:1"></span>
-      <span class="pill mono" id="mkUn" style="font-size:16px;padding:7px 12px;color:var(--warn);border:1.5px solid rgba(232,176,74,.45)">UNCONFIGURED</span>
-      <span class="pill mono abs" id="mkOk" style="right:28px;font-size:16px;padding:7px 12px;color:var(--ok);border:1.5px solid rgba(63,191,127,.5)">CONFIGURED</span>
-    </div>
-    <div class="doc-row" style="top:92px"><div class="doc-k">## Priority Task</div><div class="doc-v wipe" id="a1">Weekly LinkedIn posts + newsletter</div></div>
-    <div class="doc-row" style="top:200px"><div class="doc-k">## Content Types</div><div class="doc-v wipe" id="a2">Text posts and short-form video</div></div>
-    <div class="doc-row" style="top:308px"><div class="doc-k">## Brand Voice &amp; Tone</div><div class="doc-v wipe" id="a3">Plain-spoken, a little dry. No hype.</div></div>
-    <div class="doc-row" style="top:416px"><div class="doc-k">## Default Output Format</div><div class="doc-v wipe" id="a4">A hook, three bullets, one CTA</div></div>
-    <div class="doc-row" style="top:524px"><div class="doc-k">## Banned Words &amp; Phrases</div>
-      <div style="margin-top:14px;white-space:nowrap" id="bans">
-        <span class="ban">game-changer<s></s></span><span class="ban">revolutionary<s></s></span><span class="ban">synergy<s></s></span><span class="ban">supercharge<s></s></span>
-      </div>
-    </div>
-    <div class="doc-row" style="top:650px"><div class="doc-k">## Sonic Identity</div>
-      <div class="doc-v" style="display:flex;align-items:center;gap:18px" id="a6"><span id="a6eq" style="display:flex;align-items:flex-end;gap:5px;height:30px"></span><span class="wipe" id="a6t">tech · 112 BPM · C major</span></div>
-    </div>
-  </div>
-  <div class="abs center sub" style="left:0;right:0;top:978px;font-size:30px;color:var(--text)" id="voCap">Every skill reads <span class="mono hl" style="font-size:27px">brand-voice.md</span> before it writes a word.</div>
-</div>
-
-<!-- ================= 5-13. spotlights ================= -->
-<div id="spots"></div>
-
-<!-- ================= 14. short-form video ================= -->
-<div class="scene" id="s-video">
-  <div class="left" id="vidLeft">
-    <div class="count">10 <span>/ 12</span></div>
-    <div class="sname">short-form-video</div>
-    <div class="h1" data-lines="Scripts, and the|video itself."></div>
-    <div class="sub">TikTok, Reels, and Shorts, rendered on your machine with music composed in your brand's sound.</div>
-    <div class="row" id="vidMeta" style="margin-top:34px;font-size:26px;font-weight:600;color:var(--accent2)">
-      <svg class="ico" viewBox="0 0 24 24" data-icon="note" style="font-size:32px"></svg>
-      <span>The music in this video? Composed by it.</span>
-    </div>
-  </div>
-  <div class="viz" id="vidViz">
-    <div class="phone" id="phone" style="left:40px;top:10px;width:350px;height:690px">
-      <div class="scr">
-        <div class="abs" id="scrGlow" style="left:-120px;top:80px;width:520px;height:520px;border-radius:50%;background:radial-gradient(closest-side,rgba(224,122,85,.55),transparent)"></div>
-        <div id="scrA" class="abs" style="left:26px;right:26px;top:200px">
-          <div><span class="ttcap" id="cap1">pov:</span></div>
-          <div style="margin-top:8px"><span class="ttcap" id="cap2">your launch video</span></div>
-          <div style="margin-top:8px"><span class="ttcap" id="cap3">rendered itself</span></div>
-        </div>
-        <div id="scrB" class="abs" style="left:22px;right:22px;top:150px">
-          <div class="abs" id="chat1" style="left:0;top:0;max-width:240px;background:#2a2a36;border-radius:20px 20px 20px 6px;padding:14px 18px;font:600 22px/1.3 Inter">can you post the launch video today?</div>
-          <div class="abs" id="chat2" style="right:0;top:130px;max-width:220px;background:var(--accent);color:#1a0f0a;border-radius:20px 20px 6px 20px;padding:14px 18px;font:700 22px/1.3 Inter">already rendered it.</div>
-          <div class="abs" id="chat3" style="right:0;top:226px;max-width:220px;background:var(--accent);color:#1a0f0a;border-radius:20px 20px 6px 20px;padding:14px 18px;font:700 22px/1.3 Inter">with its own music.</div>
-        </div>
-        <div class="abs" style="right:16px;top:360px;display:flex;flex-direction:column;gap:22px;align-items:center" id="sideUI">
-          <div style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.14);display:grid;place-items:center;font-size:26px" id="heartWrap"><svg class="ico" viewBox="0 0 24 24" data-icon="heart" id="heart"></svg></div>
-          <div style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.14)"></div>
-          <div style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.14)"></div>
-        </div>
-        <div class="abs" style="left:22px;right:22px;bottom:26px;height:5px;border-radius:3px;background:rgba(255,255,255,.2)"><i class="abs" id="scrProg" style="left:0;top:0;bottom:0;width:100%;border-radius:3px;background:#fff;transform-origin:0 50%"></i></div>
-      </div>
-    </div>
-    <div class="abs" id="eqRow" style="left:50px;top:732px;width:340px;height:60px"></div>
-    <div class="abs" style="left:480px;top:40px;width:380px" id="stats">
-      <div id="st1"><div style="font-size:104px;font-weight:900;letter-spacing:-.04em;line-height:1;color:var(--accent)">23</div><div style="font-size:26px;color:var(--muted);margin-top:6px">marketing video types</div></div>
-      <div id="st2" style="margin-top:44px"><div style="font-size:104px;font-weight:900;letter-spacing:-.04em;line-height:1;color:var(--text)">22</div><div style="font-size:26px;color:var(--muted);margin-top:6px">everyday FYP formats</div></div>
-      <div id="st3" style="margin-top:44px"><div style="font-size:104px;font-weight:900;letter-spacing:-.04em;line-height:1;color:var(--indigo)">11</div><div style="font-size:26px;color:var(--muted);margin-top:6px">music genres</div></div>
-    </div>
-    <div class="abs" id="vidChips" style="left:480px;top:612px;width:380px;display:flex;flex-wrap:wrap;gap:12px">
-      <span class="pill mono" style="padding:10px 16px;border:1.5px solid var(--line);font-size:19px">TikTok</span>
-      <span class="pill mono" style="padding:10px 16px;border:1.5px solid var(--line);font-size:19px">Instagram Reels</span>
-      <span class="pill mono" style="padding:10px 16px;border:1.5px solid var(--line);font-size:19px">YouTube Shorts</span>
-    </div>
+<!-- 1. the hook -->
+<div class="scene" id="s1">
+  <div class="abs serif big" style="left:140px;top:380px" id="h1a" data-lines="The marketing work|I kept putting off."></div>
+  <div class="abs" style="left:140px;top:330px" id="h1b">
+    <div class="serif" style="font-size:260px;line-height:1" data-lines="12 skills."></div>
+    <div style="font-size:64px;font-weight:700;margin-top:40px" id="h1c">One plugin for <span class="hl">Claude Code</span>.</div>
   </div>
 </div>
 
-<!-- ================= 15. full pipeline ================= -->
-<div class="scene" id="s-pipe">
-  <div class="abs center" style="left:0;right:0;top:138px" id="pipeHead">
-    <div class="eyebrow">11 / 12 · full-pipeline</div>
-    <div class="h1" style="margin-top:22px" data-lines="Or run the whole thing, end to end."></div>
-  </div>
-  <div class="abs" id="cam" style="left:0;top:0;width:1920px;height:1080px;transform-origin:0 0">
-    <svg class="abs" style="left:0;top:0" width="1920" height="1080" viewBox="0 0 1920 1080" id="pipeSvg">
-      <path id="rail" d="M250 690 H1670" stroke="#2c2c38" stroke-width="4" stroke-linecap="round" fill="none" pathLength="1"/>
-    </svg>
-    <div id="pnodes"></div>
-    <div class="abs" id="packet" style="left:0;top:0;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#ffd2bf;box-shadow:0 0 0 6px rgba(224,122,85,.35),0 0 40px 10px rgba(224,122,85,.7)"></div>
-    <div class="abs pill" id="waitPill" style="left:1315px;top:770px;transform:translateX(-50%);padding:10px 18px;font:600 21px/1 'JetBrains Mono';color:var(--warn);border:1.5px solid rgba(232,176,74,.5);background:rgba(232,176,74,.08)">waiting for you</div>
-    <div class="abs pill" id="sentPill" style="left:1670px;top:770px;transform:translateX(-50%);padding:10px 18px;font:600 21px/1 'JetBrains Mono';color:var(--ok);border:1.5px solid rgba(63,191,127,.5);background:rgba(63,191,127,.08)">Sent · 200 OK</div>
-  </div>
-  <div class="card abs" id="chat" style="left:1010px;top:180px;width:820px;height:660px;padding:0;overflow:hidden">
-    <div style="height:72px;display:flex;align-items:center;gap:14px;padding:0 28px;border-bottom:1.5px solid var(--line)">
-      <div style="width:40px;height:40px;border-radius:12px;background:#2a1f1b;color:var(--accent);display:grid;place-items:center;font-size:24px"><svg class="ico" viewBox="0 0 24 24" data-icon="spark"></svg></div>
-      <div style="font-size:24px;font-weight:700">Claude</div>
-      <div class="mono" style="font-size:17px;color:var(--dim)">stage 4 · approval checkpoint</div>
-    </div>
-    <div class="bubble" id="cb1" style="left:28px;top:100px;width:764px;background:var(--card2);border:1.5px solid var(--line);border-radius:8px 22px 22px 22px">
-      <div style="font-size:25px;font-weight:600">Ready to send. Here's exactly what's going out:</div>
-      <div class="code" id="payload"><span id="pl1"><b>Account:    </b> your n8n webhook</span>
-<span id="pl2"><b>Destination:</b> https://your-n8n-host/webhook/abc123</span>
-<span id="pl3"><b>Attachments:</b> none</span>
-<span id="pl4"><b>Final text: </b> [linkedin_post] Speed got us here...</span></div>
-      <div style="font-size:21px;color:var(--muted);margin-top:14px" id="pl5">Reply to confirm this exact send, or say what to change first.</div>
-    </div>
-    <div class="abs pill" id="notYet" style="left:28px;top:418px;padding:12px 18px;font-size:22px;font-weight:600;color:var(--warn);background:rgba(232,176,74,.1);border:1.5px solid rgba(232,176,74,.4)">
-      <svg class="ico" viewBox="0 0 24 24" data-icon="clock" style="font-size:24px"></svg>Nothing has been sent yet.</div>
-    <div class="abs" id="typingDots" style="right:28px;top:520px;display:flex;gap:8px;padding:20px 24px;border-radius:22px;background:rgba(224,122,85,.18)">
-      <i style="width:12px;height:12px;border-radius:50%;background:var(--accent)" class="td"></i><i style="width:12px;height:12px;border-radius:50%;background:var(--accent)" class="td"></i><i style="width:12px;height:12px;border-radius:50%;background:var(--accent)" class="td"></i>
-    </div>
-    <div class="bubble" id="ub" style="right:28px;top:504px;max-width:600px;background:var(--accent);color:#1b0f0a;border-radius:22px 22px 8px 22px;font-size:26px;font-weight:700;line-height:1.3">
-      Yes, send the LinkedIn post and newsletter blurb.</div>
-  </div>
-  <div class="abs center sub" style="left:0;right:0;top:880px;color:var(--text)" id="pipeCap">One request in. A required stop before anything goes live.</div>
+<!-- 2. the skills, as the real folder listing -->
+<div class="scene" id="s2">
+  <div class="abs mono" style="left:140px;top:110px;font-size:46px;font-weight:700" id="treeHead">skills/</div>
+  <div class="abs tree" style="left:140px;top:200px" id="treeA"></div>
+  <div class="abs tree" style="left:1000px;top:200px" id="treeB"></div>
+  <div class="abs" style="left:140px;top:720px;font-size:64px;font-weight:700" id="treeCap">Each one is a plain <span class="mono hl" style="font-size:60px">SKILL.md</span> file.</div>
 </div>
 
-<!-- ================= 16. approval model ================= -->
-<div class="scene" id="s-approve">
-  <div class="abs center" style="left:0;right:0;top:150px">
-    <div class="eyebrow" id="apEye">12 / 12 · publish-pipeline</div>
-    <div class="h1" style="margin-top:22px;font-size:88px" data-lines="Nothing posts without your yes." id="apHead"></div>
+<!-- 3. brand voice -->
+<div class="scene" id="s3">
+  <div class="abs mono" style="left:140px;top:120px;font-size:42px;color:var(--ink2)" id="bvFile">references/brand-voice.md</div>
+  <div class="abs serif" style="left:140px;top:190px;font-size:130px;line-height:1.02" data-lines="Set your voice once." id="bvHead"></div>
+  <div class="abs" style="left:140px;top:420px" id="bvRows">
+    <div class="head" style="margin-bottom:28px">## Target Audience</div>
+    <div class="head" style="margin-bottom:28px">## Brand Voice &amp; Tone</div>
+    <div class="head">## Banned Words &amp; Phrases</div>
   </div>
-  <svg class="abs" style="left:0;top:0" width="1920" height="1080" viewBox="0 0 1920 1080" id="apSvg">
-    <path id="brk" d="M290 470 V455 H1110 V470" stroke="#3a3a48" stroke-width="2.5" fill="none" pathLength="1"/>
-    <path id="apRail" d="M375 650 H1560" stroke="#2c2c38" stroke-width="4" stroke-linecap="round" fill="none" pathLength="1"/>
-  </svg>
-  <div class="abs mono center" id="brkLbl" style="left:290px;width:820px;top:410px;font-size:20px;color:var(--dim)">drafting skills stop here</div>
-  <div class="abs mono center" id="humLbl" style="left:1150px;width:300px;top:410px;font-size:20px;color:var(--accent)">a real human reply</div>
-  <div class="abs mono center" id="pubLbl" style="left:1440px;width:240px;top:410px;font-size:20px;color:var(--ok)">then it sends</div>
-  <div class="st" id="st0" style="left:290px;width:170px">Planned</div>
-  <div class="st" id="st1x" style="left:550px;width:170px">Drafted</div>
-  <div class="st" id="st2x" style="left:810px;width:300px">Ready for Approval</div>
-  <div class="st" id="st3x" style="left:1200px;width:200px">Approved</div>
-  <div class="st" id="st4x" style="left:1490px;width:140px">Sent</div>
-  <div id="chev"></div>
-  <div class="abs" id="lock" style="left:1155px;top:555px;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:16px;background:#2b2216;border:2px solid rgba(232,176,74,.6);color:var(--warn);display:grid;place-items:center;font-size:30px;z-index:2">
-    <svg viewBox="0 0 24 24" class="ico" id="lockSvg"><rect x="5" y="11" width="14" height="10" rx="2"/><path id="shackle" d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+  <div class="abs" style="left:900px;top:420px;width:900px" id="bans">
+    <span class="ban">game-changer<s></s></span><span class="ban">revolutionary<s></s></span><span class="ban">synergy<s></s></span><span class="ban">supercharge<s></s></span><span class="ban">seamless<s></s></span>
   </div>
-  <div class="abs" id="tok" style="left:0;top:0;width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:50%;background:#ffd2bf;box-shadow:0 0 0 6px rgba(224,122,85,.3),0 0 34px 8px rgba(224,122,85,.6)"></div>
-  <div class="abs" id="reply" style="left:1155px;top:706px;transform:translateX(-50%);background:var(--accent);color:#1b0f0a;border-radius:22px 22px 22px 8px;padding:16px 24px;font-size:26px;font-weight:700;white-space:nowrap">Yes, send #1 and #3.</div>
-  <div class="abs center sub" style="left:0;right:0;top:880px" id="apCap">A scheduled run with nobody around? The drafts just wait for you.</div>
+  <div class="abs" style="left:140px;top:840px;font-size:64px;font-weight:700" id="bvCap">Every skill reads it <span class="hl">before it writes</span>.</div>
 </div>
 
-<!-- ================= 17. destinations ================= -->
-<div class="scene" id="s-dest">
-  <div class="abs center" style="left:0;right:0;top:96px">
-    <div class="h1" data-lines="Then it ships where you already work." id="deHead"></div>
-  </div>
-  <svg class="abs" style="left:0;top:0" width="1920" height="1080" viewBox="0 0 1920 1080" id="deSvg"></svg>
-  <div id="deDots"></div>
-  <div id="dests"></div>
-  <div class="card abs" id="json" style="left:660px;top:440px;width:600px;height:240px;padding:28px 34px;font:500 22px/1.6 'JetBrains Mono';white-space:pre;color:#d9d8d3"><span style="color:var(--accent)">POST</span> <span style="color:var(--muted)">your-webhook</span>
-{
-  <span style="color:var(--indigo)">"source_skill"</span>: "publish-pipeline",
-  <span style="color:var(--indigo)">"content"</span>: { <span style="color:var(--indigo)">"linkedin_post"</span>: "..." }
-}</div>
-  <div class="abs center sub" style="left:0;right:0;top:960px;font-size:28px" id="deCap"><span style="color:var(--indigo)">n8n, Make, or any webhook</span>, or 11 platforms directly with your own API keys.</div>
+<!-- 4. this very post: the rules check -->
+<div class="scene" id="s4">
+  <div class="abs" style="left:140px;top:100px;font-size:60px;font-weight:800" id="rHead">r/claudeskills rules</div>
+  <div class="abs" style="left:140px;top:200px" id="rules"></div>
+  <div class="stamp" style="left:1240px;top:180px" id="go">GO</div>
+  <div class="abs pill" style="left:1240px;top:440px;padding:20px 32px;font-size:44px;font-weight:700;background:var(--card);border:2px solid var(--line)" id="flair">flair: Skill Share</div>
+  <div class="bubble card" style="left:1000px;top:620px;width:800px" id="ask">"I can't open r/claudeskills from here. Can you paste the rules?"</div>
 </div>
 
-<!-- ================= 18. codex + free ================= -->
-<div class="scene" id="s-codex">
-  <div class="abs center" style="left:0;right:0;top:250px">
-    <div class="h1" data-lines="Works in Claude Code and OpenAI Codex." id="cxHead"></div>
+<!-- 5. short-form video: real frames from the plugin's own templates -->
+<div class="scene" id="s5">
+  <div class="abs serif" style="left:140px;top:90px;font-size:130px;line-height:1" data-lines="TikTok, Reels, Shorts." id="vHead"></div>
+  <div class="phone" style="left:140px;top:300px"><img src="assets/frames/tier-list.jpg" alt=""></div>
+  <div class="phone" style="left:480px;top:300px"><img src="assets/frames/text-chat.jpg" alt=""></div>
+  <div class="phone" style="left:820px;top:300px"><img src="assets/frames/pov.jpg" alt=""></div>
+  <div class="phone" style="left:1160px;top:300px"><img src="assets/frames/countdown.jpg" alt=""></div>
+  <div class="phone" style="left:1500px;top:300px"><img src="assets/frames/hot-take.jpg" alt=""></div>
+  <div class="abs" style="left:140px;top:880px;font-size:60px;font-weight:700" id="vCap"><span class="hl">28 templates</span>, rendered on your machine.</div>
+</div>
+
+<!-- 6. approval: the real checkpoint from EXAMPLE.md -->
+<div class="scene" id="s6">
+  <div class="bubble card" style="left:140px;top:90px;width:1100px" id="c1">Ready to send. Here's exactly what's going out.</div>
+  <div class="abs pill" style="left:140px;top:300px;padding:22px 34px;font-size:46px;font-weight:700;color:var(--warn);background:#f6e7c8;border:2px solid #e2c27f" id="c2">Nothing has been sent yet.</div>
+  <div class="bubble" style="left:620px;top:450px;width:1160px;background:var(--accent);color:#fff" id="c3">Yes, send the LinkedIn post and newsletter blurb.</div>
+  <div class="abs pill" style="left:140px;top:690px;padding:22px 34px;font-size:46px;font-weight:700;color:var(--ok);background:#d9eedf;border:2px solid #9fd1b0" id="c4">Sent · 200 OK</div>
+  <div class="st" style="left:140px;width:280px" id="st0">Drafted</div>
+  <div class="st" style="left:500px;width:480px" id="st1">Ready for Approval</div>
+  <div class="st" style="left:1060px;width:320px" id="st2">Approved</div>
+  <div class="st" style="left:1460px;width:220px" id="st3">Sent</div>
+</div>
+
+<!-- 7. install -->
+<div class="scene" id="s7">
+  <div class="abs serif" style="left:140px;top:110px;font-size:130px;line-height:1" data-lines="Two commands." id="iHead"></div>
+  <div class="abs card" style="left:140px;top:330px;width:1640px;padding:40px 50px" id="term">
+    <div class="cmd"><span class="typed" data-type><span class="p">$</span> claude plugin marketplace add marcosmodly/marketing-skill</span></div>
+    <div class="cmd"><span class="typed" data-type><span class="p">$</span> claude plugin install marketing-skill@marketing-skill</span></div>
   </div>
-  <div class="term card" id="cxA" style="left:150px;top:450px;width:780px;height:190px">
-    <div class="term-bar"><b></b><b></b><b></b><span>Claude Code</span></div>
-    <div style="padding:34px 28px;font:500 21px/1 'JetBrains Mono'"><span class="typed" data-type>$ claude plugin install marketing-skill@marketing-skill</span></div>
-  </div>
-  <div class="term card" id="cxB" style="left:990px;top:450px;width:780px;height:190px">
-    <div class="term-bar"><b></b><b></b><b></b><span>OpenAI Codex</span></div>
-    <div style="padding:34px 28px;font:500 21px/1 'JetBrains Mono'"><span class="typed" data-type>$ codex plugin add marketing-skill@marketing-skill</span></div>
-  </div>
-  <div class="abs" style="left:0;right:0;top:740px;display:flex;justify-content:center;gap:64px" id="cxChecks">
-    <div class="row" style="font-size:30px;font-weight:600"><div class="chk ok"><svg class="ico" viewBox="0 0 24 24" data-icon="check"></svg></div>Free to start, no API keys</div>
-    <div class="row" style="font-size:30px;font-weight:600"><div class="chk ok"><svg class="ico" viewBox="0 0 24 24" data-icon="check"></svg></div>MIT licensed</div>
-    <div class="row" style="font-size:30px;font-weight:600"><div class="chk ok"><svg class="ico" viewBox="0 0 24 24" data-icon="check"></svg></div>Your approval, every time</div>
+  <div class="abs" style="left:140px;top:700px;display:flex;gap:28px" id="chips">
+    <span class="pill" style="padding:22px 36px;font-size:46px;font-weight:700;background:var(--card);border:2px solid var(--line)">Claude Code</span>
+    <span class="pill" style="padding:22px 36px;font-size:46px;font-weight:700;background:var(--card);border:2px solid var(--line)">OpenAI Codex</span>
+    <span class="pill" style="padding:22px 36px;font-size:46px;font-weight:700;background:var(--accent-soft);border:2px solid #eab39b">No API keys to start</span>
   </div>
 </div>
 
-<!-- ================= 19. outro ================= -->
-<div class="scene" id="s-outro">
-  <div class="abs center" style="left:0;right:0;top:418px;font-size:140px;font-weight:900;letter-spacing:-.05em;line-height:1.1" id="outMain">Marketing Skills</div>
-  <div class="abs center hl" style="left:0;right:0;top:590px;font-size:66px;font-weight:800;letter-spacing:-.03em" data-lines="for Claude Code" id="outFor"></div>
-  <div class="abs" style="left:0;right:0;top:730px;display:flex;justify-content:center">
-    <div class="pill card" id="outCmd" style="padding:22px 30px;gap:18px;border-radius:20px;font:500 28px/1 'JetBrains Mono'">
-      <span class="hl">$</span><span>claude plugin marketplace add marcosmodly/marketing-skill</span>
-      <svg class="ico" viewBox="0 0 24 24" data-icon="copy" style="font-size:28px;color:var(--dim)"></svg>
-    </div>
-  </div>
-  <div class="abs center" style="left:0;right:0;top:860px;font:500 28px/1 'JetBrains Mono';color:var(--muted)" id="outUrl">github.com/marcosmodly/marketing-skill</div>
+<!-- 8. outro -->
+<div class="scene" id="s8">
+  <div class="abs serif" style="left:140px;top:200px;font-size:170px;line-height:1.02" data-lines="Free and|open source." id="oHead"></div>
+  <div class="abs mono" style="left:140px;top:600px;font-size:60px;font-weight:700" id="oUrl">github.com/marcosmodly/<span class="hl">marketing-skill</span></div>
+  <div class="abs" style="left:140px;top:720px;font-size:46px;color:var(--ink2);font-weight:600" id="oLic">MIT license · 12 skills · works in Claude Code and Codex</div>
+  <div class="abs serif" style="left:140px;top:850px;font-size:64px;font-style:italic;color:var(--accent)" id="oWink">(the music is better this time)</div>
 </div>
 
-<div id="crumb"><span class="dot"></span><span class="root">marketing-skill</span><span style="color:var(--line2)">/</span><span class="chapwrap" id="chaps"></span></div>
+<div id="wipeB"></div>
+<div id="wipeA"></div>
 <div id="prog"></div>
-<div id="flash"></div>
 <div id="black"></div>
 <div id="cues" hidden></div>
 
@@ -470,10 +185,29 @@
 'use strict';
 window.__errors = [];
 window.addEventListener('error', (e) => window.__errors.push(`${e.message} (line ${e.lineno})`));
+
 // ---------------------------------------------------------------- timing
-const BPM = 112, BEAT = 60 / BPM, BAR = 4 * BEAT, DROP = 2 * BAR;
-const B = (n) => DROP + n * BAR;            // the downbeat of bar n after the drop
-const END = B(54);                          // the sonic logo lands here
+// Seconds of speech in each voiceover line. Estimates until the recordings
+// arrive, then the measured lengths (media/explainer/README.md).
+const LINES = [9.6, 10.8, 10.8, 17.3, 12.7, 14.2, 8.5, 7.7];
+const VOICE = false;                    // true once assets/voice-1.m4a ... voice-8.m4a exist
+const MUSIC = '';                       // e.g. 'assets/track.mp3' once the licensed track is in
+const LEAD = 0.7;                       // scene on screen before its line starts
+const TAIL = 0.9;                       // hold after the line, before the next scene
+const START = [];
+{
+  let t = 0.35;
+  for (const d of LINES) { START.push(t); t += LEAD + d + TAIL; }
+  START.push(t);                        // the outro's end
+}
+const END = START[8] + 2.2;             // hold the last frame, then fade
+document.body.dataset.duration = (END + 0.6).toFixed(2);
+if (MUSIC) document.body.dataset.musicSrc = MUSIC;
+const S = (k) => START[k - 1];          // scene k starts
+const V = (k) => START[k - 1] + LEAD;   // line k starts
+const D = (k) => LINES[k - 1];          // line k's length
+const at = (k, f) => V(k) + f * D(k);   // a point f (0..1) through line k
+
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const E = {
@@ -482,13 +216,11 @@ const E = {
   inOut: 'cubic-bezier(.65,0,.35,1)',
   in: 'cubic-bezier(.55,0,1,.45)',
   back: 'cubic-bezier(.34,1.56,.64,1)',
-  soft: 'cubic-bezier(.3,1.3,.6,1)',
   lin: 'linear',
 };
 const node = (x) => (typeof x === 'string' ? $(x) : x);
 
-// One animation per element per group of properties, from absolute-time keyframes:
-// key(el, [[t, {css}], [t, {css, ease}], ...]). `ease` is the easing out of that keyframe.
+// One animation per element per group of properties, from absolute-time keyframes.
 function key(target, frames, ease = E.out) {
   const n = node(target);
   if (!n) throw new Error(`missing ${target}`);
@@ -501,54 +233,20 @@ function key(target, frames, ease = E.out) {
   });
   return n.animate(kf, { delay: t0 * 1000, duration: span * 1000, fill: 'both' });
 }
-// Visible from tin (entering from `from`) until tout (leaving to `to`); tout null = stays.
-function life(target, tin, tout, o = {}) {
-  const from = o.from || { opacity: 0, transform: 'translateY(36px)' };
+function life(target, tin, o = {}) {
+  const from = o.from || { opacity: 0, transform: 'translateY(40px)' };
   const show = o.show || { opacity: 1, transform: 'none' };
-  const to = o.to || { opacity: 0, transform: 'translateY(-24px)' };
-  const din = o.din ?? 0.6;
-  const dout = o.dout ?? 0.3;
-  const fr = [[tin, { ...from, ease: o.ein || E.out }], [tin + din, show]];
-  if (tout != null) fr.push([tout, { ...show, ease: o.eout || E.in }], [tout + dout, to]);
-  return key(target, fr);
+  return key(target, [[tin, { ...from, ease: o.ease || E.out }], [tin + (o.dur ?? 0.7), show]]);
 }
-const pop = (t, at, out, o = {}) => life(t, at, out, { from: { opacity: 0, transform: `scale(${o.s ?? 0.6})` }, show: { opacity: 1, transform: 'scale(1)' },
-  to: { opacity: 0, transform: 'scale(.9)' }, ein: E.back, din: o.din ?? 0.5, ...o });
-const fade = (t, at, out, o = {}) => life(t, at, out, { from: { opacity: 0 }, show: { opacity: 1 }, to: { opacity: 0 }, din: 0.4, ...o });
-// a scene layer: shown from t0, leaves at t1 (zoom, left, up, or fade)
-function scene(target, t0, t1, exit = 'zoom', push = 1.025) {
-  const exits = {
-    zoom: { opacity: 0, transform: 'scale(1.08)', filter: 'blur(10px)' },
-    left: { opacity: 0, transform: 'translateX(-220px) scale(1)', filter: 'blur(8px)' },
-    up: { opacity: 0, transform: 'translateY(-90px) scale(1)', filter: 'blur(6px)' },
-    fade: { opacity: 0, transform: `scale(${push})`, filter: 'blur(0px)' },
-  };
-  const t = t1 == null ? END + 2 : t1;
-  key(target, [
-    [t0 - 0.01, { opacity: 0, transform: 'scale(1)', filter: 'blur(0px)', ease: 'steps(1, end)' }],
-    [t0, { opacity: 1, transform: 'scale(1)', filter: 'blur(0px)', ease: E.lin }],
-    [t - 0.34, { opacity: 1, transform: `scale(${push})`, filter: 'blur(0px)', ease: E.in }],
-    [t + 0.06, exits[exit]],
-  ]);
-}
-// masked line rise for [data-lines] headlines
-function rise(target, t, stagger = 0.08, dur = 0.75) {
+const pop = (t, at0, s = 0.7) => life(t, at0, { from: { opacity: 0, transform: `scale(${s})` }, show: { opacity: 1, transform: 'scale(1)' }, ease: E.back, dur: 0.55 });
+function rise(target, t, stagger = 0.1, dur = 0.8) {
   $$('.mask > span', node(target)).forEach((s, i) =>
-    key(s, [[t + i * stagger, { transform: 'translateY(108%)', ease: E.out }], [t + i * stagger + dur, { transform: 'translateY(0%)' }]]));
+    key(s, [[t + i * stagger, { transform: 'translateY(110%)', ease: E.out }], [t + i * stagger + dur, { transform: 'translateY(0%)' }]]));
 }
-// typed mono text
 function type(target, t0, t1) {
   const n = node(target);
   const len = n.textContent.length;
   key(n, [[t0, { width: '0ch', ease: `steps(${len}, end)` }], [t1, { width: `${len}ch` }]]);
-}
-// left-to-right wipe for proportional text
-function wipe(target, t0, dur = 0.5, ease = E.out3) {
-  key(target, [[t0, { clipPath: 'inset(-20% 100% -20% 0)', ease }], [t0 + dur, { clipPath: 'inset(-20% 0% -20% 0)' }]]);
-}
-// SVG path draw (paths use pathLength="1")
-function draw(target, t0, dur = 0.6, ease = E.inOut) {
-  key(target, [[t0, { strokeDashoffset: 1, ease }], [t0 + dur, { strokeDashoffset: 0 }]]);
 }
 const sfx = (name, t) => {
   const i = document.createElement('i');
@@ -556,1010 +254,159 @@ const sfx = (name, t) => {
   i.style.setProperty('--in', `${t.toFixed(3)}s`);
   $('#cues').appendChild(i);
 };
-const beatsIn = (t0, t1) => { const out = []; for (let k = Math.ceil((t0 - DROP) / BEAT - 1e-6); DROP + k * BEAT < t1 - 1e-6; k++) out.push(DROP + k * BEAT); return out; };
-const easeOutCubic = (u) => 1 - (1 - u) ** 3;
-const easeInOutCubic = (u) => (u < 0.5 ? 4 * u * u * u : 1 - (-2 * u + 2) ** 3 / 2);
-const h = (html) => { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstElementChild; };
-let seed = 7;
-const FLASH = [];
-const SHOCKS = [];
-const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-
-// ---------------------------------------------------------------- icons
-const ICONS = {
-  search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/>',
-  calendar: '<rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/>',
-  split: '<circle cx="5" cy="12" r="2.2"/><path d="M7.2 12H11M11 12c3.5 0 4-6.5 8-6.5M11 12h8M11 12c3.5 0 4 6.5 8 6.5"/>',
-  seo: '<path d="M13 3H6.5A2.5 2.5 0 0 0 4 5.5v13A2.5 2.5 0 0 0 6.5 21H11"/><path d="M13 3l6 6v2"/><circle cx="16.5" cy="16.5" r="3"/><path d="M21 21l-2.3-2.3"/>',
-  megaphone: '<path d="M3 10v4a1 1 0 0 0 1 1h3l8 4.5V4.5L7 9H4a1 1 0 0 0-1 1z"/><path d="M18.5 9a4 4 0 0 1 0 6"/>',
-  mail: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7l8.5 6 8.5-6"/>',
-  send: '<path d="M21 3L10 14"/><path d="M21 3l-6.5 18-4.5-7-7-4.5z"/>',
-  chat: '<path d="M20.5 12a8.5 8.5 0 0 1-12.3 7.6L3.5 20.5l1-4.4A8.5 8.5 0 1 1 20.5 12z"/>',
-  frame: '<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 15.5l5-5 4.5 4.5 3-3 5.5 5.5"/><circle cx="15.5" cy="8.5" r="1.5"/>',
-  phone: '<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10.5 9.5v5l4-2.5z"/>',
-  pipeline: '<circle cx="4.5" cy="12" r="2.3"/><circle cx="12" cy="12" r="2.3"/><circle cx="19.5" cy="12" r="2.3"/><path d="M6.8 12h2.9M14.3 12h2.9"/>',
-  upload: '<path d="M12 15.5V4M7 8.5L12 4l5 4.5"/><path d="M4 15v3.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V15"/>',
-  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
-  x: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
-  file: '<path d="M14 3H6.5A2.5 2.5 0 0 0 4 5.5v13A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V9z"/><path d="M14 3v6h6"/>',
-  note: '<path d="M9 18V5.5l11-2.5v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>',
-  copy: '<rect x="9" y="9" width="12" height="12" rx="2.5"/><path d="M5 15V5.5A2.5 2.5 0 0 1 7.5 3H15"/>',
-  user: '<circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/>',
-  spark: '<path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4"/>',
-  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
-  heart: '<path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z"/>',
-  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
-  chev: '<path d="M9 5l7 7-7 7"/>',
-  globe: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 2.5 14.4 0 17M12 3.5c-2.5 2.6-2.5 14.4 0 17"/>',
+const voice = (k) => {
+  const i = document.createElement('i');
+  i.dataset.voice = `assets/voice-${k}.m4a`;
+  i.style.setProperty('--voice', `${V(k).toFixed(3)}s`);
+  $('#cues').appendChild(i);
 };
-const icon = (name, style = '') => `<svg class="ico" viewBox="0 0 24 24" style="${style}">${ICONS[name]}</svg>`;
+// a scene is on screen from its start to the next scene's start; the wipe hides both cuts
+function scene(id, k) {
+  key(id, [[S(k) - 0.01, { opacity: 0, ease: 'steps(1,end)' }], [S(k), { opacity: 1, ease: 'steps(1,end)' }],
+    [S(k + 1) - 0.01, { opacity: 1, ease: 'steps(1,end)' }], [S(k + 1), { opacity: k === 8 ? 1 : 0 }]]);
+}
+const ICONS = {
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+};
+const icon = (n) => `<svg class="ico" viewBox="0 0 24 24">${ICONS[n]}</svg>`;
+const h = (html) => { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstElementChild; };
 
-// ---------------------------------------------------------------- data
-const SKILLS = [
-  ['competitor-research', 'SWOT, messaging, and a battlecard, with sources.', 'search'],
-  ['content-calendar', 'A week or a month of dated posts in one pass.', 'calendar'],
-  ['content-repurposer', 'One post into LinkedIn, an X thread, and email.', 'split'],
-  ['seo-brief', 'Keywords, intent, outline, and meta. No fake volumes.', 'seo'],
-  ['ad-copy-generator', 'A/B variants for Meta, Google, and LinkedIn.', 'megaphone'],
-  ['email-sequence', 'Welcome, nurture, and drip series with timing.', 'mail'],
-  ['email-outreach', 'Researched 1:1 cold email. Never a double send.', 'send'],
-  ['community-post-generator', 'Reddit, HN, and Product Hunt posts that fit the rules.', 'chat'],
-  ['visual-brief-generator', 'Shot lists and prompts for any image tool.', 'frame'],
-  ['short-form-video', 'TikTok, Reels, and Shorts: scripts and renders.', 'phone'],
-  ['full-pipeline', 'Research to publish in one run, with a pause.', 'pipeline'],
-  ['publish-pipeline', 'Ships to n8n, Make, or platform APIs on your OK.', 'upload'],
-];
-
-// =============================================================== build + animate
+// =============================================================== build
 function build() {
-  for (const svg of $$('svg[data-icon]')) svg.innerHTML = ICONS[svg.dataset.icon];
   for (const el of $$('[data-lines]')) {
     el.innerHTML = el.dataset.lines.split('|').map((l) => `<span class="mask"><span>${l}</span></span>`).join('');
   }
-  for (const p of $$('path[pathLength]')) { p.style.strokeDasharray = '1'; p.style.strokeDashoffset = '1'; }
-
-  background();
-  coldOpen();
-  titleAndGrid();
-  install();
-  voice();
-  spotlights();
-  video();
-  pipeline();
-  approval();
-  destinations();
-  codex();
-  outro();
-  chrome();
-  effects();
+  wipes();
+  s1(); s2(); s3(); s4(); s5(); s6(); s7(); s8();
+  if (VOICE) for (let k = 1; k <= 8; k++) voice(k);
+  key('#prog', [[S(1), { transform: 'scaleX(0)', ease: E.lin }], [END, { transform: 'scaleX(1)' }]]);
+  key('#black', [[0, { opacity: 1, ease: E.out3 }], [0.35, { opacity: 0 }], [END, { opacity: 0, ease: E.inOut }], [END + 0.6, { opacity: 1 }]]);
 }
 
-// ---------------------------------------------------------------- background
-function background() {
-  const pathA = [[0, -500, -700], [20, -300, -500], [40, 100, -650], [60, -200, -300], [80, 300, -600], [100, -350, -450], [121, -100, -700]];
-  key('#glowA', pathA.map(([t, x, y]) => [t, { transform: `translate(${x + 500}px, ${y + 700}px)`, ease: E.inOut }]));
-  const pathB = [[0, 900, 200], [25, 600, 100], [45, 900, -100], [70, 500, 250], [95, 800, 0], [121, 600, 150]];
-  key('#glowB', pathB.map(([t, x, y]) => [t, { transform: `translate(${x - 900}px, ${y - 200}px)`, ease: E.inOut }]));
-  key('#dots', [[0, { transform: 'translate(0px, 0px)', ease: E.lin }], [121, { transform: 'translate(-88px, -44px)' }]]);
-  // the glows breathe up on the drop and down for the two quiet breaks
-  key('#bg', [
-    [0, { opacity: 0.55 }], [DROP - 0.01, { opacity: 0.7, ease: E.out }], [DROP + 0.3, { opacity: 1 }],
-    [B(10), { opacity: 1, ease: E.inOut }], [B(10) + 1, { opacity: 0.8 }], [B(12) - 0.5, { opacity: 0.8 }], [B(12), { opacity: 1 }],
-    [B(39), { opacity: 1, ease: E.inOut }], [B(39) + 1, { opacity: 0.72 }], [B(41) - 0.2, { opacity: 0.72 }], [B(41), { opacity: 1 }],
-    [END + 0.4, { opacity: 1 }],
-  ]);
-}
-
-// ---------------------------------------------------------------- 0. cold open
-function coldOpen() {
-  const chores = [
-    ['competitor SWOT', 300, 160, '#e07a55'], ['12 LinkedIn posts', 960, 112, '#4f8fea'], ['SEO brief', 1620, 186, '#7d8cff'],
-    ['ad variants A/B', 230, 330, '#e8b04a'], ['shot list', 690, 292, '#3fbf7f'], ['post to n8n', 1290, 280, '#7d8cff'],
-    ['welcome emails', 1700, 360, '#e07a55'], ['cold outreach', 340, 730, '#e8615a'], ['Reddit post', 1560, 720, '#ff7a45'],
-    ['TikTok script', 950, 770, '#f4a382'], ['content calendar', 260, 930, '#4f8fea'], ['hashtags', 720, 930, '#9c9ba6'],
-    ['Show HN', 1190, 940, '#e8b04a'], ['newsletter', 1660, 920, '#3fbf7f'],
-  ];
-  const wrap = $('#chores');
-  chores.forEach(([label, x, y, c], i) => {
-    const pos = h(`<div class="chore-pos" style="left:${x}px;top:${y}px"><div class="chore" style="--c:${c}"><i></i>${label}</div></div>`);
-    wrap.appendChild(pos);
-    const t = 0.15 + i * 0.235;
-    const r = (rnd() - 0.5) * 14;
-    key(pos.firstElementChild, [[t, { opacity: 0, transform: `translate(-50%,-50%) rotate(${r}deg) scale(.4)`, ease: E.back }],
-      [t + 0.45, { opacity: 0.85, transform: `translate(-50%,-50%) rotate(${r}deg) scale(1)` }]]);
-    // drift, then everything is sucked into the middle just before the drop
-    const dx = (rnd() - 0.5) * 60;
-    const dy = (rnd() - 0.5) * 40;
-    key(pos, [[0, { transform: 'translate(0px,0px) scale(1)', opacity: 1, ease: E.lin }],
-      [BEAT * 7, { transform: `translate(${dx}px,${dy}px) scale(1)`, opacity: 1, ease: 'cubic-bezier(.7,0,.9,.5)' }],
-      [DROP - 0.04, { transform: `translate(${960 - x}px,${540 - y}px) scale(.05)`, opacity: 0 }]]);
-  });
-  // one word per beat, popping a rising note each time
-  for (let i = 0; i < 6; i++) {
-    const t = BEAT * (i + 1);
-    const last = i === 5;
-    const out = last ? BEAT * 7 : t + BEAT - 0.06;
-    key(`#w${i}`, [
-      [t - 0.05, { opacity: 0, transform: 'scale(1.35)', filter: 'blur(12px)', ease: E.out }],
-      [t + 0.16, { opacity: 1, transform: 'scale(1)', filter: 'blur(0px)', ease: E.lin }],
-      [out, { opacity: 1, transform: `scale(${last ? 1.06 : 0.97})`, filter: 'blur(0px)', ease: E.in }],
-      [last ? DROP - 0.04 : out + 0.08, { opacity: 0, transform: `scale(${last ? 0.05 : 0.9})`, filter: 'blur(0px)' }],
-    ]);
-    sfx('pop', t);
+// the cut between scenes: an ink panel then a coral one sweep across
+function wipes() {
+  const a = [];
+  const b = [];
+  for (let k = 2; k <= 8; k++) {
+    const t = S(k);
+    for (const [arr, d] of [[b, -0.05], [a, 0]]) {
+      arr.push([t - 0.42 + d, { transform: 'translateX(-1920px)', ease: 'cubic-bezier(.7,0,.3,1)' }],
+        [t + d, { transform: 'translateX(0px)', ease: 'steps(1,end)' }],
+        [t + d + 0.001, { transform: 'translateX(0px)', ease: 'cubic-bezier(.7,0,.3,1)' }],
+        [t + 0.42 + d, { transform: 'translateX(1920px)', ease: 'steps(1,end)' }],
+        [t + 0.42 + d + 0.001, { transform: 'translateX(-1920px)', ease: 'steps(1,end)' }]);
+    }
+    sfx('whoosh', t - 0.3);
   }
-  sfx('whoosh', BEAT * 7 - 0.05);
-  key('#s-open', [[0, { opacity: 1 }], [DROP, { opacity: 1, ease: 'steps(1,end)' }], [DROP + 0.01, { opacity: 0 }]]);
+  key('#wipeA', [[0, { transform: 'translateX(-1920px)', ease: 'steps(1,end)' }], ...a]);
+  key('#wipeB', [[0, { transform: 'translateX(-1920px)', ease: 'steps(1,end)' }], ...b]);
 }
 
-// ---------------------------------------------------------------- 1-2. title, then the 12 dots become the 12 cards
-const RING = { x: 960, y: 300, r: 86 };
-const ringPos = (j, rot = 0) => {
-  const a = ((-90 + j * 30 + rot) * Math.PI) / 180;
-  return [RING.x + RING.r * Math.cos(a), RING.y + RING.r * Math.sin(a)];
-};
-const cardPos = (j) => [114 + (j % 4) * 429, 200 + Math.floor(j / 4) * 234];
-
-function titleAndGrid() {
-  const T = DROP;
-  // flash + shockwaves on the drop
-  FLASH.push([T, 0.55, 0.5]);
-  SHOCKS.push([T, 9, 6]);
-  // ring core: in on the drop, out when the cards form; back for the outro
-  key('#ringCore', [
-    [T - 0.01, { opacity: 0, transform: 'scale(0)' }], [T, { opacity: 1, transform: 'scale(0)', ease: E.back }], [T + 0.55, { opacity: 1, transform: 'scale(1)' }],
-    [B(2) - 0.1, { opacity: 1, transform: 'scale(1)', ease: E.in }], [B(2) + 0.3, { opacity: 0, transform: 'scale(0)' }],
-    [B(51) + 0.7, { opacity: 0, transform: 'scale(0)', ease: E.back }], [B(51) + 1.25, { opacity: 1, transform: 'scale(1)' }],
-    [END - 0.02, { opacity: 1, transform: 'scale(1)', ease: E.out3 }], [END + 0.14, { opacity: 1, transform: 'scale(1.45)', ease: E.out }], [END + 0.8, { opacity: 1, transform: 'scale(1)' }],
-  ]);
-  // breathing glow on the core, on the beat, while the title holds
-  key('#ringCore', beatsIn(T + 0.6, B(2)).flatMap((b) => [[b, { boxShadow: '0 0 90px rgba(224,122,85,.95)', ease: E.out3 }], [b + 0.4, { boxShadow: '0 0 50px rgba(224,122,85,.55)' }]]));
-
-  // title text
-  const main = $('#titleMain');
-  const chars = [...main.textContent];
-  main.innerHTML = chars.map((c) => `<span class="mask" style="display:inline-block"><span>${c === ' ' ? '&nbsp;' : c}</span></span>`).join('');
-  $$('.mask > span', main).forEach((s, i) => key(s, [[T + 0.12 + i * 0.03, { transform: 'translateY(110%) rotate(6deg)', ease: E.out }], [T + 0.95 + i * 0.03, { transform: 'translateY(0%) rotate(0deg)' }]]));
-  rise('#titleFor', T + 0.55);
-  life('#titleSub', T + 1.0, null, { din: 0.7 });
-  $$('#badges > span').forEach((b, i) => pop(b, T + 1.5 + i * 0.13, null, { s: 0.7 }));
-  sfx('tick', T + 1.5); sfx('tick', T + 1.63); sfx('tick', T + 1.76);
-  scene('#s-title', T, B(2), 'up', 1.03);
-
-  // the 12 skills
-  const wrap = $('#skills');
-  SKILLS.forEach(([name, desc, ic], j) => {
-    const sk = h(`<div class="sk"><div class="sk-in"><div class="sk-top"><span class="sk-num">${String(j + 1).padStart(2, '0')}</span><span class="sk-ico">${icon(ic)}</span></div>
-      <div class="sk-name">${name}</div><div class="sk-desc">${desc}</div></div></div>`);
-    wrap.appendChild(sk);
-    const [rx, ry] = ringPos(j);
-    const [cx, cy] = cardPos(j);
-    const d = j * 0.035;
-    const dot = (x, y) => ({ left: `${x - 9}px`, top: `${y - 9}px`, width: '18px', height: '18px', borderRadius: '9px', backgroundColor: 'rgb(243,242,238)' });
-    const card = { left: `${cx}px`, top: `${cy}px`, width: '405px', height: '212px', borderRadius: '22px', backgroundColor: 'rgb(22,22,29)' };
-    // outro: spiral in from off-screen to the same ring
-    const spiral = [];
-    const t0 = B(51) + 0.05 + j * 0.045;
-    for (let k = 0; k <= 10; k++) {
-      const u = k / 10;
-      const e = easeOutCubic(u);
-      const r = RING.r + (1250 - RING.r) * (1 - e);
-      const a = ((-90 + j * 30 + 140 * (1 - e)) * Math.PI) / 180;
-      spiral.push([t0 + u * 0.95, { ...dot(RING.x + r * Math.cos(a), RING.y + r * Math.sin(a)), ease: E.lin }]);
-    }
-    // ...then the finished ring turns slowly until the end
-    const turn = [];
-    for (let k = 1; k <= 12; k++) {
-      const t = t0 + 0.95 + ((END + 1 - t0 - 0.95) * k) / 12;
-      const [x, y] = ringPos(j, (k * 36) / 12);
-      turn.push([t, { ...dot(x, y), ease: E.lin }]);
-    }
-    key(sk, [
-      [B(2) + d, { ...dot(rx, ry), ease: E.inOut }],
-      [B(2) + 0.8 + d, card],
-      [B(7) + 0.6, card],
-      [B(7) + 0.7, dot(RING.x + 1250 * Math.cos(((-90 + j * 30 + 140) * Math.PI) / 180), RING.y + 1250 * Math.sin(((-90 + j * 30 + 140) * Math.PI) / 180))],
-      ...spiral,
-      ...turn,
-    ]);
-    // visibility, the grid's exit, and the final pulse
-    const col = j % 4;
-    const row = Math.floor(j / 4);
-    const xd = (col + row) * 0.03;
-    key(sk, [
-      [T + 0.2 + j * 0.045, { opacity: 0, transform: 'perspective(900px) scale(0)', ease: E.back }],
-      [T + 0.55 + j * 0.045, { opacity: 1, transform: 'perspective(900px) scale(1)' }],
-      [B(7) - 0.36 + xd, { opacity: 1, transform: 'perspective(900px) scale(1)', ease: E.in }],
-      [B(7) + 0.12 + xd, { opacity: 0, transform: 'perspective(900px) translateY(160px) rotateX(-55deg) scale(.9)' }],
-      [t0 - 0.02, { opacity: 0, transform: 'perspective(900px) scale(1)' }],
-      [t0, { opacity: 1, transform: 'perspective(900px) scale(1)', ease: E.out3 }],
-      [END - 0.02, { opacity: 1, transform: 'perspective(900px) scale(1)', ease: E.out3 }],
-      [END + 0.15 + j * 0.01, { opacity: 1, transform: 'perspective(900px) scale(1.7)', ease: E.out }],
-      [END + 0.7, { opacity: 1, transform: 'perspective(900px) scale(1)' }],
-    ]);
-    // border + chase light: one card per beat
-    const lit = B(3) + j * BEAT;
-    const line = { borderColor: 'rgba(44,44,56,1)', boxShadow: '0 0 0 0 rgba(224,122,85,0), 0 30px 70px -40px rgba(0,0,0,.8)' };
-    const glow = { borderColor: 'rgba(224,122,85,1)', boxShadow: '0 0 0 4px rgba(224,122,85,.18), 0 0 60px -6px rgba(224,122,85,.55)' };
-    const none = { borderColor: 'rgba(44,44,56,0)', boxShadow: '0 0 0 0 rgba(224,122,85,0), 0 30px 70px -40px rgba(0,0,0,0)' };
-    key(sk, [[B(2) + 0.3 + d, { ...none }], [B(2) + 0.8 + d, line], [lit - 0.02, { ...line, ease: E.out3 }], [lit + 0.08, glow],
-      [lit + BEAT * 0.9, { ...glow, ease: E.inOut }], [lit + BEAT * 1.6, line], [B(7) + 0.6, line], [B(7) + 0.7, none]]);
-    key(sk.firstElementChild, [[B(2) + 0.55 + d, { opacity: 0, transform: 'translateY(12px)', ease: E.out }], [B(2) + 1.05 + d, { opacity: 1, transform: 'none' }],
-      [B(7) + 0.6, { opacity: 1, transform: 'none', ease: 'steps(1,end)' }], [B(7) + 0.7, { opacity: 0, transform: 'none' }]]);
-    sfx('tick', lit);
-  });
-  sfx('whoosh', B(2) - 0.1);
-  rise('#gridHead', B(2) + 0.25);
-  life('#gridCap', B(6) - 0.4, null);
-  scene('#s-grid', B(2), B(7), 'up', 1);
+function s1() {
+  scene('#s1', 1);
+  rise('#h1a', V(1) - 0.3, 0.14);
+  // "...so I built twelve skills": the first line gives way to the answer
+  const swap = at(1, 0.48);
+  key('#h1a', [[swap - 0.01, { opacity: 1, transform: 'translateY(0px)', ease: E.in }], [swap + 0.35, { opacity: 0, transform: 'translateY(-60px)' }]]);
+  rise('#h1b', swap + 0.2, 0.1, 0.9);
+  life('#h1c', swap + 0.6);
 }
 
-// ---------------------------------------------------------------- 3. install
-function install() {
-  const T = B(7);
-  life('#instEye', T + 0.1, null);
-  rise('#instHead', T + 0.15);
-  key('#term', [[T + 0.2, { opacity: 0, transform: 'perspective(1400px) translateY(120px) rotateX(18deg)', ease: E.out }],
-    [T + 1.1, { opacity: 1, transform: 'perspective(1400px) translateY(0px) rotateX(0deg)' }]]);
-  const typed = $$('#term [data-type]');
-  type(typed[0], T + 0.75, T + 1.95);
-  type(typed[1], T + 2.3, T + 3.4);
-  fade('#tl3', T + 3.75, null);
-  type(typed[2], T + 4.05, T + 4.7);
-  // the caret sits on whichever line is typing
-  key('#c1', [[T + 0.7, { opacity: 0, ease: 'steps(1,end)' }], [T + 0.75, { opacity: 1, ease: 'steps(1,end)' }], [T + 2.25, { opacity: 0 }]]);
-  key('#c2', [[T + 2.25, { opacity: 0, ease: 'steps(1,end)' }], [T + 2.3, { opacity: 1, ease: 'steps(1,end)' }], [T + 4.0, { opacity: 0 }]]);
-  key('#c4', [[T + 4.0, { opacity: 0, ease: 'steps(1,end)' }], [T + 4.05, { opacity: 1 }]]);
-  sfx('typing', T + 0.8); sfx('typing', T + 2.35); sfx('typing', T + 4.08);
-  life('#instNote', T + 4.9, null);
-  sfx('swish', T - 0.15);
-  scene('#s-install', T, B(10), 'left');
+function s2() {
+  scene('#s2', 2);
+  const names = ['competitor-research', 'content-calendar', 'content-repurposer', 'seo-brief', 'ad-copy-generator', 'email-sequence',
+    'email-outreach', 'community-post-generator', 'visual-brief-generator', 'short-form-video', 'full-pipeline', 'publish-pipeline'];
+  life('#treeHead', S(2) + 0.35, { from: { opacity: 0, transform: 'translateX(-30px)' } });
+  names.forEach((n, i) => {
+    const row = h(`<div><i>${i === 5 || i === 11 ? '└─' : '├─'}</i>${n}/</div>`);
+    $(i < 6 ? '#treeA' : '#treeB').appendChild(row);
+    life(row, V(2) + (i / 12) * D(2) * 0.72, { from: { opacity: 0, transform: 'translateX(-40px)' }, dur: 0.5 });
+  });
+  life('#treeCap', at(2, 0.78));
 }
 
-// ---------------------------------------------------------------- 4. brand voice
-function voice() {
-  const T = B(10);
-  life('#voEye', T + 0.1, null);
-  rise('#voHead', T + 0.15, 0.12);
-  key('#doc', [[T + 0.15, { opacity: 0, transform: 'translateX(140px) scale(1)', ease: E.out }], [T + 1.0, { opacity: 1, transform: 'translateX(0px) scale(1)' }],
-    // shrinks into the hub of the broadcast
-    [B(13) + 0.25, { opacity: 1, transform: 'translateX(0px) scale(1)', ease: E.inOut }],
-    [B(13) + 1.15, { opacity: 1, transform: 'translateX(-430px) scale(.52)' }]]);
-  life('#voCmd', T + 0.6, null);
-  type($('#voCmd [data-type]'), T + 0.9, T + 1.7);
-  sfx('typing', T + 0.92);
-  const qs = [T + 2.0, T + 2.62, T + 3.24, T + 3.86];
-  qs.forEach((t, i) => {
-    key(`#q${i + 1}`, [[t, { opacity: 0, transform: 'translateX(-30px) scale(.96)', ease: E.back }], [t + 0.5, { opacity: 1, transform: 'none' }]]);
-    sfx('ping', t);
-    wipe(`#a${i + 1}`, t + 0.3, 0.55);
+function s3() {
+  scene('#s3', 3);
+  life('#bvFile', S(3) + 0.3, { from: { opacity: 0, transform: 'translateX(-30px)' } });
+  rise('#bvHead', V(3) - 0.2);
+  $$('#bvRows .head').forEach((r, i) => life(r, at(3, 0.18 + i * 0.12), { from: { opacity: 0, transform: 'translateX(-30px)' } }));
+  $$('#bans .ban').forEach((b, i) => {
+    const t = at(3, 0.42 + i * 0.07);
+    pop(b, t - 0.25, 0.8);
+    key($('s', b), [[t, { transform: 'scaleX(0)', ease: E.out3 }], [t + 0.25, { transform: 'scaleX(1)' }]]);
+    key(b, [[t, { color: 'rgb(22,19,15)', ease: E.out3 }], [t + 0.3, { color: 'rgb(150,140,128)' }]]);
   });
-  // banned words, struck one per beat as the beat comes back
-  $$('#bans .ban s').forEach((s, i) => {
-    const t = B(12) + i * BEAT;
-    key(s, [[t, { transform: 'scaleX(0)', ease: E.out3 }], [t + 0.22, { transform: 'scaleX(1)' }]]);
-    key(s.parentElement, [[t, { color: 'rgb(156,155,166)', opacity: 1, ease: E.out3 }], [t + 0.3, { color: 'rgb(107,106,118)', opacity: 0.65 }]]);
-    sfx('tick', t);
-  });
-  // sonic identity: little bars bouncing on the beat
-  const eq = $('#a6eq');
-  for (let k = 0; k < 7; k++) {
-    const bar = h(`<i style="width:6px;height:30px;border-radius:3px;background:var(--accent);transform-origin:50% 100%"></i>`);
-    eq.appendChild(bar);
-    const fr = [[B(12) + 2 * BEAT, { transform: 'scaleY(.1)' }]];
-    for (const b of beatsIn(B(12) + 2 * BEAT, B(15))) {
-      const peak = 0.35 + 0.65 * Math.abs(Math.sin(k * 1.7 + b * 3.1));
-      fr.push([b, { transform: `scaleY(${peak.toFixed(2)})`, ease: E.out3 }], [b + BEAT * 0.9, { transform: 'scaleY(.18)', ease: E.out }]);
-    }
-    key(bar, fr);
-  }
-  wipe('#a6t', B(12) + 2 * BEAT, 0.55);
-  // the marker flips once it's all filled in
-  key('#mkUn', [[B(13) - 0.01, { opacity: 1, transform: 'scale(1)' }], [B(13), { opacity: 1, transform: 'scale(1)', ease: E.in }], [B(13) + 0.18, { opacity: 0, transform: 'scale(.7)' }]]);
-  key('#mkOk', [[B(13) + 0.1, { opacity: 0, transform: 'scale(1.4)', ease: E.back }], [B(13) + 0.45, { opacity: 1, transform: 'scale(1)' }]]);
-  sfx('chime', B(13) + 0.1);
-  // the left column clears, and the file broadcasts to every skill
-  key('#voiceLeft', [[B(13) + 0.1, { opacity: 1, transform: 'translateX(0px)', ease: E.in }], [B(13) + 0.55, { opacity: 0, transform: 'translateX(-120px)' }]]);
-  const hub = { x: 960, y: 540 };
-  const svg = $('#voiceRays');
-  const nodes = $('#voiceNodes');
-  SKILLS.forEach(([name], j) => {
-    const a = ((-90 + j * 30) * Math.PI) / 180;
-    const x = hub.x + 740 * Math.cos(a);
-    const y = hub.y + 368 * Math.sin(a);
-    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    p.setAttribute('d', `M${hub.x} ${hub.y} L${x.toFixed(1)} ${y.toFixed(1)}`);
-    p.setAttribute('stroke', 'rgba(224,122,85,.45)');
-    p.setAttribute('stroke-width', '2');
-    p.setAttribute('stroke-dasharray', '1');
-    p.setAttribute('pathLength', '1');
-    p.style.strokeDashoffset = '1';
-    svg.appendChild(p);
-    const t = B(13) + 1.0 + j * 0.05;
-    draw(p, t, 0.55, E.out3);
-    const lab = h(`<div class="node-label" style="left:${x}px;top:${y}px">${name}</div>`);
-    nodes.appendChild(lab);
-    key(lab, [[t + 0.3, { opacity: 0, transform: 'translate(-50%,-50%) scale(.6)', ease: E.back }], [t + 0.75, { opacity: 1, transform: 'translate(-50%,-50%) scale(1)' }]]);
-    // pulses from the file to each skill, on every beat
-    for (const b of beatsIn(B(13) + 2.0, B(15) - 0.3)) {
-      const dot = h(`<div class="abs" style="left:0;top:0;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#ffc4ad;box-shadow:0 0 16px 4px rgba(224,122,85,.7)"></div>`);
-      nodes.insertBefore(dot, nodes.firstChild);
-      key(dot, [[b, { opacity: 0, transform: `translate(${hub.x}px,${hub.y}px)`, ease: E.out3 }], [b + 0.08, { opacity: 1, transform: `translate(${hub.x + (x - hub.x) * 0.1}px,${hub.y + (y - hub.y) * 0.1}px)`, ease: E.lin }],
-        [b + 0.6, { opacity: 1, transform: `translate(${x - (x - hub.x) * 0.12}px,${y - (y - hub.y) * 0.12}px)`, ease: E.lin }], [b + 0.7, { opacity: 0, transform: `translate(${x}px,${y}px)` }]]);
-    }
-    // each label flashes when the pulse lands
-    const flashes = [[t + 0.75, { borderColor: 'rgb(44,44,56)' }]];
-    for (const b of beatsIn(B(13) + 2.0, B(15) - 0.3)) flashes.push([b + 0.6, { borderColor: 'rgb(44,44,56)', ease: E.out3 }], [b + 0.68, { borderColor: 'rgb(224,122,85)', ease: E.out }], [b + 0.68 + BEAT * 0.8, { borderColor: 'rgb(44,44,56)' }]);
-    key(lab, flashes);
-  });
-  sfx('whoosh', B(13) + 0.95);
-  life('#voCap', B(13) + 1.8, null);
-  scene('#s-voice', T, B(15), 'zoom', 1.0);
+  life('#bvCap', at(3, 0.74));
 }
 
-// ---------------------------------------------------------------- 5-13. spotlights
-const SPOTS = [
-  { name: 'competitor-research', head: 'Know your rival|in one brief.', sub: 'SWOT, messaging, and a sales battlecard, with cited sources.', viz: vizCompetitor },
-  { name: 'content-calendar', head: 'A week of posts|in one pass.', sub: "Dated, platform-tagged posts, checked so it doesn't repeat a recent topic.", viz: vizCalendar },
-  { name: 'content-repurposer', head: 'One post|becomes three.', sub: 'A LinkedIn post, an X thread, and a newsletter blurb, from one source.', viz: vizRepurpose },
-  { name: 'seo-brief', head: 'Briefs built|for search.', sub: 'Keyword, intent, outline, and meta tags. It never invents search volumes.', viz: vizSeo },
-  { name: 'ad-copy-generator', head: 'Ads sized to|every platform.', sub: 'Meta, Google Search, and LinkedIn variants, each a different hook, with character counts.', viz: vizAds },
-  { name: 'email-sequence', head: 'Sequences with|a real story arc.', sub: 'Welcome, nurture, and drip emails with timing, subject lines, and preview text.', viz: vizSequence },
-  { name: 'email-outreach', head: 'Cold email,|made personal.', sub: 'Researched one to one, and checked against a permanent log so nobody is emailed twice.', viz: vizOutreach },
-  { name: 'community-post-generator', head: 'Posts that pass|the house rules.', sub: 'Reddit, Hacker News, Product Hunt, and more. It reads the rules first and gives a Go or No-Go.', viz: vizCommunity },
-  { name: 'visual-brief-generator', head: 'Briefs for any|image tool.', sub: 'Shot lists, per-scene prompts, and aspect ratios, ready to paste.', viz: vizVisual },
-];
+function s4() {
+  scene('#s4', 4);
+  // the rule titles from the r/claudeskills sidebar, as they were checked for this post
+  const rules = ['Stay on topic', 'Be kind', 'Sharing your own skill? Show your work', 'No spam', 'Put in some effort', 'Use post flair',
+    'No piracy or terms of service breaches', "Don't ask for or send referral codes"];
+  life('#rHead', S(4) + 0.3, { from: { opacity: 0, transform: 'translateX(-30px)' } });
+  rules.forEach((r, i) => {
+    const row = h(`<div class="rule"><b>${i + 1}</b>${r}</div>`);
+    $('#rules').appendChild(row);
+    life(row, V(4) + i * 0.32, { from: { opacity: 0, transform: 'translateX(-40px)' }, dur: 0.5 });
+  });
+  const tGo = at(4, 0.3);
+  key('#go', [[tGo, { opacity: 0, transform: 'rotate(-10deg) scale(2.6)', ease: 'cubic-bezier(.5,0,.75,0)' }], [tGo + 0.18, { opacity: 1, transform: 'rotate(-10deg) scale(1)', ease: E.back }],
+    [tGo + 0.36, { opacity: 1, transform: 'rotate(-10deg) scale(1.04)' }]]);
+  sfx('ding', tGo + 0.18);
+  life('#flair', tGo + 0.6);
+  life('#ask', at(4, 0.62), { from: { opacity: 0, transform: 'translateY(40px) scale(.96)' }, ease: E.back });
+  sfx('ping', at(4, 0.62));
+}
 
-function spotlights() {
-  const wrap = $('#spots');
-  SPOTS.forEach((s, i) => {
-    const T = B(15 + 2 * i);
-    const el = h(`<div class="scene"><div class="left"><div class="count">${String(i + 1).padStart(2, '0')} <span>/ 12</span></div>
-      <div class="sname">${s.name}</div><div class="h1">${s.head.split('|').map((l) => `<span class="mask"><span>${l}</span></span>`).join('')}</div>
-      <div class="sub">${s.sub}</div></div><div class="viz"></div></div>`);
-    wrap.appendChild(el);
-    const left = $('.left', el);
-    life($('.count', left), T + 0.05, null, { from: { opacity: 0, transform: 'translateX(-30px)' } });
-    life($('.sname', left), T + 0.12, null, { from: { opacity: 0, transform: 'translateX(-30px)' } });
-    rise(left, T + 0.15, 0.09);
-    life($('.sub', left), T + 0.5, null, { din: 0.7 });
-    const viz = $('.viz', el);
-    key(viz, [[T, { opacity: 0, transform: 'translateX(120px)', ease: E.out }], [T + 0.7, { opacity: 1, transform: 'translateX(0px)' }]]);
-    s.viz(viz, T);
-    sfx('swish', T - 0.12);
-    scene(el, T, B(17 + 2 * i), 'left', 1.015);
+function s5() {
+  scene('#s5', 5);
+  rise('#vHead', V(5) - 0.3);
+  $$('#s5 .phone').forEach((p, i) => {
+    const t = V(5) + 0.3 + i * 0.22;
+    key(p, [[t, { opacity: 0, transform: 'translateY(160px) rotate(4deg)', ease: E.out }], [t + 0.9, { opacity: 1, transform: 'translateY(0px) rotate(0deg)' }],
+      // a slow drift so the row doesn't sit dead still
+      [S(6), { opacity: 1, transform: `translateY(${i % 2 ? -14 : 14}px) rotate(0deg)`, ease: E.lin }]]);
+  });
+  life('#vCap', at(5, 0.6));
+}
+
+function s6() {
+  scene('#s6', 6);
+  life('#c1', V(6) - 0.2, { from: { opacity: 0, transform: 'translateY(40px) scale(.96)' }, ease: E.back });
+  life('#c2', at(6, 0.12));
+  life('#c3', at(6, 0.3), { from: { opacity: 0, transform: 'translateY(40px) scale(.96)' }, ease: E.back });
+  sfx('click', at(6, 0.3));
+  pop('#c4', at(6, 0.42));
+  sfx('chime', at(6, 0.42));
+  // the statuses: the drafting skills stop at Ready for Approval; only a reply moves it on
+  const pills = ['#st0', '#st1', '#st2', '#st3'];
+  pills.forEach((p, i) => {
+    pop(p, at(6, 0.52) + i * 0.12, 0.8);
+    const lit = at(6, 0.62) + i * 0.45;
+    const color = i === 3 ? '44,138,86' : '210,96,58';
+    key(p, [[lit, { borderColor: 'rgb(217,206,189)', color: 'rgb(92,85,75)', ease: E.out3 }], [lit + 0.2, { borderColor: `rgb(${color})`, color: `rgb(${color})` }]]);
   });
 }
 
-function vizCompetitor(v, T) {
-  v.innerHTML = `
-    <div class="card abs" style="left:0;top:0;width:860px;height:190px;overflow:hidden" data-k="browser">
-      <div style="height:50px;display:flex;align-items:center;gap:9px;padding:0 20px;border-bottom:1.5px solid var(--line);background:#1a1a22">
-        <b style="width:12px;height:12px;border-radius:50%;background:#3a3a46"></b><b style="width:12px;height:12px;border-radius:50%;background:#3a3a46"></b><b style="width:12px;height:12px;border-radius:50%;background:#3a3a46"></b>
-        <span class="mono" style="margin-left:18px;font-size:18px;color:var(--muted);background:#121218;border-radius:8px;padding:7px 14px;display:inline-flex;align-items:center;gap:9px">${icon('globe', 'font-size:17px')}northwind.example/pricing</span></div>
-      <div class="skel abs" style="left:28px;top:78px;width:62%"></div><div class="skel abs" style="left:28px;top:110px;width:80%"></div><div class="skel abs" style="left:28px;top:142px;width:48%"></div>
-      <div class="abs" data-k="scan" style="left:0;top:50px;bottom:0;width:160px;background:linear-gradient(90deg,rgba(224,122,85,0),rgba(224,122,85,.28),rgba(224,122,85,0));border-right:2px solid rgba(224,122,85,.8)"></div>
-    </div>
-    ${[['S', 'Strengths', 'Fast onboarding', 'var(--ok)'], ['W', 'Weaknesses', 'Prices up about 20%', 'var(--bad)'],
-      ['O', 'Opportunities', 'Compliance white space', 'var(--indigo)'], ['T', 'Threats', 'Moving up-market', 'var(--warn)']].map(([L, t, d, c], k) =>
-      `<div class="card abs" data-k="sw" style="left:${(k % 2) * 442}px;top:${222 + Math.floor(k / 2) * 262}px;width:418px;height:238px;padding:26px 30px">
-        <div style="display:flex;align-items:baseline;gap:16px"><span style="font-size:70px;font-weight:900;color:${c};line-height:1">${L}</span><span style="font-size:27px;font-weight:700">${t}</span></div>
-        <div style="font-size:24px;color:var(--muted);margin-top:22px">${d}</div><div class="skel" style="width:70%;margin-top:22px"></div></div>`).join('')}
-    <div class="abs row" data-k="src" style="left:0;top:752px;gap:12px">
-      <span class="lbl" style="margin-right:6px">sources</span>
-      ${['[1] pricing page', '[2] changelog', '[3] press release'].map((s) => `<span class="pill mono" style="padding:9px 14px;border:1.5px solid var(--line);font-size:18px;color:var(--muted)">${s}</span>`).join('')}
-    </div>`;
-  const k = (n) => $$(`[data-k="${n}"]`, v);
-  key(k('scan')[0], [[T + 0.5, { transform: 'translateX(-160px)', opacity: 1, ease: E.inOut }], [T + 1.5, { transform: 'translateX(860px)', opacity: 1 }], [T + 1.51, { opacity: 0, transform: 'translateX(860px)' }]]);
-  k('sw').forEach((el, i) => { pop(el, T + 1.25 + i * 0.16, null, { s: 0.75 }); sfx('pop', T + 1.25 + i * 0.16); });
-  life(k('src')[0], T + 2.3, null, { from: { opacity: 0, transform: 'translateX(-40px)' } });
-  sfx('tick', T + 2.3);
+function s7() {
+  scene('#s7', 7);
+  rise('#iHead', V(7) - 0.3);
+  life('#term', S(7) + 0.4);
+  const [a, b] = $$('#term [data-type]');
+  type(a, V(7) + 0.2, V(7) + 1.6);
+  type(b, V(7) + 1.8, V(7) + 3.1);
+  sfx('typing', V(7) + 0.25);
+  $$('#chips .pill').forEach((c, i) => pop(c, at(7, 0.55) + i * 0.2, 0.8));
 }
 
-function vizCalendar(v, T) {
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const chips = [['LinkedIn', 'var(--li)'], ['X', '#e8e6e3'], ['Email', 'var(--warn)'], ['Video', 'var(--accent)'], ['LinkedIn', 'var(--li)'], ['Reddit', '#ff7a45']];
-  const col = (d) => d * 124;
-  v.innerHTML = `
-    ${days.map((d, i) => `<div class="abs mono center" style="left:${col(i)}px;width:112px;top:118px;font-size:20px;color:var(--muted)">${d}</div>
-      <div class="abs" data-k="col" style="left:${col(i)}px;top:162px;width:112px;height:430px;border-radius:16px;background:rgba(22,22,29,.85);border:1.5px solid var(--line)"></div>`).join('')}
-    ${chips.map(([p, c], i) => `<div class="abs" data-k="chip" style="left:${col(i) + 8}px;top:${178 + (i % 2) * 150}px;width:96px;height:124px;border-radius:12px;background:var(--card2);border:1.5px solid var(--line2);overflow:hidden">
-      <div style="height:6px;background:${c}"></div><div style="padding:12px 10px 0;font-size:17px;font-weight:700;white-space:nowrap">${p}</div>
-      <div class="skel" style="margin:14px 10px 0;height:8px"></div><div class="skel" style="margin:8px 10px 0;height:8px;width:60%"></div></div>`).join('')}
-    <div class="abs" data-k="bad" style="left:${col(6) + 8}px;top:178px;width:96px;height:124px;border-radius:12px;background:var(--card2);border:2px solid var(--bad);overflow:hidden">
-      <div style="height:6px;background:var(--li)"></div><div style="padding:12px 10px 0;font-size:17px;font-weight:700">LinkedIn</div>
-      <div style="padding:8px 10px 0;font:600 13px/1.25 Inter;color:var(--bad)">same topic as last week</div></div>
-    <div class="abs" data-k="good" style="left:${col(6) + 8}px;top:178px;width:96px;height:124px;border-radius:12px;background:var(--card2);border:2px solid var(--ok);overflow:hidden">
-      <div style="height:6px;background:#e8e6e3"></div><div style="padding:12px 10px 0;font-size:17px;font-weight:700">X</div>
-      <div style="padding:8px 10px 0;font:600 13px/1.25 Inter;color:var(--ok)">new topic</div></div>
-    <div class="abs row" data-k="foot" style="left:0;top:632px;width:860px;justify-content:space-between">
-      <span class="row mono" style="gap:12px;font-size:21px;color:var(--muted)">${icon('file', 'font-size:24px')}state/content-calendar.md</span>
-      <span class="pill" style="padding:12px 20px;font-size:22px;font-weight:700;color:var(--warn);border:1.5px solid rgba(232,176,74,.5);background:rgba(232,176,74,.08)">7 posts · Ready for Approval</span>
-    </div>`;
-  const k = (n) => $$(`[data-k="${n}"]`, v);
-  k('col').forEach((c, i) => life(c, T + 0.2 + i * 0.04, null, { from: { opacity: 0, transform: 'translateY(30px)' } }));
-  k('chip').forEach((c, i) => {
-    const t = T + 0.55 + i * (BEAT / 2);
-    key(c, [[t, { opacity: 0, transform: 'translateY(-160px) rotate(-8deg)', ease: 'cubic-bezier(.3,1.5,.6,1)' }], [t + 0.42, { opacity: 1, transform: 'translateY(0px) rotate(0deg)' }]]);
-    sfx('tick', t + 0.18);
-  });
-  const tb = T + 2.05;
-  key(k('bad')[0], [[tb, { opacity: 0, transform: 'translateY(-160px) translateX(0px)', ease: 'cubic-bezier(.3,1.5,.6,1)' }], [tb + 0.4, { opacity: 1, transform: 'translateY(0px) translateX(0px)', ease: E.lin }],
-    [tb + 0.5, { opacity: 1, transform: 'translateY(0px) translateX(-9px)', ease: E.lin }], [tb + 0.58, { opacity: 1, transform: 'translateY(0px) translateX(9px)', ease: E.lin }],
-    [tb + 0.66, { opacity: 1, transform: 'translateY(0px) translateX(-6px)', ease: E.lin }], [tb + 0.74, { opacity: 1, transform: 'translateY(0px) translateX(0px)', ease: E.in }],
-    [tb + 1.0, { opacity: 0, transform: 'translateY(-140px) translateX(0px)' }]]);
-  sfx('click', tb + 0.45);
-  key(k('good')[0], [[tb + 1.05, { opacity: 0, transform: 'translateY(-160px)', ease: 'cubic-bezier(.3,1.5,.6,1)' }], [tb + 1.45, { opacity: 1, transform: 'translateY(0px)' }]]);
-  sfx('pop', tb + 1.25);
-  life(k('foot')[0], T + 3.25, null);
-}
-
-function vizRepurpose(v, T) {
-  v.innerHTML = `
-    <svg class="abs" style="left:0;top:0" width="860" height="800" viewBox="0 0 860 800">
-      ${[125, 400, 675].map((y, i) => `<path data-k="wire" d="M290 400 C 360 400, 360 ${y}, 430 ${y}" stroke="rgba(224,122,85,.55)" stroke-width="2.5" fill="none" pathLength="1" stroke-dasharray="1" style="stroke-dashoffset:1"/>`).join('')}
-    </svg>
-    <div class="card abs" data-k="src" style="left:0;top:228px;width:290px;height:344px;padding:26px">
-      <div class="lbl">source</div><div style="font-size:28px;font-weight:800;margin-top:14px">Blog post</div>
-      ${[90, 100, 80, 95, 70, 88, 60].map((w) => `<div class="skel" style="width:${w}%;margin-top:16px;height:10px"></div>`).join('')}
-    </div>
-    <div class="card abs" data-k="out" style="left:430px;top:0;width:430px;height:250px;padding:24px">
-      <div class="row" style="gap:10px;font-size:19px;font-weight:700;color:var(--muted)"><i style="width:10px;height:10px;border-radius:50%;background:var(--li)"></i>LinkedIn post</div>
-      <div style="font-size:23px;font-weight:600;line-height:1.38;margin-top:14px">Speed got us here. It won't be the only thing that keeps us here.</div>
-      <div class="skel" style="width:85%;margin-top:16px;height:10px"></div>
-    </div>
-    <div class="card abs" data-k="out" style="left:430px;top:275px;width:430px;height:250px;padding:24px">
-      <div class="row" style="gap:10px;font-size:19px;font-weight:700;color:var(--muted)"><i style="width:10px;height:10px;border-radius:50%;background:#e8e6e3"></i>X thread</div>
-      ${[1, 2, 3].map((n) => `<div class="row" style="gap:12px;margin-top:16px"><span class="mono" style="font-size:16px;color:var(--dim);width:34px">${n}/5</span><div class="skel" style="flex:1;height:30px;border-radius:10px;background:#23232d"></div></div>`).join('')}
-    </div>
-    <div class="card abs" data-k="out" style="left:430px;top:550px;width:430px;height:250px;padding:24px">
-      <div class="row" style="gap:10px;font-size:19px;font-weight:700;color:var(--muted)"><i style="width:10px;height:10px;border-radius:50%;background:var(--warn)"></i>Newsletter blurb</div>
-      <div class="mono" style="font-size:16px;color:var(--dim);margin-top:14px">SUBJECT</div>
-      <div style="font-size:22px;font-weight:600;line-height:1.35;margin-top:6px">Fast doesn't have to mean "security review pending"</div>
-      <div class="skel" style="width:70%;margin-top:14px;height:10px"></div>
-    </div>`;
-  const k = (n) => $$(`[data-k="${n}"]`, v);
-  life(k('src')[0], T + 0.25, null, { from: { opacity: 0, transform: 'scale(.9)' }, show: { opacity: 1, transform: 'scale(1)' } });
-  k('wire').forEach((w, i) => draw(w, T + 0.85 + i * 0.1, 0.5));
-  k('out').forEach((o, i) => { pop(o, T + 1.15 + i * 0.22, null, { s: 0.8, from: { opacity: 0, transform: 'translateX(-60px) scale(.85)' } }); sfx('pop', T + 1.15 + i * 0.22); });
-  // packets running down each wire, on the beat
-  const paths = k('wire');
-  for (const b of beatsIn(T + 1.6, T + 4.0)) {
-    paths.forEach((p) => {
-      const dot = h(`<div class="abs" style="left:0;top:0;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#ffc4ad;box-shadow:0 0 14px 4px rgba(224,122,85,.7)"></div>`);
-      v.insertBefore(dot, v.children[1]);
-      along(dot, p, b, b + 0.5);
-    });
-  }
-}
-
-// moves `dot` along an SVG path between t0 and t1 (eased), via sampled translate keyframes
-function along(dot, path, t0, t1, ease = easeInOutCubic) {
-  const L = path.getTotalLength();
-  const fr = [[t0 - 0.01, { opacity: 0, transform: `translate(${path.getPointAtLength(0).x}px,${path.getPointAtLength(0).y}px)` }]];
-  for (let k = 0; k <= 12; k++) {
-    const u = k / 12;
-    const p = path.getPointAtLength(L * ease(u));
-    fr.push([t0 + u * (t1 - t0), { opacity: k === 12 ? 0 : 1, transform: `translate(${p.x.toFixed(1)}px,${p.y.toFixed(1)}px)`, ease: E.lin }]);
-  }
-  key(dot, fr);
-}
-
-function vizSeo(v, T) {
-  const meta = 'Workflow Automation Your Security Team Can Approve';
-  v.innerHTML = `
-    <div class="card abs" data-k="bar" style="left:0;top:50px;width:860px;height:92px;border-radius:46px;display:flex;align-items:center;padding:0 34px;gap:20px">
-      <span style="font-size:30px;color:var(--muted)">${icon('search')}</span>
-      <span class="mono" style="font-size:26px"><span class="typed" data-type>workflow automation for security teams</span></span></div>
-    <div class="card abs" style="left:0;top:172px;width:860px;height:574px;padding:34px 40px" data-k="brief">
-      <div class="lbl">target keyword</div>
-      <div class="row" style="gap:12px;margin-top:14px" data-k="kw">
-        <span class="pill" style="padding:10px 18px;font-size:22px;font-weight:600;background:#23232d">workflow automation</span>
-        <span class="pill" style="padding:10px 18px;font-size:22px;font-weight:600;color:var(--indigo);border:1.5px solid rgba(125,140,255,.45)">intent: commercial</span></div>
-      <div class="lbl" style="margin-top:30px">outline</div>
-      ${['Why speed and compliance collide', 'What reviewers actually check', 'A rollout checklist'].map((t) =>
-        `<div class="row" data-k="h2" style="gap:14px;margin-top:14px;font-size:24px;font-weight:600"><span class="mono" style="font-size:16px;color:var(--accent);border:1.5px solid rgba(224,122,85,.5);border-radius:6px;padding:3px 7px">H2</span>${t}</div>`).join('')}
-      <div class="lbl" style="margin-top:30px">meta title</div>
-      <div data-k="meta" style="font-size:24px;font-weight:600;margin-top:12px">${meta}</div>
-      <div class="row" style="margin-top:16px;gap:20px"><div class="meter" style="position:relative;width:640px"><i data-k="fill" style="width:${(meta.length / 60) * 100}%"></i></div>
-      <span class="mono" data-k="cnt" style="font-size:19px;color:var(--ok)">${meta.length} / 60</span></div>
-      <div class="lbl" style="margin-top:30px">search volume</div>
-      <div class="row" style="gap:22px;margin-top:10px">
-        <span style="position:relative;font-size:40px;font-weight:800" data-k="vol">12,400 / mo<s data-k="strike" style="position:absolute;left:-6px;right:-6px;top:52%;height:5px;background:var(--bad);border-radius:3px;transform-origin:0 50%"></s></span>
-        <span class="pill" data-k="never" style="padding:10px 18px;font-size:21px;font-weight:700;color:var(--bad);background:rgba(232,97,90,.12);border:1.5px solid rgba(232,97,90,.45)">${icon('x')} never invented</span></div>
-    </div>`;
-  const k = (n) => $$(`[data-k="${n}"]`, v);
-  type($('[data-type]', v), T + 0.5, T + 1.25);
-  sfx('typing', T + 0.52);
-  life(k('kw')[0], T + 1.2, null, { from: { opacity: 0, transform: 'translateX(-30px)' } });
-  k('h2').forEach((el, i) => { life(el, T + 1.45 + i * 0.16, null, { from: { opacity: 0, transform: 'translateX(-30px)' } }); sfx('tick', T + 1.45 + i * 0.16); });
-  wipe(k('meta')[0], T + 1.95, 0.5);
-  key(k('fill')[0], [[T + 2.05, { transform: 'scaleX(0)', ease: E.out3 }], [T + 2.6, { transform: 'scaleX(1)' }]]);
-  fade(k('cnt')[0], T + 2.4, null);
-  life(k('vol')[0], T + 2.55, null, { from: { opacity: 0, transform: 'translateY(16px)' } });
-  key(k('strike')[0], [[T + 2.95, { transform: 'scaleX(0)', ease: E.out3 }], [T + 3.15, { transform: 'scaleX(1)' }]]);
-  key(k('vol')[0], [[T + 2.95, { color: 'rgb(243,242,238)' }], [T + 3.2, { color: 'rgb(107,106,118)' }]]);
-  pop(k('never')[0], T + 3.1, null, { s: 0.7 });
-  sfx('click', T + 2.98);
-}
-
-function vizAds(v, T) {
-  const rows = [
-    ['Google Search · RSA headline', 30, '', 'Audit-ready automation', 'Pass review, ship faster', 34],
-    ['Meta · primary text', 125, '~', 'Your security team can finally say yes to a faster tool.', 'Fast tools stall in security review. This one is built to pass it.', 25],
-    ['LinkedIn Ads · intro text', 150, '~', 'Compliance shouldn\'t cost you a quarter. Here\'s how teams ship faster and still pass review.', 'If a compliance review has ever blocked a tool switch, this is for you.', 23],
-  ];
-  v.innerHTML = rows.map(([p, lim, approx, a, b, fs], i) => `
-    <div class="card abs" data-k="row" style="left:0;top:${i * 272}px;width:860px;height:244px;padding:24px 30px">
-      <div class="row" style="justify-content:space-between"><span style="font-size:20px;font-weight:700;color:var(--muted)">${p}</span>
-        <span class="row" style="gap:8px"><span class="tab" data-k="ta${i}">A</span><span class="tab" data-k="tb${i}">B</span></span></div>
-      <div class="abs" style="left:30px;right:30px;top:72px;height:96px">
-        <div class="abs" data-k="xa${i}" style="left:0;right:0;top:0;font-size:${fs}px;font-weight:700;line-height:1.3">${a}</div>
-        <div class="abs" data-k="xb${i}" style="left:0;right:0;top:0;font-size:${fs}px;font-weight:700;line-height:1.3">${b}</div>
-      </div>
-      <div class="meter" style="left:30px;bottom:34px;width:640px"><i data-k="m${i}"></i></div>
-      <div class="abs mono" style="right:30px;bottom:26px;width:150px;height:22px;font-size:19px;color:var(--ok)">
-        <span class="abs" style="right:0;top:0;white-space:nowrap" data-k="ca${i}">${a.length}<span style="color:var(--dim)"> / ${approx}${lim}</span></span>
-        <span class="abs" style="right:0;top:0;white-space:nowrap" data-k="cb${i}">${b.length}<span style="color:var(--dim)"> / ${approx}${lim}</span></span></div>
-    </div>`).join('');
-  const k = (n) => $(`[data-k="${n}"]`, v);
-  $$('[data-k="row"]', v).forEach((r, i) => life(r, T + 0.2 + i * 0.12, null, { from: { opacity: 0, transform: 'translateY(40px)' } }));
-  const tSwap = T + 2.55;
-  const on = { color: 'rgb(26,15,10)', backgroundColor: 'rgb(224,122,85)', borderColor: 'rgb(224,122,85)' };
-  const off = { color: 'rgb(107,106,118)', backgroundColor: 'rgba(0,0,0,0)', borderColor: 'rgb(44,44,56)' };
-  rows.forEach(([, lim, , a, b], i) => {
-    const t0 = T + 0.8 + i * 0.15;
-    wipe(k(`xa${i}`), t0, 0.55);
-    key(k(`xa${i}`), [[tSwap + i * 0.08, { opacity: 1, transform: 'translateY(0px)', ease: E.in }], [tSwap + 0.2 + i * 0.08, { opacity: 0, transform: 'translateY(-14px)' }]]);
-    key(k(`xb${i}`), [[tSwap + 0.15 + i * 0.08, { opacity: 0, transform: 'translateY(14px)', ease: E.out }], [tSwap + 0.55 + i * 0.08, { opacity: 1, transform: 'translateY(0px)' }]]);
-    key(k(`m${i}`), [[t0, { transform: 'scaleX(0)', ease: E.out3 }], [t0 + 0.7, { transform: `scaleX(${(a.length / lim).toFixed(3)})` }],
-      [tSwap + i * 0.08, { transform: `scaleX(${(a.length / lim).toFixed(3)})`, ease: E.inOut }], [tSwap + 0.6 + i * 0.08, { transform: `scaleX(${(b.length / lim).toFixed(3)})` }]]);
-    key(k(`ca${i}`), [[t0 + 0.2, { opacity: 0 }], [t0 + 0.5, { opacity: 1, ease: 'steps(1,end)' }], [tSwap + 0.15 + i * 0.08, { opacity: 0 }]]);
-    key(k(`cb${i}`), [[tSwap + 0.15 + i * 0.08, { opacity: 0, ease: 'steps(1,end)' }], [tSwap + 0.16 + i * 0.08, { opacity: 1 }]]);
-    key(k(`ta${i}`), [[tSwap + i * 0.08, { ...on, ease: E.out3 }], [tSwap + 0.2 + i * 0.08, off]]);
-    key(k(`tb${i}`), [[tSwap + i * 0.08, { ...off, ease: E.out3 }], [tSwap + 0.2 + i * 0.08, on]]);
-  });
-  sfx('swish', tSwap);
-}
-
-function vizSequence(v, T) {
-  const xs = [96, 318, 540, 762];
-  const days = ['Day 0', 'Day 3', 'Day 6', 'Day 10'];
-  const beats = ['Announce', 'Proof', 'Objections', 'Last call'];
-  const ys = [262, 190, 128, 82];
-  v.innerHTML = `
-    <svg class="abs" style="left:0;top:0" width="860" height="800" viewBox="0 0 860 800">
-      <defs><linearGradient id="arcG" x1="0" x2="1"><stop offset="0" stop-color="#7d8cff"/><stop offset="1" stop-color="#e07a55"/></linearGradient></defs>
-      <path data-k="arc" d="M20 300 C 200 280, 420 180, 840 60" stroke="url(#arcG)" stroke-width="5" stroke-linecap="round" fill="none" pathLength="1" stroke-dasharray="1" style="stroke-dashoffset:1"/>
-      <path data-k="line" d="M40 400 H820" stroke="#3a3a48" stroke-width="3" fill="none" pathLength="1" stroke-dasharray="1" style="stroke-dashoffset:1"/>
-    </svg>
-    <div class="abs lbl" style="left:20px;top:20px" data-k="lab">narrative arc</div>
-    ${xs.map((x, i) => `
-      <div class="abs" data-k="pt" style="left:${x - 9}px;top:${ys[i] - 9}px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 0 18px rgba(255,255,255,.6)"></div>
-      <div class="abs" data-k="node" style="left:${x - 11}px;top:389px;width:22px;height:22px;border-radius:50%;background:var(--bg);border:3px solid var(--accent)"></div>
-      <div class="abs mono center" data-k="day" style="left:${x - 80}px;width:160px;top:350px;font-size:21px;color:var(--accent)">${days[i]}</div>
-      <div class="card abs" data-k="mail" style="left:${x - 100}px;top:448px;width:200px;height:252px;padding:22px 20px">
-        <div style="font-size:30px;color:var(--muted)">${icon('mail')}</div>
-        <div style="font-size:23px;font-weight:800;margin-top:12px">${beats[i]}</div>
-        <div class="mono" style="font-size:14px;color:var(--dim);margin-top:16px">SUBJECT · A / B</div>
-        <div class="skel" style="margin-top:10px;height:9px"></div><div class="skel" style="margin-top:8px;height:9px;width:70%"></div>
-        <div class="pill" style="margin-top:18px;padding:7px 12px;font-size:15px;font-weight:700;color:var(--accent);border:1.5px solid rgba(224,122,85,.45)">one CTA</div>
-      </div>`).join('')}
-    <div class="abs" data-k="env" style="left:0;top:0;font-size:34px;color:#ffd2bf;filter:drop-shadow(0 0 10px rgba(224,122,85,.8))">${icon('send')}</div>`;
-  const k = (n) => $$(`[data-k="${n}"]`, v);
-  const arc = k('arc')[0];
-  const L = arc.getTotalLength();
-  k('pt').forEach((pt, i) => {
-    let best = null;
-    for (let s = 0; s <= 400; s++) { const q = arc.getPointAtLength((L * s) / 400); if (!best || Math.abs(q.x - xs[i]) < Math.abs(best.x - xs[i])) best = q; }
-    pt.style.left = `${best.x - 9}px`;
-    pt.style.top = `${best.y - 9}px`;
-  });
-  draw(k('line')[0], T + 0.3, 0.7);
-  draw(k('arc')[0], T + 0.5, 1.6, E.inOut);
-  fade(k('lab')[0], T + 0.9, null);
-  const env = k('env')[0];
-  const fr = [[T + 0.75, { opacity: 0, transform: 'translate(10px, 383px)' }]];
-  xs.forEach((x, i) => {
-    const t = T + 1.0 + i * 0.45;
-    fr.push([t - 0.3, { opacity: 1, transform: `translate(${x - 17 - 60}px, 383px)`, ease: E.out3 }], [t, { opacity: 1, transform: `translate(${x - 17}px, 383px)`, ease: E.lin }]);
-    pop(k('mail')[i], t, null, { s: 0.7, from: { opacity: 0, transform: 'translateY(-30px) scale(.8)' } });
-    pop(k('pt')[i], t + 0.05, null, { s: 0 });
-    life(k('day')[i], t - 0.1, null, { from: { opacity: 0, transform: 'translateY(10px)' } });
-    key(k('node')[i], [[t, { backgroundColor: 'rgb(12,12,17)', transform: 'scale(1)', ease: E.back }], [t + 0.25, { backgroundColor: 'rgb(224,122,85)', transform: 'scale(1.25)', ease: E.out }], [t + 0.6, { backgroundColor: 'rgb(224,122,85)', transform: 'scale(1)' }]]);
-    sfx('pop', t);
-  });
-  fr.push([T + 2.6, { opacity: 0, transform: `translate(${xs[3] + 40}px, 383px)` }]);
-  key(env, fr);
-}
-
-function vizOutreach(v, T) {
-  const people = [['Head of Ops · fintech', 'Posted about audit prep'], ['VP Marketing · SaaS', 'Already in your log'], ['Founder · devtools', 'Shipped v2 last week']];
-  const log = [['COO · retail', 'Sent', 'var(--muted)', 'rgba(156,155,166,.4)'], ['VP Marketing · SaaS', 'Replied', 'var(--bad)', 'rgba(232,97,90,.45)'], ['CTO · health', 'Unsubscribed', 'var(--bad)', 'rgba(232,97,90,.45)']];
-  v.innerHTML = `
-    ${people.map(([r, n], i) => `<div class="card abs" data-k="p" style="left:0;top:${90 + i * 156}px;width:350px;height:132px;padding:22px 24px;display:flex;gap:18px;align-items:center;z-index:2">
-      <div style="width:60px;height:60px;border-radius:50%;background:#23232d;display:grid;place-items:center;font-size:30px;color:var(--muted);flex:none">${icon('user')}</div>
-      <div><div style="font-size:22px;font-weight:700;white-space:nowrap">${r}</div><div style="font-size:18px;color:var(--muted);margin-top:8px;white-space:nowrap">${n}</div></div></div>`).join('')}
-    <div class="card abs" data-k="log" style="left:380px;top:60px;width:480px;height:436px;padding:0;overflow:hidden">
-      <div class="row mono" style="height:62px;padding:0 24px;gap:12px;font-size:18px;color:var(--muted);border-bottom:1.5px solid var(--line)">${icon('file', 'font-size:22px')}state/outreach-log.md</div>
-      ${log.map(([r, s, c, b], i) => `<div class="row" data-k="lr${i}" style="height:74px;padding:0 24px;justify-content:space-between;border-bottom:1.5px solid var(--line)">
-        <span style="font-size:19px;font-weight:600;color:var(--muted);white-space:nowrap">${r}</span>
-        <span class="pill mono" style="padding:7px 12px;font-size:15px;color:${c};border:1.5px solid ${b}">${s}</span></div>`).join('')}
-      ${[0, 1].map((i) => `<div class="row" data-k="new${i}" style="height:74px;padding:0 24px;justify-content:space-between;border-bottom:1.5px solid var(--line);background:rgba(232,176,74,.05)">
-        <span style="font-size:19px;font-weight:600;white-space:nowrap">${people[i * 2][0]}</span>
-        <span class="pill mono" style="padding:7px 12px;font-size:15px;color:var(--warn);border:1.5px solid rgba(232,176,74,.5)">Ready for Approval</span></div>`).join('')}
-    </div>
-    <div class="abs pill" data-k="sup" style="left:0;top:194px;padding:10px 16px;font-size:19px;font-weight:700;color:var(--bad);background:rgba(232,97,90,.12);border:1.5px solid rgba(232,97,90,.45);z-index:3">${icon('x')} already replied · suppressed</div>
-    <div class="abs pill" data-k="foot" style="left:380px;top:540px;padding:14px 22px;font-size:23px;font-weight:700;border:1.5px solid var(--line);background:var(--card)">${icon('lock', 'color:var(--accent)')} Drafts only. It never hits send.</div>`;
-  const k = (n) => $$(`[data-k="${n}"]`, v);
-  const ps = k('p');
-  const tin = (i) => T + 0.2 + i * 0.1;
-  life(k('log')[0], T + 0.3, null, { from: { opacity: 0, transform: 'translateX(60px)' } });
-  // 1st and 3rd fly into the log as new rows; the 2nd bounces off a row that already replied
-  const at = (x, y = 0, s = 1) => `translate(${x}px,${y}px) scale(${s})`;
-  const fly = (p, i, t, dy) => key(p, [[tin(i), { opacity: 0, transform: at(-60), ease: E.out }], [tin(i) + 0.6, { opacity: 1, transform: at(0) }],
-    [t, { opacity: 1, transform: at(0), ease: E.inOut }], [t + 0.45, { opacity: 0, transform: at(450, dy, 0.55) }]]);
-  const t1 = T + 1.15;
-  const t3 = T + 2.75;
-  fly(ps[0], 0, t1, 225);
-  key(k('new0')[0], [[t1 + 0.35, { opacity: 0, transform: 'translateX(-30px)', ease: E.out }], [t1 + 0.75, { opacity: 1, transform: 'none' }]]);
-  sfx('pop', t1 + 0.4);
-  const t2 = T + 1.85;
-  key(ps[1], [[tin(1), { opacity: 0, transform: at(-60), ease: E.out }], [tin(1) + 0.6, { opacity: 1, transform: at(0) }],
-    [t2, { opacity: 1, transform: at(0), ease: E.in }], [t2 + 0.25, { opacity: 1, transform: at(70), ease: E.out }],
-    [t2 + 0.33, { opacity: 1, transform: at(48), ease: E.lin }], [t2 + 0.41, { opacity: 1, transform: at(62), ease: E.inOut }], [t2 + 0.8, { opacity: 1, transform: at(0) }]]);
-  key(ps[1], [[t2 + 0.2, { borderColor: 'rgb(44,44,56)' }], [t2 + 0.25, { borderColor: 'rgb(232,97,90)' }]]);
-  key(k('lr1')[0], [[t2 + 0.2, { backgroundColor: 'rgba(232,97,90,0)' }], [t2 + 0.25, { backgroundColor: 'rgba(232,97,90,.22)', ease: E.out }], [t2 + 1.3, { backgroundColor: 'rgba(232,97,90,.08)' }]]);
-  pop(k('sup')[0], t2 + 0.3, null, { s: 0.7 });
-  sfx('click', t2 + 0.25);
-  fly(ps[2], 2, t3, -13);
-  key(k('new1')[0], [[t3 + 0.35, { opacity: 0, transform: 'translateX(-30px)', ease: E.out }], [t3 + 0.75, { opacity: 1, transform: 'none' }]]);
-  sfx('pop', t3 + 0.4);
-  life(k('foot')[0], T + 3.2, null);
-}
-
-function vizCommunity(v, T) {
-  const plats = ['Reddit', 'Hacker News', 'Product Hunt', 'Indie Hackers', 'dev.to', 'Discord', 'Slack', 'Telegram'];
-  const card = (x, name, checks, stamp, ok) => `
-    <div class="card abs" data-k="card" style="left:${x}px;top:150px;width:418px;height:480px;padding:28px 30px;overflow:hidden">
-      <div style="font-size:28px;font-weight:800">${name}</div>
-      <div class="mono" style="font-size:16px;color:var(--dim);margin-top:8px">rules researched live</div>
-      ${checks.map(([t, good]) => `<div class="row" data-k="ck" style="margin-top:26px;font-size:23px;font-weight:600"><span class="chk ${good ? 'ok' : 'no'}">${icon(good ? 'check' : 'x')}</span>${t}</div>`).join('')}
-      <div class="stamp" data-k="stamp" style="left:${ok ? 120 : 70}px;top:330px;color:${ok ? 'var(--ok)' : 'var(--bad)'}">${stamp}</div>
-    </div>`;
-  v.innerHTML = `
-    <div class="abs" style="left:0;top:0;width:860px;display:flex;flex-wrap:wrap;gap:12px">
-      ${plats.map((p) => `<span class="pill mono" data-k="plat" style="padding:11px 18px;font-size:19px;border:1.5px solid var(--line);background:var(--card)">${p}</span>`).join('')}</div>
-    ${card(0, 'Community A', [['Rules page read', 1], ['Top posts sampled', 1], ['Show posts welcome', 1]], 'GO', true)}
-    ${card(442, 'Community B', [['Rules page read', 1], ['Top posts sampled', 1], ['No self-promotion', 0]], 'NO-GO', false)}
-    <div class="abs sub" data-k="foot" style="left:0;top:672px;font-size:26px">It only drafts a post that's actually welcome.</div>`;
-  const k = (n) => $$(`[data-k="${n}"]`, v);
-  k('plat').forEach((p, i) => { pop(p, T + 0.25 + i * 0.06, null, { s: 0.7 }); });
-  sfx('tick', T + 0.25); sfx('tick', T + 0.49);
-  k('card').forEach((c, i) => life(c, T + 0.55 + i * 0.12, null, { from: { opacity: 0, transform: 'translateY(50px)' } }));
-  const cks = k('ck');
-  [T + 1.0, T + 1.2, T + 1.4, T + 1.95, T + 2.15, T + 2.35].forEach((t, i) => {
-    life(cks[i], t, null, { from: { opacity: 0, transform: 'translateX(-24px)' }, din: 0.4 });
-    sfx('tick', t);
-  });
-  const [go, no] = k('stamp');
-  key(go, [[T + 1.7, { opacity: 0, transform: 'rotate(-12deg) scale(2.4)', ease: 'cubic-bezier(.5,0,.75,0)' }], [T + 1.86, { opacity: 1, transform: 'rotate(-12deg) scale(1)', ease: E.back }], [T + 2.0, { opacity: 1, transform: 'rotate(-12deg) scale(1.04)' }]]);
-  key(no, [[T + 2.75, { opacity: 0, transform: 'rotate(8deg) scale(2.4)', ease: 'cubic-bezier(.5,0,.75,0)' }], [T + 2.91, { opacity: 1, transform: 'rotate(8deg) scale(1)', ease: E.back }], [T + 3.05, { opacity: 1, transform: 'rotate(8deg) scale(1.04)' }]]);
-  sfx('ding', T + 1.86);
-  sfx('click', T + 2.91);
-  life(k('foot')[0], T + 3.2, null);
-}
-
-function vizVisual(v, T) {
-  const scene = `
-    <div class="abs" style="left:-360px;top:-240px;width:720px;height:480px">
-      <div class="abs" style="left:0;top:0;width:360px;height:480px;background:#191920"></div>
-      <div class="abs" style="left:360px;top:0;width:360px;height:480px;background:#1e2433"></div>
-      ${[[40, 60, -12], [150, 40, 8], [70, 170, 5], [190, 150, -7], [50, 290, 10], [170, 280, -4], [100, 380, -9], [230, 360, 6]].map(([x, y, r]) =>
-        `<div class="abs" style="left:${x}px;top:${y}px;width:110px;height:72px;border-radius:10px;background:#2a2a35;border:1.5px solid #3a3a48;transform:rotate(${r}deg)"></div>`).join('')}
-      <div class="abs" style="left:420px;top:205px;width:240px;height:70px;border-radius:14px;background:#262f45;border:2px solid #7d8cff;display:flex;align-items:center;gap:12px;padding:0 18px">
-        <span style="width:22px;height:22px;border-radius:50%;background:var(--ok)"></span><span class="skel" style="flex:1;background:#3b4766"></span></div>
-    </div>`;
-  v.innerHTML = `
-    <div class="abs" data-k="frame" style="left:430px;top:258px;width:720px;height:405px;margin:0;transform:translate(-50%,-50%);border:4px solid var(--accent);border-radius:18px;overflow:hidden;box-shadow:0 0 0 1px rgba(224,122,85,.2),0 0 80px -20px rgba(224,122,85,.6)">
-      <div class="abs" style="left:50%;top:50%">${scene}</div></div>
-    ${['16:9 · YouTube', '9:16 · Reels, TikTok, Shorts', '1:1 · Feed post', '4:5 · Instagram feed'].map((t) =>
-      `<div class="abs center" data-k="ratio" style="left:0;right:0;top:516px"><span class="pill mono" style="padding:10px 18px;font-size:20px;background:var(--card);border:1.5px solid var(--line)">${t}</span></div>`).join('')}
-    <div class="card abs" data-k="prompt" style="left:0;top:584px;width:860px;height:172px;padding:24px 32px">
-      <div class="row" style="justify-content:space-between"><span class="lbl" style="color:var(--accent)">shot 1 · prompt</span><span class="mono" style="font-size:16px;color:var(--dim)">centered · even split</span></div>
-      <div data-k="ptext" style="font-size:25px;font-weight:600;line-height:1.42;margin-top:16px">Split frame: a cluttered manual workflow on the left, a single clean audit-log entry on the right.</div>
-    </div>`;
-  const k = (n) => $$(`[data-k="${n}"]`, v);
-  const f = k('frame')[0];
-  const sizes = [[720, 405], [270, 480], [440, 440], [384, 480]];
-  const ts = [T + 0.3, T + 1.15, T + 1.95, T + 2.75];
-  const fr = [[ts[0], { width: '720px', height: '405px', opacity: 0, ease: E.out }], [ts[0] + 0.4, { width: '720px', height: '405px', opacity: 1 }]];
-  sizes.slice(1).forEach(([w, hh], i) => fr.push([ts[i + 1], { width: `${sizes[i][0]}px`, height: `${sizes[i][1]}px`, opacity: 1, ease: 'cubic-bezier(.7,0,.2,1)' }], [ts[i + 1] + 0.5, { width: `${w}px`, height: `${hh}px`, opacity: 1 }]));
-  key(f, fr);
-  k('ratio').forEach((r, i) => {
-    const out = i < 3 ? ts[i + 1] : null;
-    life(r, ts[i] + 0.1, out, { from: { opacity: 0, transform: 'translateY(16px)' }, to: { opacity: 0, transform: 'translateY(-12px)' }, din: 0.4, dout: 0.18 });
-    if (i) sfx('swish', ts[i]);
-  });
-  life(k('prompt')[0], T + 0.6, null, { from: { opacity: 0, transform: 'translateY(40px)' } });
-  key(k('ptext')[0], [[T + 1.0, { clipPath: 'inset(0 100% 0 0)', ease: 'steps(28,end)' }], [T + 2.2, { clipPath: 'inset(0 0% 0 0)' }]]);
-  sfx('typing', T + 1.02);
-}
-
-// ---------------------------------------------------------------- 14. short-form video
-function video() {
-  const T = B(33);
-  const left = $('#vidLeft');
-  life($('.count', left), T + 0.05, null, { from: { opacity: 0, transform: 'translateX(-30px)' } });
-  life($('.sname', left), T + 0.12, null, { from: { opacity: 0, transform: 'translateX(-30px)' } });
-  rise(left, T + 0.15, 0.09);
-  life($('.sub', left), T + 0.5, null, { din: 0.7 });
-  key('#phone', [[T + 0.1, { opacity: 0, transform: 'perspective(1600px) translateY(80px) rotateY(-24deg) rotateX(8deg)', ease: E.out }],
-    [T + 1.2, { opacity: 1, transform: 'perspective(1600px) translateY(0px) rotateY(-9deg) rotateX(2deg)', ease: E.inOut }],
-    [B(37) - 0.3, { opacity: 1, transform: 'perspective(1600px) translateY(-10px) rotateY(6deg) rotateX(0deg)' }]]);
-  key('#scrGlow', [[T, { transform: 'translate(0px,0px)', ease: E.inOut }], [T + 4, { transform: 'translate(160px,120px)', ease: E.inOut }], [B(37), { transform: 'translate(40px,280px)' }]]);
-  ['#cap1', '#cap2', '#cap3'].forEach((c, i) => { pop(c, T + 0.9 + i * BEAT * 0.5, null, { s: 0.4, din: 0.35 }); sfx('pop', T + 0.9 + i * BEAT * 0.5); });
-  key('#heart', [[T + 2.2, { color: 'rgb(255,255,255)', fill: 'rgba(232,97,90,0)', transform: 'scale(1)', ease: E.back }], [T + 2.45, { color: 'rgb(232,97,90)', fill: 'rgba(232,97,90,1)', transform: 'scale(1.35)', ease: E.out }], [T + 2.8, { color: 'rgb(232,97,90)', fill: 'rgba(232,97,90,1)', transform: 'scale(1)' }]]);
-  // second clip: a fictional text-message skit
-  const T2 = B(35);
-  key('#scrA', [[T2 - 0.15, { opacity: 1, transform: 'translateX(0px)', ease: E.in }], [T2 + 0.1, { opacity: 0, transform: 'translateX(-120px)' }]]);
-  key('#scrB', [[T2, { opacity: 0, transform: 'translateX(120px)', ease: E.out }], [T2 + 0.35, { opacity: 1, transform: 'translateX(0px)' }]]);
-  [['#chat1', T2 + 0.4], ['#chat2', T2 + 1.2], ['#chat3', T2 + 1.75]].forEach(([c, t]) => { pop(c, t, null, { s: 0.6, din: 0.4 }); sfx('ping', t); });
-  sfx('swish', T2 - 0.1);
-  key('#scrProg', [[T + 0.6, { transform: 'scaleX(0)', ease: E.lin }], [T2 - 0.1, { transform: 'scaleX(1)', ease: 'steps(1,end)' }], [T2, { transform: 'scaleX(0)', ease: E.lin }], [B(37), { transform: 'scaleX(.95)' }]]);
-  ['#st1', '#st2', '#st3'].forEach((s, i) => { life(s, T + 0.9 + i * 0.22, null, { from: { opacity: 0, transform: 'translateY(40px)' } }); sfx('tick', T + 0.9 + i * 0.22); });
-  $$('#vidChips > span').forEach((c, i) => pop(c, T2 + 0.6 + i * 0.12, null, { s: 0.7 }));
-  life('#vidMeta', T2 + 1.0, null, { from: { opacity: 0, transform: 'translateX(-30px)' } });
-  sfx('chime', T2 + 1.0);
-  // an equalizer that hits on the kick
-  const row = $('#eqRow');
-  for (let k = 0; k < 22; k++) {
-    const bar = h(`<i class="eq" style="left:${k * 15}px;height:60px"></i>`);
-    row.appendChild(bar);
-    const fr = [[T + 0.4, { transform: 'scaleY(.06)', opacity: 0 }], [T + 0.8, { transform: 'scaleY(.12)', opacity: 1 }]];
-    for (const b of beatsIn(T + 0.9, B(37))) {
-      const peak = 0.3 + 0.7 * Math.abs(Math.sin(k * 0.55 + b * 1.9)) * (0.6 + 0.4 * Math.sin(k * 0.3));
-      fr.push([b, { transform: `scaleY(${Math.max(0.15, peak).toFixed(2)})`, opacity: 1, ease: E.out3 }], [b + BEAT * 0.92, { transform: 'scaleY(.12)', opacity: 1, ease: E.out }]);
-    }
-    key(bar, fr);
-  }
-  sfx('swish', T - 0.12);
-  scene('#s-video', T, B(37), 'zoom', 1.02);
-}
-
-// ---------------------------------------------------------------- 15. full pipeline, with the approval checkpoint
-function pipeline() {
-  const T = B(37);
-  const xs = [250, 605, 960, 1315, 1670];
-  const y = 520;
-  const nodes = [['Research', 'competitor-research', 'search'], ['Repurpose', 'content-repurposer', 'split'], ['Visual brief', 'visual-brief-generator', 'frame'],
-    ['Your approval', 'you', 'lock'], ['Publish', 'publish-pipeline', 'upload']];
-  const wrap = $('#pnodes');
-  const els = nodes.map(([t, d, ic], i) => {
-    const n = h(`<div class="pnode card" style="left:${xs[i]}px;top:${y}px"><div class="ic">${icon(ic)}</div><div class="t">${t}</div><div class="d">${d}</div></div>`);
-    wrap.appendChild(n);
-    pop(n, T + 0.3 + i * 0.13, null, { s: 0.7 });
-    sfx('tick', T + 0.3 + i * 0.13);
-    // a tap on the rail under each node
-    const tap = h(`<div class="abs" style="left:${xs[i] - 8}px;top:682px;width:16px;height:16px;border-radius:50%;background:#2c2c38"></div>`);
-    wrap.appendChild(tap);
-    fade(tap, T + 0.5 + i * 0.13, null);
-    return n;
-  });
-  rise('#pipeHead', T + 0.1);
-  life($('#pipeHead .eyebrow'), T + 0.05, null);
-  draw('#rail', T + 0.6, 1.0);
-  // the packet runs the chain one beat per hop and stops at the gate
-  const lit = (i, t, gate = false) => {
-    const ic = $('.ic', els[i]);
-    const hot = gate ? { backgroundColor: 'rgb(54,41,20)', color: 'rgb(232,176,74)' } : { backgroundColor: 'rgb(224,122,85)', color: 'rgb(26,15,10)' };
-    return [ic, [[t - 0.05, { backgroundColor: 'rgb(35,35,45)', color: 'rgb(156,155,166)', ease: E.out3 }], [t + 0.15, hot]]];
-  };
-  const hop = B(38);
-  const px = (x) => ({ opacity: 1, transform: `translate(${x}px, 690px)` });
-  key('#packet', [[hop - 0.2, { opacity: 0, transform: `translate(${xs[0]}px, 690px) scale(0)`, ease: E.back }], [hop, { ...px(xs[0]), transform: `translate(${xs[0]}px, 690px) scale(1)`, ease: E.inOut }],
-    [hop + BEAT, { ...px(xs[1]), transform: `translate(${xs[1]}px, 690px) scale(1)`, ease: E.inOut }], [hop + 2 * BEAT, { ...px(xs[2]), transform: `translate(${xs[2]}px, 690px) scale(1)`, ease: E.inOut }],
-    [hop + 3 * BEAT, { ...px(xs[3]), transform: `translate(${xs[3]}px, 690px) scale(1)`, ease: E.lin }],
-    [B(41) + 0.6, { ...px(xs[3]), transform: `translate(${xs[3]}px, 690px) scale(1)`, ease: E.inOut }],
-    [B(41) + 1.2, { ...px(xs[4]), transform: `translate(${xs[4]}px, 690px) scale(1)`, ease: E.out3 }],
-    [B(41) + 1.5, { opacity: 0, transform: `translate(${xs[4]}px, 690px) scale(2.5)` }]]);
-  for (let i = 0; i < 3; i++) { const [ic, fr] = lit(i, hop + i * BEAT); key(ic, fr); sfx('pop', hop + i * BEAT); }
-  // the gate: amber while it waits, green once you say yes
-  const gate = $('.ic', els[3]);
-  const g0 = hop + 3 * BEAT;
-  key(gate, [[g0 - 0.05, { backgroundColor: 'rgb(35,35,45)', color: 'rgb(156,155,166)', ease: E.out3 }], [g0 + 0.15, { backgroundColor: 'rgb(54,41,20)', color: 'rgb(232,176,74)' }],
-    [B(41) - 0.02, { backgroundColor: 'rgb(54,41,20)', color: 'rgb(232,176,74)', ease: E.out3 }], [B(41) + 0.2, { backgroundColor: 'rgb(23,64,43)', color: 'rgb(63,191,127)' }]]);
-  const gateShackle = $('path:last-child', gate);
-  key(gateShackle, [[B(41) - 0.02, { transform: 'translateY(0px)', ease: E.back }], [B(41) + 0.3, { transform: 'translateY(-3px)' }]]);
-  key(els[3], beatsIn(g0, B(41)).flatMap((b) => [[b, { borderColor: 'rgb(232,176,74)', boxShadow: '0 0 0 6px rgba(232,176,74,.18), 0 0 50px rgba(232,176,74,.35)', ease: E.out }], [b + BEAT * 0.95, { borderColor: 'rgb(90,74,40)', boxShadow: '0 0 0 0 rgba(232,176,74,0), 0 0 0 rgba(232,176,74,0)' }]])
-    .concat([[B(41), { borderColor: 'rgb(63,191,127)', boxShadow: '0 0 0 8px rgba(63,191,127,.2), 0 0 60px rgba(63,191,127,.45)', ease: E.out }], [B(41) + 1, { borderColor: 'rgb(44,44,56)', boxShadow: '0 0 0 0 rgba(63,191,127,0), 0 0 0 rgba(63,191,127,0)' }]]));
-  sfx('pop', g0);
-  life('#waitPill', g0 + 0.25, B(41), { from: { opacity: 0, transform: 'translateX(-50%) translateY(14px)' }, show: { opacity: 1, transform: 'translateX(-50%) translateY(0px)' }, to: { opacity: 0, transform: 'translateX(-50%) translateY(-8px)' } });
-  const [ic4, fr4] = lit(4, B(41) + 1.2);
-  key(ic4, fr4.map(([t, p]) => [t, t > B(41) + 1.2 ? { backgroundColor: 'rgb(23,64,43)', color: 'rgb(63,191,127)' } : p]));
-  pop('#sentPill', B(41) + 1.35, null, { s: 0.6, from: { opacity: 0, transform: 'translateX(-50%) scale(.6)' }, show: { opacity: 1, transform: 'translateX(-50%) scale(1)' } });
-  sfx('ding', B(41) + 1.3);
-  // camera: push in on the gate while the chat plays out, then pull back
-  const zoom = 'translate(-1386px, -234px) scale(1.45)';
-  key('#cam', [[B(39), { transform: 'translate(0px, 0px) scale(1)', opacity: 1, ease: E.inOut }], [B(39) + 0.9, { transform: zoom, opacity: 1 }],
-    [B(41) + 0.1, { transform: zoom, opacity: 1, ease: E.inOut }], [B(41) + 1.0, { transform: 'translate(0px, 0px) scale(1)', opacity: 1 }]]);
-  key('#pipeHead', [[B(39), { opacity: 1, ease: E.in }], [B(39) + 0.4, { opacity: 0 }], [B(41) + 0.6, { opacity: 0, ease: E.out }], [B(41) + 1.1, { opacity: 1 }]]);
-  key('#chat', [[B(39) + 0.4, { opacity: 0, transform: 'translateX(140px)', ease: E.out }], [B(39) + 1.1, { opacity: 1, transform: 'translateX(0px)' }],
-    [B(41) + 0.05, { opacity: 1, transform: 'translateX(0px)', ease: E.in }], [B(41) + 0.5, { opacity: 0, transform: 'translateX(160px)' }]]);
-  const c0 = B(39) + 0.9;
-  key('#cb1', [[c0, { opacity: 0, transform: 'translateY(24px)', ease: E.out }], [c0 + 0.45, { opacity: 1, transform: 'none' }]]);
-  sfx('ping', c0);
-  ['#pl1', '#pl2', '#pl3', '#pl4', '#pl5'].forEach((p, i) => fade(p, c0 + 0.45 + i * 0.16, null, { din: 0.3 }));
-  life('#notYet', c0 + 1.45, null, { from: { opacity: 0, transform: 'translateY(16px)' } });
-  key('#typingDots', [[c0 + 2.3, { opacity: 0, transform: 'scale(.6)', ease: E.back }], [c0 + 2.55, { opacity: 1, transform: 'scale(1)', ease: E.lin }], [c0 + 3.15, { opacity: 1, transform: 'scale(1)', ease: E.in }], [c0 + 3.25, { opacity: 0, transform: 'scale(.6)' }]]);
-  $$('#typingDots .td').forEach((d, i) => d.animate([{ transform: 'translateY(0px)', opacity: 0.4 }, { transform: 'translateY(-7px)', opacity: 1 }, { transform: 'translateY(0px)', opacity: 0.4 }],
-    { delay: (c0 + 2.4 + i * 0.12) * 1000, duration: 500, iterations: 3, easing: 'ease-in-out', fill: 'both' }));
-  pop('#ub', c0 + 3.25, null, { s: 0.8, from: { opacity: 0, transform: 'translateY(20px) scale(.9)' } });
-  sfx('ping', c0 + 3.25);
-  sfx('chime', B(41));
-  FLASH.push([B(41), 0.12, 0.35]);
-  life('#pipeCap', B(42) - 0.2, null);
-  sfx('whoosh', B(39) - 0.05);
-  scene('#s-pipe', T, B(43), 'zoom', 1.0);
-}
-
-// ---------------------------------------------------------------- 16. the approval model
-function approval() {
-  const T = B(43);
-  life('#apEye', T + 0.1, null);
-  rise('#apHead', T + 0.15);
-  const pills = ['#st0', '#st1x', '#st2x', '#st3x', '#st4x'];
-  const cx = [375, 635, 960, 1300, 1560];
-  pills.forEach((p, i) => { pop(p, T + 0.45 + i * 0.12, null, { s: 0.7 }); sfx('tick', T + 0.45 + i * 0.12); });
-  const chev = $('#chev');
-  [505, 765, 1445].forEach((x, i) => {
-    const c = h(`<div class="abs" style="left:${x - 16}px;top:539px;font-size:32px;color:var(--line2)">${icon('chev')}</div>`);
-    chev.appendChild(c);
-    fade(c, T + 0.7 + i * 0.1, null);
-  });
-  pop('#lock', T + 0.95, null, { s: 0.5 });
-  draw('#brk', T + 1.0, 0.6);
-  draw('#apRail', T + 0.8, 0.8);
-  fade('#brkLbl', T + 1.2, null);
-  fade('#humLbl', T + 1.35, null);
-  fade('#pubLbl', T + 1.5, null);
-  // light each state as the token reaches it
-  const on = (i, t, rgb, bg) => key(pills[i], [[t, { borderColor: 'rgb(44,44,56)', color: 'rgb(156,155,166)', backgroundColor: 'rgb(22,22,29)', ease: E.out3 }],
-    [t + 0.15, { borderColor: `rgb(${rgb})`, color: 'rgb(243,242,238)', backgroundColor: bg }],
-    ...(i < 4 ? [[t + BEAT * 2, { borderColor: `rgb(${rgb})`, color: 'rgb(243,242,238)', backgroundColor: bg, ease: E.inOut }], [t + BEAT * 3, { borderColor: 'rgb(58,58,72)', color: 'rgb(156,155,166)', backgroundColor: 'rgb(22,22,29)' }]] : [])]);
-  const t0 = B(44);
-  const tok = (x, s = 1) => ({ transform: `translate(${x}px, 650px) scale(${s})` });
-  const fr = [[t0 - 0.2, { opacity: 0, ...tok(cx[0], 0), ease: E.back }], [t0, { opacity: 1, ...tok(cx[0]), ease: E.inOut }],
-    [t0 + BEAT, { opacity: 1, ...tok(cx[1]), ease: E.inOut }], [t0 + 2 * BEAT, { opacity: 1, ...tok(cx[2]), ease: E.in }],
-    [t0 + 3 * BEAT, { opacity: 1, ...tok(1128), ease: E.out }], [t0 + 3 * BEAT + 0.18, { opacity: 1, ...tok(1100), ease: E.inOut }]];
-  on(0, t0, '224,122,85', 'rgba(224,122,85,.12)');
-  on(1, t0 + BEAT, '224,122,85', 'rgba(224,122,85,.12)');
-  on(2, t0 + 2 * BEAT, '232,176,74', 'rgba(232,176,74,.12)');
-  [t0, t0 + BEAT, t0 + 2 * BEAT].forEach((t) => sfx('pop', t));
-  // blocked at the lock until the reply comes in
-  const bump = t0 + 3 * BEAT;
-  key('#lockSvg', [[bump - 0.01, { transform: 'translateX(0px) rotate(0deg)' }], [bump + 0.05, { transform: 'translateX(5px) rotate(6deg)', ease: E.lin }], [bump + 0.13, { transform: 'translateX(-4px) rotate(-5deg)', ease: E.lin }],
-    [bump + 0.21, { transform: 'translateX(2px) rotate(2deg)', ease: E.lin }], [bump + 0.3, { transform: 'translateX(0px) rotate(0deg)' }]]);
-  sfx('click', bump);
-  const yes = B(45) - 0.2;
-  pop('#reply', yes, null, { s: 0.7, from: { opacity: 0, transform: 'translateX(-50%) translateY(20px) scale(.8)' }, show: { opacity: 1, transform: 'translateX(-50%) translateY(0px) scale(1)' } });
-  sfx('ping', yes);
-  const open = B(45) + 0.4;
-  key('#shackle', [[open, { transform: 'translateY(0px)', ease: E.back }], [open + 0.3, { transform: 'translateY(-4px)' }]]);
-  key('#lock', [[open, { backgroundColor: 'rgb(43,34,22)', color: 'rgb(232,176,74)', borderColor: 'rgba(232,176,74,.6)', ease: E.out3 }],
-    [open + 0.25, { backgroundColor: 'rgb(23,64,43)', color: 'rgb(63,191,127)', borderColor: 'rgba(63,191,127,.7)' }]]);
-  sfx('click', open);
-  fr.push([open + 0.1, { opacity: 1, ...tok(1100), ease: E.inOut }], [open + 0.1 + BEAT, { opacity: 1, ...tok(cx[3]), ease: E.inOut }],
-    [open + 0.1 + 2 * BEAT, { opacity: 1, ...tok(cx[4]), ease: E.out }], [open + 0.1 + 2 * BEAT + 0.5, { opacity: 0, ...tok(cx[4], 2.4) }]);
-  key('#tok', fr);
-  on(3, open + 0.1 + BEAT, '224,122,85', 'rgba(224,122,85,.16)');
-  on(4, open + 0.1 + 2 * BEAT, '63,191,127', 'rgba(63,191,127,.14)');
-  sfx('pop', open + 0.1 + BEAT);
-  sfx('chime', open + 0.1 + 2 * BEAT);
-  life('#apCap', B(46) - 1.0, null);
-  scene('#s-approve', T, B(46), 'up', 1.0);
-}
-
-// ---------------------------------------------------------------- 17. destinations
-function destinations() {
-  const T = B(46);
-  rise('#deHead', T + 0.12);
-  pop('#json', T + 0.35, null, { s: 0.8 });
-  sfx('pop', T + 0.35);
-  const names = [['LinkedIn'], ['X'], ['Facebook'], ['Instagram'], ['YouTube'], ['TikTok'], ['Reddit'], ['dev.to'], ['Discord'], ['Slack'], ['Telegram'], ['any webhook', 1], ['Make', 1], ['n8n', 1]];
-  const svg = $('#deSvg');
-  const dests = $('#dests');
-  const dots = $('#deDots');
-  const c = { x: 960, y: 560 };
-  names.forEach(([n, auto], i) => {
-    const a = ((-90 + 12 + i * (360 / 14)) * Math.PI) / 180;
-    const x = c.x + 760 * Math.cos(a);
-    const y = c.y + 300 * Math.sin(a);
-    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    p.setAttribute('d', `M${c.x} ${c.y} L${x.toFixed(1)} ${y.toFixed(1)}`);
-    p.setAttribute('stroke', auto ? 'rgba(125,140,255,.4)' : 'rgba(224,122,85,.35)');
-    p.setAttribute('stroke-width', '2');
-    p.setAttribute('stroke-dasharray', '1');
-    p.setAttribute('pathLength', '1');
-    p.style.strokeDashoffset = '1';
-    svg.appendChild(p);
-    const t = T + 0.75 + i * 0.06;
-    draw(p, t, 0.5, E.out3);
-    const d = h(`<div class="dest${auto ? ' auto' : ''}" style="left:${x.toFixed(1)}px;top:${y.toFixed(1)}px">${n}</div>`);
-    dests.appendChild(d);
-    key(d, [[t + 0.25, { opacity: 0, transform: 'translate(-50%,-50%) scale(.5)', ease: E.back }], [t + 0.7, { opacity: 1, transform: 'translate(-50%,-50%) scale(1)' }]]);
-    // a payload pulse down every line on each beat, and the chip lights as it lands
-    const flashes = [[t + 0.7, { borderColor: auto ? 'rgba(125,140,255,.4)' : 'rgb(44,44,56)' }]];
-    for (const b of beatsIn(T + 1.8, B(49) - 0.4)) {
-      const dot = h(`<div class="abs" style="left:0;top:0;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:${auto ? '#c2c9ff' : '#ffc4ad'};box-shadow:0 0 14px 4px ${auto ? 'rgba(125,140,255,.7)' : 'rgba(224,122,85,.7)'}"></div>`);
-      dots.appendChild(dot);
-      along(dot, p, b + 0.05, b + 0.55, easeOutCubic);
-      flashes.push([b + 0.5, { borderColor: auto ? 'rgba(125,140,255,.4)' : 'rgb(44,44,56)', ease: E.out3 }], [b + 0.56, { borderColor: auto ? 'rgb(125,140,255)' : 'rgb(224,122,85)', ease: E.out }], [b + 0.56 + BEAT * 0.8, { borderColor: auto ? 'rgba(125,140,255,.4)' : 'rgb(44,44,56)' }]);
-    }
-    key(d, flashes);
-  });
-  sfx('whoosh', T + 0.75);
-  life('#deCap', T + 2.2, null);
-  scene('#s-dest', T, B(49), 'zoom', 1.02);
-}
-
-// ---------------------------------------------------------------- 18. codex
-function codex() {
-  const T = B(49);
-  rise('#cxHead', T + 0.12);
-  life('#cxA', T + 0.35, null, { from: { opacity: 0, transform: 'translateX(-80px)' } });
-  life('#cxB', T + 0.45, null, { from: { opacity: 0, transform: 'translateX(80px)' } });
-  const [a, b] = $$('#s-codex [data-type]');
-  type(a, T + 0.85, T + 1.85);
-  type(b, T + 0.95, T + 1.85);
-  sfx('typing', T + 0.9);
-  $$('#cxChecks > .row').forEach((r, i) => { life(r, T + 2.15 + i * BEAT * 0.5, null, { from: { opacity: 0, transform: 'translateY(26px)' } }); sfx('pop', T + 2.15 + i * BEAT * 0.5); });
-  scene('#s-codex', T, B(51), 'zoom', 1.02);
-}
-
-// ---------------------------------------------------------------- 19. outro
-function outro() {
-  const T = B(51);
-  sfx('whoosh', T + 0.05);
-  const main = $('#outMain');
-  main.innerHTML = [...main.textContent].map((c) => `<span class="mask" style="display:inline-block"><span>${c === ' ' ? '&nbsp;' : c}</span></span>`).join('');
-  $$('.mask > span', main).forEach((s, i) => key(s, [[T + 1.1 + i * 0.03, { transform: 'translateY(110%) rotate(6deg)', ease: E.out }], [T + 1.9 + i * 0.03, { transform: 'translateY(0%) rotate(0deg)' }]]));
-  rise('#outFor', T + 1.55);
-  life('#outCmd', T + 2.2, null, { from: { opacity: 0, transform: 'translateY(30px) scale(.96)' } });
-  sfx('pop', T + 2.2);
-  life('#outUrl', T + 2.6, null);
-  FLASH.push([END, 0.18, 0.5]);
-  SHOCKS.push([END, 7, 4.5]);
-  scene('#s-outro', T, null);
-  key('#black', [[END + 0.3, { opacity: 0, ease: E.inOut }], [END + 1.0, { opacity: 1 }]]);
-}
-
-// ---------------------------------------------------------------- chrome: chapters + progress
-function chrome() {
-  const chaps = [['overview', B(2), B(7)], ['install', B(7), B(10)], ['setup', B(10), B(15)], ['the skills', B(15), B(37)],
-    ['end to end', B(37), B(43)], ['publishing', B(43), B(49)], ['compatibility', B(49), B(51)]];
-  const wrap = $('#chaps');
-  chaps.forEach(([name, t0, t1]) => {
-    const c = h(`<span class="chap">${name}</span>`);
-    wrap.appendChild(c);
-    life(c, t0, t1 - 0.25, { from: { opacity: 0, transform: 'translateY(100%)' }, to: { opacity: 0, transform: 'translateY(-100%)' }, din: 0.45, dout: 0.25 });
-  });
-  key('#crumb', [[B(2), { opacity: 0, transform: 'translateY(-14px)', ease: E.out }], [B(2) + 0.6, { opacity: 1, transform: 'none' }],
-    [B(51) - 0.3, { opacity: 1, transform: 'none', ease: E.in }], [B(51), { opacity: 0, transform: 'translateY(-14px)' }]]);
-  key('#prog', [[DROP, { transform: 'scaleX(0)', opacity: 1, ease: E.lin }], [END, { transform: 'scaleX(1)', opacity: 1, ease: E.in }], [END + 0.6, { transform: 'scaleX(1)', opacity: 0 }]]);
-}
-
-// the white flash and the two shockwave rings are shared by several moments, so each gets one animation
-function effects() {
-  const fr = [[0, { opacity: 0 }]];
-  for (const [t, peak, dur] of FLASH.sort((a, b) => a[0] - b[0])) fr.push([t - 0.01, { opacity: 0 }], [t, { opacity: peak, ease: E.out3 }], [t + dur, { opacity: 0 }]);
-  key('#flash', fr);
-  [['#shock1', 0, 0], ['#shock2', 0.12, 1]].forEach(([id, d, which]) => {
-    const f = [[0, { opacity: 0, transform: 'scale(.2)' }]];
-    for (const [t, s1, s2] of SHOCKS.sort((a, b) => a[0] - b[0])) {
-      f.push([t + d - 0.01, { opacity: 0, transform: 'scale(.2)' }], [t + d, { opacity: 1, transform: 'scale(.3)', ease: E.out3 }], [t + d + 1.1, { opacity: 0, transform: `scale(${which ? s2 : s1})` }]);
-    }
-    key(id, f);
-  });
+function s8() {
+  scene('#s8', 8);
+  rise('#oHead', V(8) - 0.3, 0.12);
+  life('#oUrl', at(8, 0.35));
+  life('#oLic', at(8, 0.5));
+  life('#oWink', at(8, 0.78), { from: { opacity: 0, transform: 'translateY(20px) rotate(-2deg)' }, show: { opacity: 1, transform: 'rotate(-2deg)' } });
 }
 
 build();

@@ -1,26 +1,41 @@
 # Explainer video
 
-`marketing-skill-explainer.mp4` is a 2-minute, 1920x1080 (16:9), 60fps
-explainer of this plugin: the 12 skills, install, the shared brand voice,
-a short demo of each skill, the end-to-end pipeline with its approval
-checkpoint, and where publishing goes.
+A 1920x1080 (16:9), 60fps explainer of this plugin. v2 reworks v1 after
+feedback on r/claudeskills:
 
-It's made with the plugin's own tools. `explainer.html` is an animated
-page in the same style as the short-form templates, and `render.js` renders
-it with `scripts/video/render.js` (frame-exact seeking, plus the
-synthesized soundtrack: the `tech` sonic identity at 112 BPM, with sound
-effects on the page's cues). Every scene starts on a bar of the music.
+- **Music:** a licensed track instead of the generated loop.
+- **Voiceover:** your own recording.
+- **Readable on a phone:** nothing on screen under 40px.
+- **Real content:** the skill folders, `brand-voice.md`, frames from the
+  plugin's own templates, and the approval checkpoint from `EXAMPLE.md`,
+  instead of mock screens.
 
-To re-render after editing the page (same setup as `scripts/video`: Node 18+,
-ffmpeg, and Playwright):
+`explainer.html` is the animated page. `render.js` renders it with
+`scripts/video/render.js` (frame-exact seeking, the music and voice mix at
+-14 LUFS), at landscape size and in parallel. v1 is in git history.
 
-```
-cd media/explainer
-node render.js explainer.html marketing-skill-explainer.mp4    # full render, a few minutes per worker
-node render.js explainer.html --sheet --every 2                # contact sheet of the whole timeline
-node render.js explainer.html --stills 14.5,52.8,91.8          # single frames
-node render.js explainer.html preview.mp4 --from 83 --to 97    # one stretch, silent
-```
+## Making v2 with your voice and music
 
-`render.js` picks up Playwright from `scripts/video/node_modules`, or from a
-global install when `NODE_PATH` points at it.
+1. Record the eight lines in `voiceover-script.md` as `assets/voice-1.m4a`
+   ... `assets/voice-8.m4a`, and put the licensed track in `assets/`.
+2. Measure the lines and paste the printed `LINES` into `explainer.html`:
+
+   ```
+   node render.js --voice-lengths assets
+   ```
+
+3. In `explainer.html`, set `VOICE = true` and `MUSIC = 'assets/<track>'`.
+   Record the track's license with `node ../../scripts/video/media.js credit
+   assets/<track> --source ... --license ... --link ...`.
+4. Check and render:
+
+   ```
+   node render.js explainer.html --check                 # no visible text under 40px
+   node render.js explainer.html --sheet --every 2.5     # contact sheet of the whole timeline
+   node render.js explainer.html marketing-skill-explainer.mp4
+   ```
+
+Other options: `--stills 12,40` for single frames, and `--from 30 --to 45`
+for a silent preview of one stretch. `render.js` finds Playwright in
+`scripts/video/node_modules`, or in a global install when `NODE_PATH` points
+at it.
