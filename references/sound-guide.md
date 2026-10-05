@@ -158,7 +158,10 @@ when a long video doesn't.
 
 For real produced music, put the file in the page's `assets/` folder and
 set `<body data-music-src="assets/track.mp3" data-music-start="12">`
-(seconds into the track). The renderer trims it to the video, fades it in
+(seconds into the track). `data-music-at="4"` brings the music in 4
+seconds into the video instead of at the start: for an opening line that
+plays alone, or a track shorter than the video, so it can still end with
+it. The renderer trims it to the video, fades it in
 and out, dips it a few dB under each sound effect, and mixes it to the same
 loudness as everything else.
 

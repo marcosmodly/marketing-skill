@@ -11,3 +11,6 @@ state/videos/assets/*
 .media-cache/
 slides/
 scripts/video/check-report/
+
+# licensed music for the explainer: used in the render, never redistributed
+media/explainer/assets/music/

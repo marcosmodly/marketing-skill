@@ -474,6 +474,7 @@ async function readPage(page) {
       music: d.music || 'lofi',
       musicSrc: d.musicSrc ? new URL(d.musicSrc, location.href).href : '',
       musicStart: num(d.musicStart) || 0,
+      musicAt: num(d.musicAt) || 0,
     };
   }, SOUNDS);
 }
@@ -542,15 +543,19 @@ const probeDuration = (file) => parseFloat(spawnSync('ffprobe', ['-v', 'error', 
 
 // Mixes a licensed track (trimmed, faded) under the generated sound effects, dipping it a
 // few dB on each effect so they still land, and writes the result to `out` as a WAV.
-function mixLicensedTrack(trackFile, start, duration, sfxWav, out) {
+// `at` is when the music comes in (data-music-at), for a track shorter than the video or an
+// opening that plays without it.
+function mixLicensedTrack(trackFile, start, duration, sfxWav, out, at = 0) {
   const trackLen = probeDuration(trackFile);
   const problems = [];
-  if (Number.isFinite(trackLen) && trackLen - start < duration) {
-    problems.push(`the track has only ${(trackLen - start).toFixed(1)}s from data-music-start=${start}s for a ${duration}s video, so the music will stop early; pick an earlier data-music-start or a longer track`);
+  const room = Math.max(0, duration - at);
+  if (Number.isFinite(trackLen) && trackLen - start < room - 0.05) {
+    problems.push(`the track has only ${(trackLen - start).toFixed(1)}s from data-music-start=${start}s for the ${room.toFixed(1)}s it plays${at ? ` (from data-music-at=${at}s)` : ''}, so the music will stop early; pick an earlier data-music-start, a later data-music-at, or a longer track`);
   }
   const fadeOut = Math.max(0, duration - 1.5).toFixed(2);
-  ffmpeg(['-ss', String(start), '-t', String(duration), '-i', trackFile, '-i', sfxWav, '-filter_complex',
-    `[0:a]aresample=48000,aformat=channel_layouts=stereo,apad,atrim=0:${duration},afade=t=in:d=0.3,afade=t=out:st=${fadeOut}:d=1.5,volume=0.8[m];` +
+  const delay = at > 0 ? `,adelay=${Math.round(at * 1000)}:all=1` : '';
+  ffmpeg(['-ss', String(start), '-t', String(room), '-i', trackFile, '-i', sfxWav, '-filter_complex',
+    `[0:a]aresample=48000,aformat=channel_layouts=stereo,afade=t=in:d=0.3${delay},apad,atrim=0:${duration},afade=t=out:st=${fadeOut}:d=1.5,volume=0.8[m];` +
     '[1:a]asplit=2[fx][key];[m][key]sidechaincompress=threshold=0.04:ratio=2.5:attack=5:release=180[ducked];' +
     '[ducked][fx]amix=inputs=2:normalize=0', '-ar', '48000', '-c:a', 'pcm_s16le', out]);
   return problems;
@@ -652,7 +657,7 @@ function writeSoundtrack(settings, duration, tmp, videoOnly, out) {
   fs.writeFileSync(wav, wavBuffer(L, R));
   if (licensed) {
     const mixed = path.join(tmp, 'mixed.wav');
-    for (const p of mixLicensedTrack(settings.musicFile, settings.musicStart, duration, wav, mixed)) console.warn(`Warning: ${p}`);
+    for (const p of mixLicensedTrack(settings.musicFile, settings.musicStart, duration, wav, mixed, settings.musicAt)) console.warn(`Warning: ${p}`);
     wav = mixed;
   }
   if (voices.length) {

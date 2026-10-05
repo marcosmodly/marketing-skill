@@ -191,22 +191,62 @@ window.addEventListener('error', (e) => window.__errors.push(`${e.message} (line
 // arrive, then the measured lengths (media/explainer/README.md).
 const LINES = [9.6, 10.8, 10.8, 17.3, 12.7, 14.2, 8.5, 7.7];
 const VOICE = '';                       // e.g. 'assets/voice-{n}.m4a' (recorded) or '.wav' (voice.js) once the lines exist
-const MUSIC = '';                       // e.g. 'assets/track.mp3' once the licensed track is in
 const LEAD = 0.7;                       // scene on screen before its line starts
 const TAIL = 0.9;                       // hold after the line, before the next scene
+
+// The music, and its rhythm from scripts/video/beats.js (times in the track). The file isn't
+// committed (its license doesn't allow redistributing it); put it at TRACK to render.
+// "Funky Diesel" by 21 On The Block, 108 BPM, confidence 0.86.
+const TRACK = 'assets/music/funky-diesel.mp3';
+const TRACK_LENGTH = 100.556;
+const TRACK_LIFT = 8.882;                // the beat coming in
+const TRACK_BEATS = [0.557, 1.103, 1.66, 2.218, 2.775, 3.32, 3.878, 4.435, 4.992, 5.55, 6.107, 6.664, 7.221, 7.767, 8.324, 8.882, 9.439, 9.996, 10.553, 11.111, 11.668, 12.214, 12.771, 13.328, 13.886, 14.443, 15, 15.557, 16.115, 16.672, 17.218, 17.775, 18.332, 18.889, 19.447, 20.004, 20.55, 21.107, 21.664, 22.221, 22.779, 23.336, 23.882, 24.439, 24.996, 25.554, 26.111, 26.668, 27.225, 27.783, 28.34, 28.886, 29.443, 29.977, 30.557, 31.115, 31.66, 32.194, 32.775, 33.332, 33.89, 34.424, 34.992, 35.55, 36.107, 36.664, 37.222, 37.779, 38.336, 38.882, 39.439, 40.008, 40.554, 41.111, 41.668, 42.214, 42.771, 43.34, 43.886, 44.443, 45, 45.558, 46.126, 46.672, 47.229, 47.787, 48.332, 48.89, 49.447, 49.993, 50.55, 51.107, 51.664, 52.222, 52.779, 53.336, 53.894, 54.439, 54.996, 55.554, 56.111, 56.668, 57.226, 57.783, 58.329, 58.886, 59.443, 60, 60.558, 61.115, 61.672, 62.229, 62.775, 63.332, 63.89, 64.447, 65.004, 65.55, 66.107, 66.664, 67.222, 67.779, 68.336, 68.894, 69.439, 69.997, 70.554, 71.111, 71.668, 72.226, 72.771, 73.329, 73.886, 74.443, 74.989, 75.546, 76.103, 76.661, 77.218, 77.775, 78.333, 78.878, 79.435, 79.993, 80.55, 81.107, 81.665, 82.222, 82.779, 83.336, 83.882, 84.439, 84.997, 85.554, 86.111, 86.657, 87.214, 87.771, 88.329, 88.886, 89.443, 90.001, 90.558, 91.103, 91.661, 92.218, 92.775, 93.333, 93.89, 94.447, 95.004, 95.55, 96.107, 96.665, 97.222, 97.779, 98.348, 98.905, 99.451, 100.02];
+
+// Scenes follow the voice; with music, each scene change moves onto the next beat, and the
+// track is placed so its own ending lands with the video's (coming in late if it's shorter).
+const BEAT = TRACK ? (TRACK_BEATS[TRACK_BEATS.length - 1] - TRACK_BEATS[0]) / (TRACK_BEATS.length - 1) : 0;
 const START = [];
+const HOLD = 1.6;                       // the last frame's minimum hold before the fade
+let musicStart = 0;
+let musicAt = 0;
+let beatsInVideo = [];
 {
   let t = 0.35;
-  for (const d of LINES) { START.push(t); t += LEAD + d + TAIL; }
+  const plain = [];
+  for (const d of LINES) { plain.push(t); t += LEAD + d + TAIL; }
+  if (TRACK) {
+    // each snap to the next beat adds half a beat on average
+    const estimate = t - TAIL + HOLD + 0.6 + 7 * BEAT / 2;
+    if (estimate <= TRACK_LENGTH) musicStart = TRACK_LENGTH - estimate;
+    else musicAt = estimate - TRACK_LENGTH;
+    beatsInVideo = TRACK_BEATS.filter((b) => b >= musicStart).map((b) => b - musicStart + musicAt);
+  }
+  const nextBeat = (x) => beatsInVideo.find((b) => b >= x - 0.12) ?? x;
+  t = 0.35;
+  LINES.forEach((d, i) => {
+    START.push(i === 0 || !TRACK ? t : nextBeat(t));
+    t = START[i] + LEAD + d + TAIL;
+  });
   START.push(t);                        // the outro's end
 }
-const END = START[8] + 2.2;             // hold the last frame, then fade
+const MUSIC_END = TRACK ? musicAt + TRACK_LENGTH - musicStart : 0;
+const END = Math.max(START[8] - TAIL + HOLD, MUSIC_END - 0.6); // hold the last frame (to the music's own ending), then fade
 document.body.dataset.duration = (END + 0.6).toFixed(2);
-if (MUSIC) document.body.dataset.musicSrc = MUSIC;
+if (TRACK) Object.assign(document.body.dataset, { musicSrc: TRACK, musicStart: musicStart.toFixed(3), musicAt: musicAt.toFixed(3) });
 const S = (k) => START[k - 1];          // scene k starts
 const V = (k) => START[k - 1] + LEAD;   // line k starts
 const D = (k) => LINES[k - 1];          // line k's length
-const at = (k, f) => V(k) + f * D(k);   // a point f (0..1) through line k
+// a point f (0..1) through line k, on the nearest beat when there's music
+const onBeat = (x) => {
+  const b = beatsInVideo.reduce((best, v) => (Math.abs(v - x) < Math.abs(best - x) ? v : best), Infinity);
+  return Math.abs(b - x) <= 0.3 ? b : x;
+};
+const at = (k, f) => onBeat(V(k) + f * D(k));
+// for a run of items: the beats from x on (or an even spacing without music)
+const beatRun = (x, n, gap) => {
+  const i = beatsInVideo.findIndex((b) => b >= x - 0.12);
+  return Array.from({ length: n }, (_, k) => (i >= 0 && beatsInVideo[i + k] !== undefined ? beatsInVideo[i + k] : x + k * gap));
+};
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -307,7 +347,9 @@ function s1() {
   scene('#s1', 1);
   rise('#h1a', V(1) - 0.3, 0.14);
   // "...so I built twelve skills": the first line gives way to the answer
-  const swap = at(1, 0.48);
+  // the answer lands on the beat coming in, when that falls mid-line; otherwise on a beat
+  const lift = TRACK_LIFT - musicStart + musicAt;
+  const swap = TRACK && lift > at(1, 0.3) && lift < at(1, 0.8) ? lift : at(1, 0.48);
   key('#h1a', [[swap - 0.01, { opacity: 1, transform: 'translateY(0px)', ease: E.in }], [swap + 0.35, { opacity: 0, transform: 'translateY(-60px)' }]]);
   rise('#h1b', swap + 0.2, 0.1, 0.9);
   life('#h1c', swap + 0.6);
@@ -318,10 +360,12 @@ function s2() {
   const names = ['competitor-research', 'content-calendar', 'content-repurposer', 'seo-brief', 'ad-copy-generator', 'email-sequence',
     'email-outreach', 'community-post-generator', 'visual-brief-generator', 'short-form-video', 'full-pipeline', 'publish-pipeline'];
   life('#treeHead', S(2) + 0.35, { from: { opacity: 0, transform: 'translateX(-30px)' } });
+  // one folder per beat
+  const times = beatRun(V(2), 12, (D(2) * 0.72) / 12);
   names.forEach((n, i) => {
     const row = h(`<div><i>${i === 5 || i === 11 ? '└─' : '├─'}</i>${n}/</div>`);
     $(i < 6 ? '#treeA' : '#treeB').appendChild(row);
-    life(row, V(2) + (i / 12) * D(2) * 0.72, { from: { opacity: 0, transform: 'translateX(-40px)' }, dur: 0.5 });
+    life(row, times[i], { from: { opacity: 0, transform: 'translateX(-40px)' }, dur: 0.5 });
   });
   life('#treeCap', at(2, 0.78));
 }
@@ -346,10 +390,11 @@ function s4() {
   const rules = ['Stay on topic', 'Be kind', 'Sharing your own skill? Show your work', 'No spam', 'Put in some effort', 'Use post flair',
     'No piracy or terms of service breaches', "Don't ask for or send referral codes"];
   life('#rHead', S(4) + 0.3, { from: { opacity: 0, transform: 'translateX(-30px)' } });
+  const times = beatRun(V(4), 8, 0.32);
   rules.forEach((r, i) => {
     const row = h(`<div class="rule"><b>${i + 1}</b>${r}</div>`);
     $('#rules').appendChild(row);
-    life(row, V(4) + i * 0.32, { from: { opacity: 0, transform: 'translateX(-40px)' }, dur: 0.5 });
+    life(row, times[i], { from: { opacity: 0, transform: 'translateX(-40px)' }, dur: 0.5 });
   });
   const tGo = at(4, 0.3);
   key('#go', [[tGo, { opacity: 0, transform: 'rotate(-10deg) scale(2.6)', ease: 'cubic-bezier(.5,0,.75,0)' }], [tGo + 0.18, { opacity: 1, transform: 'rotate(-10deg) scale(1)', ease: E.back }],
