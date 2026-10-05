@@ -21,6 +21,10 @@
  *   node render.js --sample <genre> <out.m4a> [--motif "1 3 5 6 | 5 3 2 -"] [--key C] [--mode major]
  *                  [--bpm 118] [--energy 3] [--duration 12]          # audition a sound with no page at all
  *
+ * A voiceover goes in with <body data-voice-src="assets/voice.m4a"> (one take, starting at
+ * data-voice-start) or data-voice="assets/line-2.m4a" on any element (plays at its --voice
+ * or --in time). The music and effects duck under it.
+ *
  * Every run lints the layout: text outside the platforms' safe zone,
  * overflowing or clipped, or colliding with other text is reported with its
  * time, which is how copy that runs long gets caught.
@@ -445,9 +449,20 @@ async function readPage(page) {
     }
     const d = document.body.dataset;
     const num = (v) => (v !== undefined && v !== '' ? parseFloat(v) : undefined);
+    // spoken lines: one take on <body>, and/or one clip per element at its --voice (or --in) time
+    const voices = [];
+    if (d.voiceSrc) voices.push({ src: new URL(d.voiceSrc, location.href).href, time: num(d.voiceStart) || 0 });
+    for (const el of document.querySelectorAll('[data-voice]')) {
+      const cs = getComputedStyle(el);
+      let time = toSeconds(cs.getPropertyValue('--voice'));
+      if (Number.isNaN(time)) time = toSeconds(cs.getPropertyValue('--in'));
+      if (Number.isNaN(time)) problems.push(`data-voice="${el.dataset.voice}" but the element has no --voice or --in time`);
+      else voices.push({ src: new URL(el.dataset.voice, location.href).href, time });
+    }
     return {
       cues,
       problems,
+      voices,
       duration: num(d.duration),
       drop: num(d.drop),
       bpm: num(d.bpm),
@@ -459,6 +474,7 @@ async function readPage(page) {
       music: d.music || 'lofi',
       musicSrc: d.musicSrc ? new URL(d.musicSrc, location.href).href : '',
       musicStart: num(d.musicStart) || 0,
+      musicAt: num(d.musicAt) || 0,
     };
   }, SOUNDS);
 }
@@ -500,21 +516,46 @@ function checkMusic(settings) {
       settings.musicFile = file;
     }
   }
+  settings.voiceClips = [];
+  for (const v of settings.voices || []) {
+    const file = v.src.startsWith('file:') ? fileURLToPath(v.src) : '';
+    if (!file || !fs.existsSync(file)) problems.push(`voice clip not found (${file || v.src}); leaving it out`);
+    else settings.voiceClips.push({ file, time: v.time });
+  }
   return problems;
 }
 
+// Warnings about the mix as a whole, once the video's length is known.
+const LONG_FOR_GENERATED_MUSIC = 45;
+function checkMix(settings, duration) {
+  const problems = [];
+  if (!settings.musicFile && settings.music !== 'none' && duration > LONG_FOR_GENERATED_MUSIC) {
+    problems.push(`the generated music is written for short videos and repeats the same few bars, so over ${Math.round(duration)}s it gets monotonous; use a licensed track (data-music-src) for a video this long`);
+  }
+  const cues = settings.cues.filter((c) => c.time < duration).length;
+  if ((settings.voiceClips || []).length && cues > duration / 3) {
+    problems.push(`${cues} sound effects under a voiceover is one every ${(duration / cues).toFixed(1)}s, and effects compete with speech; keep them to scene changes and key moments (one every 3s or fewer)`);
+  }
+  return problems;
+}
+
+const probeDuration = (file) => parseFloat(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', file], { encoding: 'utf8' }).stdout);
+
 // Mixes a licensed track (trimmed, faded) under the generated sound effects, dipping it a
 // few dB on each effect so they still land, and writes the result to `out` as a WAV.
-function mixLicensedTrack(trackFile, start, duration, sfxWav, out) {
-  const probe = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', trackFile], { encoding: 'utf8' });
-  const trackLen = parseFloat(probe.stdout);
+// `at` is when the music comes in (data-music-at), for a track shorter than the video or an
+// opening that plays without it.
+function mixLicensedTrack(trackFile, start, duration, sfxWav, out, at = 0) {
+  const trackLen = probeDuration(trackFile);
   const problems = [];
-  if (Number.isFinite(trackLen) && trackLen - start < duration) {
-    problems.push(`the track has only ${(trackLen - start).toFixed(1)}s from data-music-start=${start}s for a ${duration}s video, so the music will stop early; pick an earlier data-music-start or a longer track`);
+  const room = Math.max(0, duration - at);
+  if (Number.isFinite(trackLen) && trackLen - start < room - 0.05) {
+    problems.push(`the track has only ${(trackLen - start).toFixed(1)}s from data-music-start=${start}s for the ${room.toFixed(1)}s it plays${at ? ` (from data-music-at=${at}s)` : ''}, so the music will stop early; pick an earlier data-music-start, a later data-music-at, or a longer track`);
   }
   const fadeOut = Math.max(0, duration - 1.5).toFixed(2);
-  ffmpeg(['-ss', String(start), '-t', String(duration), '-i', trackFile, '-i', sfxWav, '-filter_complex',
-    `[0:a]aresample=48000,aformat=channel_layouts=stereo,apad,atrim=0:${duration},afade=t=in:d=0.3,afade=t=out:st=${fadeOut}:d=1.5,volume=0.8[m];` +
+  const delay = at > 0 ? `,adelay=${Math.round(at * 1000)}:all=1` : '';
+  ffmpeg(['-ss', String(start), '-t', String(room), '-i', trackFile, '-i', sfxWav, '-filter_complex',
+    `[0:a]aresample=48000,aformat=channel_layouts=stereo,afade=t=in:d=0.3${delay},apad,atrim=0:${duration},afade=t=out:st=${fadeOut}:d=1.5,volume=0.8[m];` +
     '[1:a]asplit=2[fx][key];[m][key]sidechaincompress=threshold=0.04:ratio=2.5:attack=5:release=180[ducked];' +
     '[ducked][fx]amix=inputs=2:normalize=0', '-ar', '48000', '-c:a', 'pcm_s16le', out]);
   return problems;
@@ -530,6 +571,50 @@ function measureAudio(file, filter = '') {
     return m ? (m[1] === '-inf' ? -Infinity : parseFloat(m[1])) : NaN;
   };
   return { lufs: value(/I:\s+(-?[\d.]+|-inf) LUFS/), truePeak: value(/Peak:\s+(-?[\d.]+|-inf) dBFS/) };
+}
+
+// The voice is leveled low here so the peak limiter in muxSoundtrack (PRE) leaves speech alone;
+// muxSoundtrack then brings the whole mix up to -14 LUFS. The music and effects sit
+// BED_UNDER_VOICE dB under it, and duck about 10 dB more while someone is speaking.
+const VOICE_LUFS = -26;
+const BED_UNDER_VOICE = 7;
+
+// Mixes spoken lines over the music and effects in `bedWav`, and writes the result to `out`
+// as a WAV. Returns problems to warn about.
+function mixVoice(clips, duration, bedWav, tmp, out) {
+  const problems = [];
+  const parts = [];
+  let prevEnd = -Infinity;
+  [...clips].sort((a, b) => a.time - b.time).forEach((clip, i) => {
+    // each clip is cleaned up and leveled on its own, so lines recorded at different distances
+    // match: low rumble filtered, leading silence trimmed (the line starts at its cue), light
+    // compression
+    const raw = path.join(tmp, `voice-${i}-raw.wav`);
+    ffmpeg(['-i', clip.file, '-af', 'aresample=48000,aformat=channel_layouts=stereo,highpass=f=80,' +
+      'silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.08,' +
+      'acompressor=threshold=0.1:ratio=2.5:attack=15:release=200', '-c:a', 'pcm_s16le', raw]);
+    const { lufs } = measureAudio(raw);
+    const leveled = path.join(tmp, `voice-${i}.wav`);
+    ffmpeg(['-i', raw, '-af', `volume=${Number.isFinite(lufs) ? (VOICE_LUFS - lufs).toFixed(2) : 0}dB`, '-c:a', 'pcm_s16le', leveled]);
+    const len = probeDuration(leveled);
+    const name = path.basename(clip.file);
+    if (clip.time < prevEnd - 0.05) problems.push(`voice ${name} starts at ${clip.time.toFixed(2)}s, before the previous line ends at ${prevEnd.toFixed(2)}s, so they overlap`);
+    if (clip.time + len > duration + 0.05) problems.push(`voice ${name} runs ${(clip.time + len - duration).toFixed(1)}s past the end of the video and will be cut off`);
+    prevEnd = clip.time + len;
+    parts.push({ file: leveled, time: clip.time });
+  });
+  const voiceWav = path.join(tmp, 'voice.wav');
+  ffmpeg([...parts.flatMap((p) => ['-i', p.file]), '-filter_complex',
+    `${parts.map((p, i) => `[${i}:a]adelay=${Math.round(p.time * 1000)}:all=1[v${i}]`).join(';')};` +
+    `${parts.map((p, i) => `[v${i}]`).join('')}amix=inputs=${parts.length}:normalize=0,apad,atrim=0:${duration}`,
+    '-ar', '48000', '-c:a', 'pcm_s16le', voiceWav]);
+  const bed = measureAudio(bedWav).lufs;
+  const bedGain = Number.isFinite(bed) ? (VOICE_LUFS - BED_UNDER_VOICE - bed).toFixed(2) : '0';
+  ffmpeg(['-i', bedWav, '-i', voiceWav, '-filter_complex',
+    `[0:a]volume=${bedGain}dB[bed];[1:a]asplit=2[v][key];` +
+    '[bed][key]sidechaincompress=threshold=0.008:ratio=3:attack=40:release=450[ducked];' +
+    '[ducked][v]amix=inputs=2:normalize=0', '-t', String(duration), '-ar', '48000', '-c:a', 'pcm_s16le', out]);
+  return problems;
 }
 
 function muxSoundtrack(videoOnly, wav, out) {
@@ -561,8 +646,9 @@ function muxSilence(videoOnly, out) {
 // effects) and muxes it into `out`, or writes it alone when there's no video.
 function writeSoundtrack(settings, duration, tmp, videoOnly, out) {
   const licensed = !!settings.musicFile;
+  const voices = settings.voiceClips || [];
   const { L, R, silent } = buildSoundtrack(settings.cues, { ...settings, music: licensed ? 'none' : settings.music, duration });
-  if (silent && !licensed) {
+  if (silent && !licensed && !voices.length) {
     if (videoOnly) muxSilence(videoOnly, out);
     else ffmpeg(['-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo', '-t', String(duration), '-c:a', 'aac', out]);
     return { audio: 'silent track' };
@@ -571,8 +657,13 @@ function writeSoundtrack(settings, duration, tmp, videoOnly, out) {
   fs.writeFileSync(wav, wavBuffer(L, R));
   if (licensed) {
     const mixed = path.join(tmp, 'mixed.wav');
-    for (const p of mixLicensedTrack(settings.musicFile, settings.musicStart, duration, wav, mixed)) console.warn(`Warning: ${p}`);
+    for (const p of mixLicensedTrack(settings.musicFile, settings.musicStart, duration, wav, mixed, settings.musicAt)) console.warn(`Warning: ${p}`);
     wav = mixed;
+  }
+  if (voices.length) {
+    const voiced = path.join(tmp, 'voiced.wav');
+    for (const p of mixVoice(voices, duration, wav, tmp, voiced)) console.warn(`Warning: ${p}`);
+    wav = voiced;
   }
   const level = muxSoundtrack(videoOnly, wav, out);
   const counts = {};
@@ -580,7 +671,8 @@ function writeSoundtrack(settings, duration, tmp, videoOnly, out) {
   const summary = Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(', ');
   const music = licensed ? `licensed track ${path.basename(settings.musicFile)} + `
     : settings.music === 'none' ? '' : `${settings.music} music + `;
-  return { audio: `soundtrack (${music}${summary || 'no sound effects'}; ${level.lufs} LUFS, ${level.truePeak} dBTP)` };
+  const voice = voices.length ? `, voiceover (${voices.length} clip${voices.length === 1 ? '' : 's'})` : '';
+  return { audio: `soundtrack (${music}${summary || 'no sound effects'}${voice}; ${level.lufs} LUFS, ${level.truePeak} dBTP)` };
 }
 
 // --sample: a short preview of a genre and hook, with no page involved.
@@ -638,6 +730,7 @@ async function main() {
 
   const duration = Number(args.duration || settings.duration);
   if (!(duration > 0)) fail('Set the length with <body data-duration="24"> on the page, or pass --duration.');
+  for (const p of checkMix(settings, duration)) console.warn(`Warning: ${p}`);
   if (args.check) {
     const lint = await lintTimeline(page, duration);
     await browser.close();
@@ -709,6 +802,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-  WIDTH, HEIGHT, loadPlaywright, launchBrowser, openPage, prepareMedia, readPage, checkMusic, seek,
+  WIDTH, HEIGHT, loadPlaywright, launchBrowser, openPage, prepareMedia, readPage, checkMusic, checkMix, mixVoice, seek,
   lintLayout, lintTimeline, describeLint, slideTimes, writeSoundtrack, measureAudio, muxSoundtrack,
 };

@@ -145,16 +145,52 @@ originals, so there's nothing to license.
 | `glitch` | A digital stutter | An error, a crash, a "system overload" bit |
 
 One or two meme cues per video is plenty; the rest should be the quiet
-ones (`pop`, `swish`, `tick`). Every cue is mixed under the music, and the
+ones (`pop`, `swish`, `tick`). Under a voiceover, use fewer still: scene
+changes and one or two key moments, about one every 3 seconds at most. Every cue is mixed under the music, and the
 whole mix lands at about -14 LUFS, so a cue never jumps out of a feed.
 
 ## Licensed tracks instead
 
+The generated music is written for 10 to 30 second videos: it repeats the
+same few bars, which works in a short and wears thin past about 45
+seconds. For anything longer, use a licensed track; the renderer warns
+when a long video doesn't.
+
 For real produced music, put the file in the page's `assets/` folder and
 set `<body data-music-src="assets/track.mp3" data-music-start="12">`
-(seconds into the track). The renderer trims it to the video, fades it in
+(seconds into the track). `data-music-at="4"` brings the music in 4
+seconds into the video instead of at the start: for an opening line that
+plays alone, or a track shorter than the video, so it can still end with
+it. The renderer trims it to the video, fades it in
 and out, dips it a few dB under each sound effect, and mixes it to the same
 loudness as everything else.
+
+### Cutting to the track's beat
+
+`scripts/video/beats.js` reads a track's rhythm with ffmpeg, locally:
+
+```
+node scripts/video/beats.js assets/track.mp3 --align 2.2 --duration 24
+```
+
+It prints the tempo, a confidence from 0 to 1, the biggest lifts (a
+drop, a chorus, the beat coming in), the `data-music-start` that lands the
+biggest lift at `--align` seconds into the video, and every beat and bar in
+video time. Use it like this:
+
+- **Confidence 0.5 or more:** set `data-music-start` from it, align the
+  lift with the end of the hook, and put scene changes (`--out`) and key
+  cues (`--in`) on the printed bar times, or on beats when it says the bars
+  are a guess.
+- **Under 0.5:** the track has no steady beat (ambient, cinematic, free
+  tempo). Don't snap anything to it; time scenes to the voiceover or to
+  reading pace.
+
+It was checked against this plugin's own music in eight genres (exact
+tempo and beats within a few milliseconds in seven, and a low confidence on
+the eighth), plus noise and a sustained pad. You can't hear the result, so
+send the user an `--audio-only` render or a short preview to check the
+sync.
 
 Only use a track the user has a license for, and record where it came
 from, so the credits stay with the video:
@@ -182,3 +218,52 @@ video, even if the clip is short.
 **Trending sounds** only exist inside each app. If the user would rather
 post with one, they add it in the app and turn the video's own audio down.
 Posting through an API can't add one.
+
+## Voiceover
+
+A voice goes on top of the music and effects. Only use the user's own
+recording, or a voice they generate with a service they have their own
+key for. Never imitate a real person's voice without their permission, and
+if the voice is AI-generated, check whether the platform asks for an
+AI-content label.
+
+- **One line per file:** record each line of the script separately
+  (`voice-1.m4a`, `voice-2.m4a`, ...), put them in `assets/`, and add
+  `data-voice="assets/voice-1.m4a"` to the element the line belongs to.
+  It plays at that element's `--voice` time, or `--in`. A flubbed line is
+  then one quick re-record, and each scene can be timed to its line.
+- **One continuous take:** `<body data-voice-src="assets/voice.m4a"
+  data-voice-start="0.5">`.
+- **What the renderer does:** trims the silence before each line (it
+  starts on its cue), filters low rumble, compresses lightly, and levels
+  every line to the same loudness. The music and effects sit about 7 dB
+  under the voice and duck about 10 dB more while someone is speaking.
+  The whole mix still lands at -14 LUFS.
+- **Recording:** a quiet room (a closet full of clothes works well), the
+  phone about 20 cm away and a little off to the side, and the phone's
+  voice memo app. Any format ffmpeg reads is fine.
+- **Timing:** read each file's length (`ffprobe`) and give its scene that
+  long plus a beat. The renderer warns when lines overlap or run past the
+  end.
+
+### A free generated voice
+
+When the user would rather not record, `scripts/video/voice.js` reads the
+script with Kokoro, an open-source model (Apache-2.0) that runs locally:
+no account, no API key, no cost. One-time setup is `npm install
+kokoro-js` in `scripts/video` (about 600 MB), and the first run downloads
+the model (about 90 MB) from Hugging Face; after that it works offline.
+
+```
+node scripts/video/voice.js --audition samples "The first line of the script."   # four voices, same line
+node scripts/video/voice.js script.md --out assets --voice af_heart               # voice-1.wav, voice-2.wav, ...
+```
+
+The script file takes numbered lines (`1. ...`) or one paragraph per line.
+`--voices` lists all 28 voices with a quality grade; the best are
+`af_heart` and `af_bella` (American, female), then `am_michael` and
+`am_fenrir` (American, male) and `bf_emma` (British, female). `--speed`
+sets the pace (1 is normal). You can't hear the result, so send the
+audition files to the user and let them pick. These are synthetic stock
+voices, so if a platform asks whether a video uses AI-generated audio, the
+answer is yes.
