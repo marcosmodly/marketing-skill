@@ -9,8 +9,8 @@
 
   Timing follows the voiceover. LINES holds how long each spoken line runs;
   each scene starts LEAD seconds before its line and holds TAIL seconds after
-  it. Set VOICE and MUSIC once the files are in assets/ (see
-  voiceover-script.md); until then it previews silent with estimated lengths.
+  it. Set VOICE and MUSIC once the files are in assets/ (see README.md);
+  until then it previews silent with estimated lengths.
 
   Rendered with ./render.js, which reuses scripts/video/render.js: every
   animation is a Web Animation with an absolute start time, so the renderer
@@ -190,7 +190,7 @@ window.addEventListener('error', (e) => window.__errors.push(`${e.message} (line
 // Seconds of speech in each voiceover line. Estimates until the recordings
 // arrive, then the measured lengths (media/explainer/README.md).
 const LINES = [9.6, 10.8, 10.8, 17.3, 12.7, 14.2, 8.5, 7.7];
-const VOICE = false;                    // true once assets/voice-1.m4a ... voice-8.m4a exist
+const VOICE = '';                       // e.g. 'assets/voice-{n}.m4a' (or .mp3 from tts.js) once the lines exist
 const MUSIC = '';                       // e.g. 'assets/track.mp3' once the licensed track is in
 const LEAD = 0.7;                       // scene on screen before its line starts
 const TAIL = 0.9;                       // hold after the line, before the next scene
@@ -256,7 +256,7 @@ const sfx = (name, t) => {
 };
 const voice = (k) => {
   const i = document.createElement('i');
-  i.dataset.voice = `assets/voice-${k}.m4a`;
+  i.dataset.voice = VOICE.replace('{n}', k);
   i.style.setProperty('--voice', `${V(k).toFixed(3)}s`);
   $('#cues').appendChild(i);
 };

@@ -16,6 +16,17 @@ feedback on r/claudeskills:
 
 ## Making v2 with your voice and music
 
+The lines can be your own recordings, or a text-to-speech voice through
+OpenRouter. For that, the environment needs `OPENROUTER_API_KEY` set and
+`openrouter.ai` allowed in its network access. Audition one line first,
+then generate all eight as `assets/voice-1.mp3` ... `voice-8.mp3` and use
+`VOICE = 'assets/voice-{n}.mp3'` in step 3:
+
+```
+node tts.js --model <model id> --voice <voice> --line 1
+node tts.js --model <model id> --voice <voice>
+```
+
 1. Record the eight lines in `voiceover-script.md` as `assets/voice-1.m4a`
    ... `assets/voice-8.m4a`, and put the licensed track in `assets/`.
 2. Measure the lines and paste the printed `LINES` into `explainer.html`:
@@ -24,7 +35,8 @@ feedback on r/claudeskills:
    node render.js --voice-lengths assets
    ```
 
-3. In `explainer.html`, set `VOICE = true` and `MUSIC = 'assets/<track>'`.
+3. In `explainer.html`, set `VOICE = 'assets/voice-{n}.m4a'` and
+   `MUSIC = 'assets/<track>'`.
    Record the track's license with `node ../../scripts/video/media.js credit
    assets/<track> --source ... --license ... --link ...`.
 4. Check and render:
