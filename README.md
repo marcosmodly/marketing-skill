@@ -756,6 +756,7 @@ YouTube Shorts, Instagram Reels, and TikTok all expect.
 cd scripts/video
 npm install
 npx playwright install chromium   # skip if Google Chrome is installed; it's used as a fallback
+npm install kokoro-js             # optional: free generated voiceovers (about 600 MB)
 ```
 
 For stock backgrounds, also get free API keys from
@@ -775,6 +776,8 @@ node render.js --sample pop out.m4a --motif "1 3 5 3 | 6 5 3 -" --key D   # audi
 node render.js page.html out.mp4 --silent               # silent audio track instead of the soundtrack
 node media.js search "cozy coffee shop morning" --out assets --count 3     # stock photos (+ --type video)
 node check.js                                            # QA every template: layout, cues, fonts, loudness
+node voice.js script.md --out assets --voice af_heart     # a free voiceover, one WAV per script line
+node voice.js --audition samples "One line to try."       # the same line in four voices, to pick one
 ```
 
 Every render lints its layout as it goes: text outside the area the
@@ -860,6 +863,13 @@ How a video's soundtrack is put together:
   continuous take). The renderer trims the silence before each line,
   evens out their levels, and ducks the music and effects under your
   voice.
+- **A free generated voice instead:** `voice.js` reads the script with
+  Kokoro, an open-source voice model (Apache-2.0) that runs on your own
+  machine, so there's no account, API key, or cost. It writes one WAV per
+  line in any of 28 stock voices. Install it once with `npm install
+  kokoro-js`; the first run downloads the model (about 90 MB) and then
+  works offline. If a platform asks whether a video uses AI-generated
+  audio, say yes.
 
 ### Templates by video type
 
@@ -1023,6 +1033,7 @@ scripts/
     soundtrack.js        # the music and sound-effects synthesizer render.js uses (no dependencies)
     media.js             # finds stock photos and clips (Pexels, Pixabay, Openverse) and writes their credits
     check.js             # QA pass over templates: layout lint, cues, fonts, loudness, contact sheets
+    voice.js             # free local voiceover (Kokoro): a script -> one WAV per line
     templates/           # 6 marketing + 22 everyday starting pages, built from templates/build.py and fyp.py
 ```
 

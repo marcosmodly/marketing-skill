@@ -16,15 +16,16 @@ feedback on r/claudeskills:
 
 ## Making v2 with your voice and music
 
-The lines can be your own recordings, or a text-to-speech voice through
-OpenRouter. For that, the environment needs `OPENROUTER_API_KEY` set and
-`openrouter.ai` allowed in its network access. Audition one line first,
-then generate all eight as `assets/voice-1.mp3` ... `voice-8.mp3` and use
-`VOICE = 'assets/voice-{n}.mp3'` in step 3:
+The lines can be your own recordings, or a free generated voice from the
+plugin's `scripts/video/voice.js` (Kokoro, runs locally, no key or cost;
+it needs `npm install kokoro-js` in `scripts/video` once, and
+`huggingface.co` reachable for the first model download). Audition the
+first line, then generate all eight as `assets/voice-1.wav` ...
+`voice-8.wav` and use `VOICE = 'assets/voice-{n}.wav'` in step 3:
 
 ```
-node tts.js --model <model id> --voice <voice> --line 1
-node tts.js --model <model id> --voice <voice>
+node ../../scripts/video/voice.js --audition samples "I wanted Claude Code to handle the marketing work I kept putting off."
+node ../../scripts/video/voice.js voiceover-script.md --out assets --voice af_heart
 ```
 
 1. Record the eight lines in `voiceover-script.md` as `assets/voice-1.m4a`

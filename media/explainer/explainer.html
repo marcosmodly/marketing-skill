@@ -190,7 +190,7 @@ window.addEventListener('error', (e) => window.__errors.push(`${e.message} (line
 // Seconds of speech in each voiceover line. Estimates until the recordings
 // arrive, then the measured lengths (media/explainer/README.md).
 const LINES = [9.6, 10.8, 10.8, 17.3, 12.7, 14.2, 8.5, 7.7];
-const VOICE = '';                       // e.g. 'assets/voice-{n}.m4a' (or .mp3 from tts.js) once the lines exist
+const VOICE = '';                       // e.g. 'assets/voice-{n}.m4a' (recorded) or '.wav' (voice.js) once the lines exist
 const MUSIC = '';                       // e.g. 'assets/track.mp3' once the licensed track is in
 const LEAD = 0.7;                       // scene on screen before its line starts
 const TAIL = 0.9;                       // hold after the line, before the next scene

@@ -215,3 +215,25 @@ AI-content label.
 - **Timing:** read each file's length (`ffprobe`) and give its scene that
   long plus a beat. The renderer warns when lines overlap or run past the
   end.
+
+### A free generated voice
+
+When the user would rather not record, `scripts/video/voice.js` reads the
+script with Kokoro, an open-source model (Apache-2.0) that runs locally:
+no account, no API key, no cost. One-time setup is `npm install
+kokoro-js` in `scripts/video` (about 600 MB), and the first run downloads
+the model (about 90 MB) from Hugging Face; after that it works offline.
+
+```
+node scripts/video/voice.js --audition samples "The first line of the script."   # four voices, same line
+node scripts/video/voice.js script.md --out assets --voice af_heart               # voice-1.wav, voice-2.wav, ...
+```
+
+The script file takes numbered lines (`1. ...`) or one paragraph per line.
+`--voices` lists all 28 voices with a quality grade; the best are
+`af_heart` and `af_bella` (American, female), then `am_michael` and
+`am_fenrir` (American, male) and `bf_emma` (British, female). `--speed`
+sets the pace (1 is normal). You can't hear the result, so send the
+audition files to the user and let them pick. These are synthetic stock
+voices, so if a platform asks whether a video uses AI-generated audio, the
+answer is yes.
