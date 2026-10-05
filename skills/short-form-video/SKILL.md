@@ -324,6 +324,14 @@ command below.
        `assets/`, set `data-music-src` and `data-music-start`, and record its
        license with `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/media.js credit
        <file> --source ... --license ...`. Don't use a track without a license note.
+       Then read its rhythm: `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/beats.js
+       assets/<file> --align <end of the hook, s> --duration <length>`. If
+       the confidence is 0.5 or more, use the `data-music-start` it prints
+       and move scene changes and key cues onto its bar (or beat) times; if
+       it's lower, don't snap anything and time scenes to the voice or reading
+       pace. Tell the user what you did ("104 BPM, started at 0:32 so the drop
+       hits as the hook ends, cuts on the bar"), and send an `--audio-only`
+       render to check the sync, since you can't hear it.
      - **Longer than about 45 seconds:** the generated music repeats the
        same few bars and wears thin, so ask for a licensed track instead.
        The renderer warns about it.

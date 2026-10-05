@@ -776,6 +776,7 @@ node render.js --sample pop out.m4a --motif "1 3 5 3 | 6 5 3 -" --key D   # audi
 node render.js page.html out.mp4 --silent               # silent audio track instead of the soundtrack
 node media.js search "cozy coffee shop morning" --out assets --count 3     # stock photos (+ --type video)
 node check.js                                            # QA every template: layout, cues, fonts, loudness
+node beats.js assets/track.mp3 --align 2 --duration 24   # a track's tempo and beats, started so its drop hits 2s
 node voice.js script.md --out assets --voice af_heart     # a free voiceover, one WAV per script line
 node voice.js --audition samples "One line to try."       # the same line in four voices, to pick one
 ```
@@ -852,6 +853,10 @@ How a video's soundtrack is put together:
   trending sounds can't be added.
 - **Your own track instead:** add `data-music-src="assets/track.mp3"`.
   The renderer trims it, fades it, and dips it under the sound effects.
+  `beats.js` finds the track's tempo, beats, bars, and its biggest lift
+  (a drop or chorus), so the skill can start the track where the lift
+  lands on your hook and cut scenes on the beat. It says how confident it
+  is; on music without a steady beat, scenes follow the voice instead.
   `sound-guide.md` lists where to get licensed tracks; never use a
   popular song without a license.
 - **Longer videos:** the generated music is written for shorts and
@@ -1034,6 +1039,7 @@ scripts/
     media.js             # finds stock photos and clips (Pexels, Pixabay, Openverse) and writes their credits
     check.js             # QA pass over templates: layout lint, cues, fonts, loudness, contact sheets
     voice.js             # free local voiceover (Kokoro): a script -> one WAV per line
+    beats.js             # a music track's tempo, beats, bars, and drops, to cut a video on its beat
     templates/           # 6 marketing + 22 everyday starting pages, built from templates/build.py and fyp.py
 ```
 

@@ -162,6 +162,33 @@ set `<body data-music-src="assets/track.mp3" data-music-start="12">`
 and out, dips it a few dB under each sound effect, and mixes it to the same
 loudness as everything else.
 
+### Cutting to the track's beat
+
+`scripts/video/beats.js` reads a track's rhythm with ffmpeg, locally:
+
+```
+node scripts/video/beats.js assets/track.mp3 --align 2.2 --duration 24
+```
+
+It prints the tempo, a confidence from 0 to 1, the biggest lifts (a
+drop, a chorus, the beat coming in), the `data-music-start` that lands the
+biggest lift at `--align` seconds into the video, and every beat and bar in
+video time. Use it like this:
+
+- **Confidence 0.5 or more:** set `data-music-start` from it, align the
+  lift with the end of the hook, and put scene changes (`--out`) and key
+  cues (`--in`) on the printed bar times, or on beats when it says the bars
+  are a guess.
+- **Under 0.5:** the track has no steady beat (ambient, cinematic, free
+  tempo). Don't snap anything to it; time scenes to the voiceover or to
+  reading pace.
+
+It was checked against this plugin's own music in eight genres (exact
+tempo and beats within a few milliseconds in seven, and a low confidence on
+the eighth), plus noise and a sustained pad. You can't hear the result, so
+send the user an `--audio-only` render or a short preview to check the
+sync.
+
 Only use a track the user has a license for, and record where it came
 from, so the credits stay with the video:
 
