@@ -29,17 +29,21 @@ node ../../scripts/video/voice.js voiceover-script.md --out assets --voice af_he
 ```
 
 1. Record the eight lines in `voiceover-script.md` as `assets/voice-1.m4a`
-   ... `assets/voice-8.m4a`, and put the licensed track in `assets/`.
+   ... `assets/voice-8.m4a` (or generate them, above).
 2. Measure the lines and paste the printed `LINES` into `explainer.html`:
 
    ```
    node render.js --voice-lengths assets
    ```
 
-3. In `explainer.html`, set `VOICE = 'assets/voice-{n}.m4a'` and
-   `MUSIC = 'assets/<track>'`.
-   Record the track's license with `node ../../scripts/video/media.js credit
-   assets/<track> --source ... --license ... --link ...`.
+3. In `explainer.html`, set `VOICE = 'assets/voice-{n}.m4a'` (or `.wav`).
+   The music is `assets/music/funky-diesel.mp3`, which git ignores because
+   its license doesn't allow redistributing the file, so put it there
+   before rendering. The page places the track so its ending lands at the
+   video's end and moves each scene change onto a beat. For a different
+   track, point `TRACK` at it and replace `TRACK_LENGTH`, `TRACK_LIFT`, and
+   `TRACK_BEATS` with the output of
+   `node ../../scripts/video/beats.js assets/music/<file> --json`.
 4. Check and render:
 
    ```
