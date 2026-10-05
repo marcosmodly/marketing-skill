@@ -14,6 +14,20 @@ feedback on r/claudeskills:
 `scripts/video/render.js` (frame-exact seeking, the music and voice mix at
 -14 LUFS), at landscape size and in parallel. v1 is in git history.
 
+## Credits
+
+Put these in the description wherever the video is posted:
+
+```
+Music from #Uppbeat (free for Creators!): https://uppbeat.io/music/tracks/21-on-the-block/funky-diesel License code: WKCBH1LMDV3AQDIE
+Voiceover: AI voice generated with ElevenLabs (elevenlabs.io)
+```
+
+The track and the voice files aren't in the repo (both are git-ignored):
+the track's license doesn't allow redistributing the file, and the voice
+is one ElevenLabs take split into `assets/voice-1.wav` ... `voice-8.wav`
+at the pauses between paragraphs.
+
 ## Making v2 with your voice and music
 
 The lines can be your own recordings, or a free generated voice from the

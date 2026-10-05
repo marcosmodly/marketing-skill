@@ -16,3 +16,4 @@ scripts/video/check-report/
 media/explainer/assets/music/*
 !media/explainer/assets/music/CREDITS.md
 !media/explainer/assets/music/credits.json
+media/explainer/assets/voice-*

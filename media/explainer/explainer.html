@@ -187,10 +187,10 @@ window.__errors = [];
 window.addEventListener('error', (e) => window.__errors.push(`${e.message} (line ${e.lineno})`));
 
 // ---------------------------------------------------------------- timing
-// Seconds of speech in each voiceover line. Estimates until the recordings
-// arrive, then the measured lengths (media/explainer/README.md).
-const LINES = [9.6, 10.8, 10.8, 17.3, 12.7, 14.2, 8.5, 7.7];
-const VOICE = '';                       // e.g. 'assets/voice-{n}.m4a' (recorded) or '.wav' (voice.js) once the lines exist
+// Seconds of speech in each voiceover line, measured with `node render.js --voice-lengths assets`.
+// The voice is ElevenLabs ("Brian S."), one take split into its eight lines.
+const LINES = [7.58, 14.68, 9.06, 12.72, 10.63, 12.08, 6.49, 6.65];
+const VOICE = 'assets/voice-{n}.wav';
 const LEAD = 0.7;                       // scene on screen before its line starts
 const TAIL = 0.9;                       // hold after the line, before the next scene
 
