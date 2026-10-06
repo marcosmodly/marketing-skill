@@ -250,6 +250,10 @@ tones (playful / professional) to show how the voice changes it.
 - **Copy:** "so I once sent an invoice to the wrong client." / "Our first
   customer found us by accident."
 - **Skip it** without a real story; never invent one.
+- **Told aloud:** for a storytime with a voiceover (the user's own voice
+  works best), use `narrated.html` through `compose.js`: one chunk of the
+  story per line, captions synced to the voice, and the "storytime" sticker
+  idea as the hook.
 
 ### Top-5 countdown (`countdown.html`, 16s)
 - **Beats:** the promise with a "save this" sticker → tips 5 to 1, a

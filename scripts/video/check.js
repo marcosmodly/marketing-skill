@@ -54,6 +54,8 @@ async function checkPage(browser, pagePath, outDir, withAudio) {
     const mediaProblems = await r.prepareMedia(page);
     const settings = await r.readPage(page);
     result.problems.push(...fontProblems, ...settings.problems, ...mediaProblems, ...r.checkMusic(settings));
+    // voice lines measured and captions placed before linting, so the lint covers them
+    result.problems.push(...(await r.prepareVoices(page, settings)).problems);
     const duration = settings.duration;
     if (!(duration > 0)) {
       result.problems.push('no <body data-duration>');

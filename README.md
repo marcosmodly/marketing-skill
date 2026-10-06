@@ -782,6 +782,9 @@ node check.js                                            # QA every template: la
 node beats.js assets/track.mp3 --align 2 --duration 24   # a track's tempo and beats, started so its drop hits 2s
 node voice.js script.md --out assets --voice af_heart     # a free voiceover, one WAV per script line
 node voice.js --audition samples "One line to try."       # the same line in four voices, to pick one
+node compose.js script.md                                 # a narrated video page from a script: voice, backgrounds, synced captions
+node render.js page.html --voice-lengths                  # each voice line's start, length, and room in its scene
+node captions.js assets/voice-1.wav --text "the line"     # when each word of a line is said
 ```
 
 Every render lints its layout as it goes: text outside the area the
@@ -878,6 +881,18 @@ How a video's soundtrack is put together:
   kokoro-js`; the first run downloads the model (about 90 MB) and then
   works offline. If a platform asks whether a video uses AI-generated
   audio, say yes.
+- **Captions synced to the voice:** most people watch muted. A line in
+  `<div class="say auto" data-voice="...">` is shown word by word in short
+  chunks, the word being said highlighted, timed to the clip by
+  `captions.js` with no service involved (about 50 ms from the true word
+  starts on average, checked against synthesized speech). The render also
+  writes an `.srt` caption file. `--whisper` uses Whisper's word timing
+  instead, if `kokoro-js` is installed.
+- **A narrated video in one step:** `compose.js` takes a script of numbered
+  lines (each with an optional `[bg: search query]`), voices it or uses
+  your takes, fetches a background per line, times every scene to its line
+  with cuts on the beat, and writes the page with the hook on screen from
+  the first frame.
 
 ### Templates by video type
 
@@ -895,6 +910,7 @@ in `scripts/video/templates/`:
 | `faq.html` | 18s | FAQ replies to a comment, myth vs fact | pop |
 | `announcement.html` | 18s | Launches, plus event, webinar, and live-stream promos | house |
 | `team.html` | 18s | Meet the team, the people side of a company profile | acoustic |
+| `narrated.html` | per script | A voiceover over one background per line, with captions synced to the voice: explainers, tips, text-led brand stories (built by `compose.js`) | the identity, energy −1 |
 
 The skill swaps each template's default sound for your sonic identity.
 
@@ -939,7 +955,7 @@ frame by frame, so output is frame-exact on any machine), the background
 slots, the music settings on `<body>`, and `data-sfx` cues. The templates
 are built from one shared base by `templates/build.py` (the everyday ones
 are defined in `templates/fyp.py`); edit those and run `python3 build.py`
-rather than hand-editing 28 copies.
+rather than hand-editing 29 copies.
 
 The skill saves its pages and renders under `state/videos/`, with media in
 `state/videos/assets/`. Rendered MP4s and downloaded media are git-ignored;
@@ -1042,8 +1058,10 @@ scripts/
     media.js             # finds stock photos and clips (Pexels, Pixabay, Openverse) and writes their credits
     check.js             # QA pass over templates: layout lint, cues, fonts, loudness, contact sheets
     voice.js             # free local voiceover (Kokoro): a script -> one WAV per line
+    captions.js          # word timing for a voice line, caption chunks, and .srt files
+    compose.js           # a narrated video page from a script: voice, backgrounds, synced captions
     beats.js             # a music track's tempo, beats, bars, and drops, to cut a video on its beat
-    templates/           # 6 marketing + 22 everyday starting pages, built from templates/build.py and fyp.py
+    templates/           # 7 marketing + 22 everyday starting pages, built from templates/build.py and fyp.py
 ```
 
 ## Share what you made

@@ -3,8 +3,8 @@
 
 Every template carries the same base styles (canvas, safe area, entrances,
 type scale, count-ups, background layer, and the everyday/FYP kit), so edit
-them here and run `python3 build.py` rather than hand-editing 28 copies.
-The six marketing templates are defined below; the 22 everyday ones are in
+them here and run `python3 build.py` rather than hand-editing 29 copies.
+The seven marketing templates are defined below; the 22 everyday ones are in
 fyp.py. Each page is still fully self-contained after building, so the
 skill can copy any one of them.
 """
@@ -691,6 +691,92 @@ TEMPLATES["promo.html"] = dict(
     body_attrs='data-duration="24" data-drop="3" data-music="tech" data-bpm="120" data-key="C" data-mode="major" data-energy="3" data-motif="1 5 3 5 | 6 5 3 2"',
     css='  /* scene 2/3: the to-do list */\n  .listhead { position: relative; height: 180px; margin-bottom: 28px; }\n  .listhead > div { position: absolute; left: 0; bottom: 0; }\n  .chips { display: flex; flex-direction: column; gap: 18px; }\n  .chip { display: flex; align-items: center; gap: 26px; align-self: flex-start;\n          background: var(--card); border: 2px solid var(--line); border-radius: 22px;\n          padding: 20px 34px 20px 24px; font-size: 46px; font-weight: 600;\n          animation: slideIn .4s cubic-bezier(.2,.8,.2,1) var(--in) both,\n                     dim .3s ease-out var(--tick) forwards; }\n  .chip:nth-child(even) { margin-left: 34px; }\n  @keyframes dim { to { color: var(--muted); border-color: #3a2a24; } }\n  .box { width: 52px; height: 52px; border-radius: 12px; border: 4px solid #5a5966; flex: none;\n         display: grid; place-items: center;\n         animation: tick .25s ease-out var(--tick) forwards; }\n  @keyframes tick { to { background: var(--accent); border-color: var(--accent); } }\n  .box svg { width: 34px; height: 34px; animation: checkIn .3s cubic-bezier(.2,.9,.3,1.4) var(--tick) both; }\n  @keyframes checkIn { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: none; } }\n  .tag { display: inline-block; font-size: 40px; font-weight: 600; color: var(--muted); margin-top: 10px; }\n\n  /* scene 4: approval card */\n  .card { background: var(--card); border: 2px solid var(--line); border-radius: 32px; padding: 40px; margin-top: 56px; position: relative; }\n  .cardtop { display: flex; justify-content: space-between; align-items: center; font-size: 36px; color: var(--muted); font-weight: 600; }\n  .pill { position: relative; height: 62px; width: 330px; }\n  .pill span { position: absolute; right: 0; top: 0; height: 62px; padding: 0 26px; border-radius: 31px;\n               display: flex; align-items: center; font-size: 32px; font-weight: 700; white-space: nowrap; }\n  .p1 { background: #3a2f17; color: var(--warn); animation: fadeOut .2s linear var(--flip) forwards; }\n  .p2 { background: #163626; color: var(--ok); animation: popIn .4s cubic-bezier(.2,.9,.3,1.3) var(--flip) both; }\n  .posttext { font-size: 44px; font-weight: 600; line-height: 1.3; margin: 34px 0 26px; }\n  .bar { height: 26px; border-radius: 13px; background: #2a2a33; margin-bottom: 18px; }\n  .btn { margin-top: 26px; height: 108px; border-radius: 24px; background: var(--accent); color: #fff;\n         display: grid; place-items: center; font-size: 46px; font-weight: 800;\n         animation: press .3s ease-in-out var(--press) both, done .3s ease-out var(--flip) forwards; }\n  @keyframes press { 0% { transform: none; } 40% { transform: scale(.94); } 100% { transform: none; } }\n  @keyframes done { to { background: #2a2a33; color: var(--muted); } }\n  .cursor { position: absolute; width: 90px; height: 90px; left: 520px; top: 440px;\n            animation: fadeIn .2s ease-out var(--cin) both, cursorMove .6s cubic-bezier(.3,.7,.2,1) var(--cin) both; }\n  @keyframes cursorMove { from { transform: translate(260px, 380px); } to { transform: none; } }\n\n  /* scene 6: terminal */\n  .term { margin-top: 56px; background: #08080b; border: 2px solid var(--line); border-radius: 28px; overflow: hidden; }\n  .termbar { height: 58px; background: #16161c; display: flex; align-items: center; gap: 14px; padding-left: 26px; }\n  .termbar i { width: 20px; height: 20px; border-radius: 50%; background: #3a3a44; display: block; }\n  .termbody { padding: 30px 34px 34px; font-family: "JetBrains Mono", "DejaVu Sans Mono", monospace; font-size: 36px; line-height: 1.5; color: #d9d8d2; }\n  .termbody .dollar { color: var(--accent); }\n  .caret { display: inline-block; width: 20px; height: 40px; background: #d9d8d2; vertical-align: -6px; animation: blink 1s steps(1) 0s infinite; }\n  @keyframes blink { 50% { opacity: 0; } }\n',
     body='  <!-- Scene 1 (0–3s): hook, readable sound-off -->\n  <div class="scene" style="--out:2.75s">\n    <div class="huge pop" style="--in:.05s" data-sfx="pop">Stop writing</div>\n    <div class="huge pop" style="--in:.4s" data-sfx="pop">marketing</div>\n    <div class="huge pop" style="--in:.75s" data-sfx="pop">posts</div>\n    <div class="huge pop accent" style="--in:1.1s" data-sfx="pop">by hand.</div>\n  </div>\n\n  <!-- Scenes 2+3 (3–12.5s): the week\'s list, then it gets done -->\n  <div class="scene" style="--out:12.25s" data-sfx="whoosh:out">\n    <div class="listhead">\n      <div class="big gone" style="--in:3.05s; --out:7.0s" data-sfx="whoosh:out">Your week:</div>\n      <div style="bottom:0">\n        <div class="mid rise" style="--in:7.3s">One plugin. <span class="accent">12 skills.</span></div>\n        <div class="tag fade" style="--in:7.7s">marketing-skill for Claude Code</div>\n      </div>\n    </div>\n    <div class="chips">\n      <div class="chip" style="--in:3.4s;  --tick:8.3s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>Competitor research</div>\n      <div class="chip" style="--in:3.75s; --tick:8.65s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>LinkedIn post</div>\n      <div class="chip" style="--in:4.1s;  --tick:9.0s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>X thread</div>\n      <div class="chip" style="--in:4.45s; --tick:9.35s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>SEO brief</div>\n      <div class="chip" style="--in:4.8s;  --tick:9.7s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>Ad copy variants</div>\n      <div class="chip" style="--in:5.15s; --tick:10.05s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>Cold emails</div>\n      <div class="chip" style="--in:5.5s;  --tick:10.4s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>TikTok script</div>\n      <div class="chip" style="--in:5.85s; --tick:10.75s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>Reddit post</div>\n    </div>\n  </div>\n\n  <!-- Scene 4 (12.5–17.5s): nothing ships without approval -->\n  <div class="scene" style="--out:17.35s" data-sfx="whoosh:out">\n    <div class="big rise" style="--in:12.55s">Nothing posts</div>\n    <div class="big rise accent" style="--in:12.85s">until you say so.</div>\n    <div class="card rise" style="--in:13.3s">\n      <div class="cardtop">\n        <div>LinkedIn · Tue 9:00</div>\n        <div class="pill" style="--flip:15.1s" data-sfx="chime:flip"><span class="p1">Ready for approval</span><span class="p2">Approved ✓</span></div>\n      </div>\n      <div class="posttext">We cut onboarding from 14 days to 3. Here\'s what we stopped doing:</div>\n      <div class="bar" style="width:92%"></div>\n      <div class="bar" style="width:78%"></div>\n      <div class="btn" style="--press:14.85s; --flip:15.1s" data-sfx="click:press">Approve</div>\n      <svg class="cursor" style="--cin:14.1s" viewBox="0 0 24 24"><path d="M4 2.5l15 9.2-6.6 1.4 3.9 7.3-2.7 1.4-3.9-7.3L4.6 19z" fill="#fff" stroke="#0f0f13" stroke-width="1.3" stroke-linejoin="round"/></svg>\n    </div>\n  </div>\n\n  <!-- Scene 5 (17.5–20.7s): free, open, editable -->\n  <div class="scene" style="--out:20.55s" data-sfx="whoosh:out">\n    <div class="huge pop" style="--in:17.6s" data-sfx="pop">Free.</div>\n    <div class="huge pop" style="--in:17.95s" data-sfx="pop">Open source.</div>\n    <div class="huge pop accent" style="--in:18.3s" data-sfx="pop">Yours to edit.</div>\n    <div class="small fade" style="--in:18.9s; margin-top:40px">Every skill is a plain SKILL.md file.</div>\n  </div>\n\n  <!-- Scene 6 (20.7–24s): CTA -->\n  <div class="scene">\n    <div class="big rise" style="--in:20.75s">Get it on GitHub</div>\n    <div class="mid rise accent" style="--in:21.05s; margin-top:18px">marcosmodly/<br>marketing-skill</div>\n    <div class="term rise" style="--in:21.5s">\n      <div class="termbar"><i></i><i></i><i></i></div>\n      <div class="termbody"><span class="dollar">$</span> claude plugin install<br>&nbsp;&nbsp;marketing-skill@marketing-skill<span class="caret"></span></div>\n    </div>\n  </div>\n')
+
+
+# ---------------------------------------------------------------- narrated
+def chunked(text, start, step=0.24, max_words=4, max_chars=22):
+    """Caption chunks the way captions.js builds them from a voice clip, at a steady reading pace,
+    so the template shows what a narrated render looks like before any voice is recorded."""
+    words = text.split()
+    chunks, cur = [], []
+    for i, w in enumerate(words):
+        cur.append(i)
+        nxt = words[i + 1] if i + 1 < len(words) else None
+        joined = " ".join(words[j] for j in cur)
+        if nxt is None or w[-1] in ".,!?;:" or len(cur) >= max_words or len(joined) + 1 + len(nxt) > max_chars:
+            chunks.append(cur)
+            cur = []
+    out = []
+    for k, c in enumerate(chunks):
+        t_in = start + c[0] * step
+        t_out = start + chunks[k + 1][0] * step if k + 1 < len(chunks) else start + len(words) * step + 0.5
+        ws = " ".join(f'<i style="--in:{start + j * step:.2f}s; --done:{start + (j + 1) * step:.2f}s">{words[j]}</i>' for j in c)
+        out.append(f'<span class="cc" style="--in:{t_in:.2f}s; --out:{t_out:.2f}s">{ws}</span>')
+    return " ".join(out)
+
+
+
+NARRATED_LINES = [
+    (0.2, "Most freelancers lose money on invoices they send late."),
+    (3.4, "Clients pay fastest when the invoice lands the day the work ends."),
+    (6.9, "So send it before you close the laptop, not on Friday."),
+    (10.0, "Follow for one money habit a week."),
+]
+
+TEMPLATES["narrated.html"] = dict(
+    bgs=[(0, 3.3), (3.3, 6.8), (6.8, 9.9), (9.9, 12.5)],
+    g1="#21405a", g2="#5a3321",
+    doc="""  Template: narrated (references/video-types.md: explainer, educational,
+  text-led brand story; and a storytime variant in fyp-formats.md). 12.5
+  seconds: a voiceover over one full-bleed background per line, with
+  word-by-word captions synced to the voice, and the hook on screen from
+  the very first frame.
+
+  Usually made by scripts/video/compose.js, not by hand: it voices a script
+  line by line (or uses the user's recordings), fetches a background per
+  line, times every scene to its line, and writes this page. By hand: each
+  line is a scene holding
+    <div class="say auto" data-voice="assets/voice-2.wav" style="--voice:3.4s">The line, as spoken.</div>
+  and render.js times the captions to the clip (render.js --voice-lengths
+  shows each line's length and its room in the scene). Without a voice clip,
+  the captions here run at a steady reading pace, as a preview.
+
+  The hook (.hook) has no entrance animation on purpose: the first frame is
+  the cover and the moment a viewer decides to stay.""",
+    body_attrs='class="fyp" data-duration="12.5" data-drop="3.3" data-music="tech" data-bpm="112" data-key="C" data-mode="major" data-energy="2" data-motif="1 5 3 5 | 6 5 3 2"',
+    css="""
+  /* a line per scene: the hook (first scene only) at the top, captions low in the safe area */
+  .scene.narr { justify-content: flex-end; padding-bottom: 30px; }
+  .narr > .hook { margin-bottom: auto; }
+  .hook { font-size: 70px; line-height: 1.4; }
+  .narr .say { min-height: 220px; }
+  .narr > .end { margin: auto 0; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+""",
+    body="""
+  <!-- 0–3.3s: the hook, on screen from frame 0, and the first line -->
+  <div class="scene narr center" style="--out:3.15s">
+    <div class="cap hook"><span>you're losing money on every late invoice</span></div>
+    <div class="say auto">""" + chunked(NARRATED_LINES[0][1], NARRATED_LINES[0][0]) + """</div>
+  </div>
+
+  <!-- 3.3–6.8s -->
+  <div class="scene narr center" style="--out:6.65s">
+    <div class="say auto">""" + chunked(NARRATED_LINES[1][1], NARRATED_LINES[1][0]) + """</div>
+  </div>
+
+  <!-- 6.8–9.9s -->
+  <div class="scene narr center" style="--out:9.75s">
+    <div class="say auto">""" + chunked(NARRATED_LINES[2][1], NARRATED_LINES[2][0]) + """</div>
+  </div>
+
+  <!-- 9.9–12.5s: the CTA, spoken and on screen -->
+  <div class="scene narr center">
+    <div class="end">
+      <div class="cap hl pop" style="--in:10.0s" data-sfx="chime"><span>one money habit a week</span></div>
+    </div>
+    <div class="say auto">""" + chunked(NARRATED_LINES[3][1], NARRATED_LINES[3][0]) + """</div>
+  </div>
+""")
 
 
 def bg_slots(windows):

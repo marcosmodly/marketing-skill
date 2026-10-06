@@ -263,12 +263,16 @@ command below.
 
    **Rendering locally instead** (step 3's local option, once the user
    opts in): follow `${CLAUDE_PLUGIN_ROOT}/references/video-rendering.md`
-   from top to bottom. In short: copy the template the type or format
-   names to `state/videos/<date>-<slug>.html` and rewrite its scenes to
-   the step 4 script; set the music from the Sonic Identity; add the
-   voiceover, backgrounds, and cues; run `--check` until clean and look at
-   every `--slides` frame; then render, and carry any required credit
-   line into each platform's caption. Never ship a bracketed placeholder.
+   from top to bottom. In short: for a voiceover over backgrounds, write
+   the script as numbered lines and let `scripts/video/compose.js` build
+   a narrated page with captions synced to the voice; for anything else,
+   copy the template the type or format names to
+   `state/videos/<date>-<slug>.html` and rewrite its scenes to the step 4
+   script, then set the music from the Sonic Identity and add the
+   voiceover, backgrounds, and cues. Either way, run `--check` until clean
+   and look at every `--slides` frame; then render, and carry any required
+   credit line into each platform's caption. Never ship a bracketed
+   placeholder.
 
    **Filmed types instead:** deliver a shot list in the Video Script
    section: each beat as a shot (what's in frame, who says what, how long),
@@ -394,8 +398,9 @@ aspect ratio/length reminder.
 State plainly whether an actual video was generated this run, via which
 tool (or rendered locally, which is motion graphics with an original
 soundtrack, not footage), where the file was saved, which backgrounds were
-used (stock, with provider, or AI, with tool) and the sound (genre and hook,
-or the licensed track) — or that none was
+used (stock, with provider, or AI, with tool), the sound (genre and hook,
+or the licensed track), and the voice (recorded or generated, which voice)
+and how captions were timed — or that none was
 connected/used and this script/package is the deliverable, plus which
 free tool was recommended if nothing was connected, and the exact setup
 fix for any tool that was listed but not usable yet (step 3).

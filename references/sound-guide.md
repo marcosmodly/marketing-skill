@@ -234,17 +234,22 @@ AI-content label.
   then one quick re-record, and each scene can be timed to its line.
 - **One continuous take:** `<body data-voice-src="assets/voice.m4a"
   data-voice-start="0.5">`.
-- **What the renderer does:** trims the silence before each line (it
-  starts on its cue), filters low rumble, compresses lightly, and levels
-  every line to the same loudness. The music and effects sit about 7 dB
+- **What the renderer does:** trims the silence at both ends of each line
+  (it starts on its cue, and its length is the speech itself), filters low
+  rumble, compresses lightly, and levels every line to the same loudness. The music and effects sit about 7 dB
   under the voice and duck about 10 dB more while someone is speaking.
   The whole mix still lands at -14 LUFS.
 - **Recording:** a quiet room (a closet full of clothes works well), the
   phone about 20 cm away and a little off to the side, and the phone's
   voice memo app. Any format ffmpeg reads is fine.
-- **Timing:** read each file's length (`ffprobe`) and give its scene that
-  long plus a beat. The renderer warns when lines overlap or run past the
-  end.
+- **Timing:** `render.js <page> --voice-lengths` lists each line's start,
+  length, and the room its scene leaves; give each scene its line plus a
+  beat. The renderer warns when lines overlap, run past their scene, or run
+  past the end. `compose.js` does all of this for a narrated video.
+- **Captions:** most people watch muted, so every voiced line should be
+  captioned. `<div class="say auto" data-voice="...">` shows the line word
+  by word, timed to the clip (see `video-rendering.md`), and the render
+  writes an `.srt` file for the platforms' own caption tracks.
 
 ### A free generated voice
 

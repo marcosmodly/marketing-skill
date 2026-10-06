@@ -12,6 +12,10 @@ For a longer survey of the formats, see Sparkhouse's
 
 - **Render:** `scripts/video/render.js` makes it from text alone, as motion
   graphics (kinetic text, shapes, UI mockups) with an original soundtrack.
+- **Narrate:** a voiceover over one background per line, with captions
+  synced to the voice (`narrated.html`, built from a script by
+  `scripts/video/compose.js`). The voice is the user's own takes or a free
+  generated one.
 - **Render + your assets:** renderable, but only with real material from
   you, such as screenshots, photos, a logo, a customer's actual words, or
   real numbers. The skill asks for these and never invents them.
@@ -56,12 +60,12 @@ and has to work with the sound off.
 
 ### Brand story / brand film
 - **Goal:** emotional connection; the origin or mission story.
-- **Made by:** Film or Generate for the full version. Render can do a text-led "story in five lines" short.
+- **Made by:** Film or Generate for the full version. Narrate (`narrated.html`) tells it in five spoken lines over atmospheric backgrounds; Render can do a text-only "story in five lines" short.
 - **Beats:** the moment it started → the problem you saw → what you did about it → where it is now → the line you want remembered.
 
 ### Explainer
 - **Goal:** consideration; make the value proposition obvious.
-- **Made by:** Render (`promo.html` or `how-to.html`).
+- **Made by:** Narrate (`narrated.html`), or Render (`promo.html` or `how-to.html`).
 - **Beats:** the problem → how it works in three simple steps → the outcome → CTA. One idea per scene, no jargon.
 
 ### Animation & motion graphics
@@ -81,7 +85,7 @@ and has to work with the sound off.
 
 ### Educational / tips
 - **Goal:** awareness; useful on its own, so people share and save it.
-- **Made by:** Render (`promo.html` as a list, or `faq.html`).
+- **Made by:** Narrate (`narrated.html`, one tip per line), or Render (`promo.html` as a list, or `faq.html`).
 - **Beats:** a promise ("3 things I wish I knew about X") → one tip per beat → a payoff line → CTA (follow for more). Tips should be correct and specific; check facts before drafting.
 
 ### FAQ
@@ -169,6 +173,7 @@ project's sonic identity in `brand-voice.md` (see `sound-guide.md`).
 | Type | Background | Sound |
 |---|---|---|
 | Ad, brand profile, explainer, educational, presentation | A setting or mood that fits each beat; clips for energy | The identity |
+| Narrated (any type told as a voiceover) | One setting per line, the same light and palette throughout | The identity, one energy step lower under the voice |
 | Product demo, how-to | Real screenshots in the phone frame, over a soft (blurred) setting | The identity |
 | FAQ, myth vs fact | One calm setting, blurred, so the text leads | The identity |
 | Announcement; event, webinar, or live promo | Bold photos or energetic clips | The identity, energy +1 |

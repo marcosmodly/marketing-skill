@@ -5,6 +5,20 @@ Skills that read "our changelog" for source material read this file too.
 
 ## 0.8.0 (unreleased)
 
+- **Narrated videos with synced captions.** `scripts/video/compose.js`
+  turns a script of numbered lines into a finished page: a voiceover
+  (Kokoro or your own takes), a background per line, scenes timed to the
+  voice with cuts on the beat, the hook on screen from the first frame, and
+  word-by-word captions synced to the voice. New `narrated.html` template.
+- `scripts/video/captions.js`: when each word of a voice line is said,
+  from the clip's pauses and the words' lengths (no service; about 50 ms
+  from the true word starts on average against synthesized speech), with
+  Whisper as an option. `<div class="say auto" data-voice>` gets captions
+  in any template, and renders with captions write an `.srt`.
+- The renderer prepares voice clips before capturing frames: silence is
+  trimmed from both ends, `--voice-lengths` lists each line's start, length,
+  and room in its scene, and a line running past its scene is reported.
+- `voice.js` writes each line's sentence timings next to its WAV.
 - `short-form-video`'s local-render steps moved to
   `references/video-rendering.md`, and its worked example to
   `references/short-form-video-example.md`, so script-only runs load less.

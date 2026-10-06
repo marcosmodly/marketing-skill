@@ -21,13 +21,51 @@ Check it's usable with `node --version` (18+), `ffmpeg -version`, and
 missing, give the user the one-time setup from README's "Rendering a
 short-form video locally" section rather than installing it unasked.
 
+## A narrated video: compose.js
+
+For a voiceover over backgrounds (an explainer, tips, a text-led brand
+story, a storytime), don't hand-edit a template. Write the script as
+numbered lines, one per scene, and let `compose.js` build the page:
+
+```
+---
+title: late invoices
+hook: you're losing money on every late invoice
+cta: one money habit a week
+voice: af_heart
+bg: freelancer desk morning
+---
+1. Most freelancers lose money on invoices they send late. [bg: stressed laptop night]
+2. Clients pay fastest when the invoice lands the day the work ends.
+3. So send it before you close the laptop, not on Friday.
+4. Follow for one money habit a week.
+```
+
+Save it as `${CLAUDE_PLUGIN_ROOT}/state/videos/<date>-<slug>.md` and run
+`node ${CLAUDE_PLUGIN_ROOT}/scripts/video/compose.js <that file>`. It
+voices each line (or uses the user's takes, one file per line, with
+`recordings: assets/<slug>-{n}.m4a`; `state/videos/assets/` is shared by
+every video, so name takes after the video), fetches a background per `[bg: ...]` (a query, or
+a file in `assets/`), times every scene to its line with cuts on the
+music's beat, applies the Sonic Identity one energy step lower so it sits
+under the voice, puts word-by-word captions synced to the voice under each
+line, and runs `--check`. The hook sits on screen from the first frame;
+always set one. Keep lines short (one idea, under about 15 words) and the
+hook under about 8 words. Then preview and render as below; the render
+also writes an `.srt` caption file next to the MP4.
+
+To change a line, edit the script and run `compose.js` again: the timing is
+measured from the voice, so don't hand-edit it in the page. Send the user
+the voice (`--audio-only`) or a render to check, since you can't hear it.
+
 ## Start the page
 
-Copy the template `video-types.md` or `fyp-formats.md` names, from
+For everything else, copy the template `video-types.md` or `fyp-formats.md` names, from
 `${CLAUDE_PLUGIN_ROOT}/scripts/video/templates/`, to
-`${CLAUDE_PLUGIN_ROOT}/state/videos/<date>-<slug>.html`. There are six
+`${CLAUDE_PLUGIN_ROOT}/state/videos/<date>-<slug>.html`. There are seven
 marketing templates (`promo`, `how-to`, `testimonial`, `faq`,
-`announcement`, `team`) and 22 everyday ones (`pov`, `tier-list`,
+`announcement`, `team`, and `narrated`, which `compose.js` uses) and 22
+everyday ones (`pov`, `tier-list`,
 `text-chat`, `storytime`, and the rest listed in `fyp-formats.md`). Put any
 images the user supplied in `state/videos/assets/`.
 
@@ -93,10 +131,22 @@ file (`voice-1.m4a`, `voice-2.m4a`, ...), and put the files in `assets/`.
 Add `data-voice="assets/voice-1.m4a"` to the element each line belongs
 to; it plays at that element's `--voice` time, or `--in`. For one
 continuous take, use `<body data-voice-src="..." data-voice-start="...">`
-instead. Time each scene to its line's length (`ffprobe` the file). The
-renderer trims the silence before each line, levels the lines to match,
-and ducks the music and effects under the voice. Under a voice, keep sound
-effects to scene changes; the renderer warns past one every 3 seconds.
+instead. The renderer trims the silence at both ends of each line, levels
+the lines to match, and ducks the music and effects under the voice.
+`render.js <page> --voice-lengths` lists each line's start, length, and the
+room its scene leaves; time each scene to it, and the renderer warns when a
+line runs past its scene. Under a voice, keep sound effects to scene
+changes; the renderer warns past one every 3 seconds.
+
+**Captions synced to the voice:** put the line's text in
+`<div class="say auto" data-voice="assets/voice-2.m4a"
+style="--voice:3.4s">...</div>` and the renderer shows it word by word,
+in short chunks, with the word being said highlighted, timed to the clip
+(`captions.js`, from the clip's pauses and the words' lengths; about 50 ms
+from the true word starts on average). Most people watch muted, so caption
+every voiced line. `--whisper` times them with Whisper instead, if
+`kokoro-js` is installed and huggingface.co is reachable; it falls back on
+its own when Whisper's timing doesn't hold up.
 
 Never imitate a real person's voice without their permission, and if the
 voice is AI-generated, have the user check whether the platform asks for

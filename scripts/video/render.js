@@ -20,10 +20,14 @@
  *   node render.js <page.html> <out.m4a> --audio-only              # just the soundtrack, in seconds
  *   node render.js --sample <genre> <out.m4a> [--motif "1 3 5 6 | 5 3 2 -"] [--key C] [--mode major]
  *                  [--bpm 118] [--energy 3] [--duration 12]          # audition a sound with no page at all
+ *   node render.js <page.html> --voice-lengths                     # each voice line's start, length, and room in its scene
  *
  * A voiceover goes in with <body data-voice-src="assets/voice.m4a"> (one take, starting at
  * data-voice-start) or data-voice="assets/line-2.m4a" on any element (plays at its --voice
- * or --in time). The music and effects duck under it.
+ * or --in time). The music and effects duck under it. An element with class "say auto" and a
+ * data-voice clip gets word-by-word captions of its own text, timed to the clip (captions.js;
+ * add --whisper to time them with Whisper instead), and a render with captions also writes
+ * an .srt next to the video. Every voice line is checked against its scene's end.
  *
  * Every run lints the layout: text outside the platforms' safe zone,
  * overflowing or clipped, or colliding with other text is reported with its
@@ -40,6 +44,7 @@ const os = require('os');
 const path = require('path');
 const { fileURLToPath, pathToFileURL } = require('url');
 const { buildSoundtrack, wavBuffer, parseMotif, SOUNDS, GENRES } = require('./soundtrack');
+const captions = require('./captions');
 
 const WIDTH = 1080;
 const HEIGHT = 1920;
@@ -71,6 +76,8 @@ function parseArgs(argv) {
     else if (a === '--audio-only') args.audioOnly = true;
     else if (a === '--check') args.check = true;
     else if (a === '--slides') args.slides = true;
+    else if (a === '--voice-lengths') args.voiceLengths = true;
+    else if (a === '--whisper') args.whisper = true;
     else if (['--duration', '--fps', '--stills', '--outdir', '--sample', '--motif', '--key', '--mode', '--bpm', '--energy'].includes(a)) args[a.slice(2)] = argv[++i];
     else if (a === '-h' || a === '--help') args.help = true;
     else args.positional.push(a);
@@ -452,13 +459,21 @@ async function readPage(page) {
     // spoken lines: one take on <body>, and/or one clip per element at its --voice (or --in) time
     const voices = [];
     if (d.voiceSrc) voices.push({ src: new URL(d.voiceSrc, location.href).href, time: num(d.voiceStart) || 0 });
-    for (const el of document.querySelectorAll('[data-voice]')) {
+    document.querySelectorAll('[data-voice]').forEach((el, index) => {
       const cs = getComputedStyle(el);
       let time = toSeconds(cs.getPropertyValue('--voice'));
       if (Number.isNaN(time)) time = toSeconds(cs.getPropertyValue('--in'));
-      if (Number.isNaN(time)) problems.push(`data-voice="${el.dataset.voice}" but the element has no --voice or --in time`);
-      else voices.push({ src: new URL(el.dataset.voice, location.href).href, time });
-    }
+      if (Number.isNaN(time)) {
+        problems.push(`data-voice="${el.dataset.voice}" but the element has no --voice or --in time`);
+        return;
+      }
+      el.dataset.voiceIndex = String(index);
+      const scene = el.closest('.scene');
+      const sceneOut = scene ? toSeconds(scene.style.getPropertyValue('--out')) : NaN;
+      // <div class="say auto" data-voice="..."> gets word-by-word captions of its own text
+      const caption = el.matches('.say.auto') ? el.textContent.replace(/\s+/g, ' ').trim() : '';
+      voices.push({ src: new URL(el.dataset.voice, location.href).href, time, index, sceneOut, caption });
+    });
     return {
       cues,
       problems,
@@ -520,7 +535,7 @@ function checkMusic(settings) {
   for (const v of settings.voices || []) {
     const file = v.src.startsWith('file:') ? fileURLToPath(v.src) : '';
     if (!file || !fs.existsSync(file)) problems.push(`voice clip not found (${file || v.src}); leaving it out`);
-    else settings.voiceClips.push({ file, time: v.time });
+    else settings.voiceClips.push({ ...v, file });
   }
   return problems;
 }
@@ -579,29 +594,109 @@ function measureAudio(file, filter = '') {
 const VOICE_LUFS = -26;
 const BED_UNDER_VOICE = 7;
 
+// Cleans up and levels one spoken line, so lines recorded at different distances match: low
+// rumble filtered, silence trimmed from both ends (the line starts at its cue, and its length
+// is the speech itself), light compression, then leveled to VOICE_LUFS. Cached across runs.
+// Returns { prepared, length, trimmed }, where trimmed is how much silence came off the start.
+const VOICE_CACHE = path.join(os.tmpdir(), 'render-video-cache', 'voice');
+function prepareVoice(file) {
+  const st = fs.statSync(file);
+  const key = crypto.createHash('sha1').update(`${file}|${st.size}|${st.mtimeMs}|${VOICE_LUFS}|2`).digest('hex').slice(0, 16);
+  const prepared = path.join(VOICE_CACHE, `${key}.wav`);
+  const meta = `${prepared}.json`;
+  if (!fs.existsSync(meta)) {
+    fs.mkdirSync(VOICE_CACHE, { recursive: true });
+    const raw = path.join(VOICE_CACHE, `${key}-raw.wav`);
+    const lead = path.join(VOICE_CACHE, `${key}-lead.wav`);
+    // the leading trim on its own first, to know how much it took off
+    ffmpeg(['-i', file, '-af', 'aresample=48000,aformat=channel_layouts=stereo,highpass=f=80,' +
+      'silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.08', '-c:a', 'pcm_s16le', lead]);
+    const trimmed = Math.max(0, probeDuration(file) - probeDuration(lead));
+    // trailing silence: reversed, trimmed like the start, reversed back
+    ffmpeg(['-i', lead, '-af', 'areverse,silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.15,areverse,' +
+      'acompressor=threshold=0.1:ratio=2.5:attack=15:release=200', '-c:a', 'pcm_s16le', raw]);
+    const { lufs } = measureAudio(raw);
+    ffmpeg(['-i', raw, '-af', `volume=${Number.isFinite(lufs) ? (VOICE_LUFS - lufs).toFixed(2) : 0}dB`, '-c:a', 'pcm_s16le', prepared]);
+    fs.rmSync(raw, { force: true });
+    fs.rmSync(lead, { force: true });
+    fs.writeFileSync(meta, JSON.stringify({ length: probeDuration(prepared), trimmed }));
+  }
+  return { prepared, ...JSON.parse(fs.readFileSync(meta, 'utf8')) };
+}
+
+// Prepares every voice clip before any frame is captured, so the page can use real line
+// lengths: checks each line fits its scene, and puts word-by-word captions in every
+// <div class="say auto" data-voice>. Returns { problems, cues } (cues for an .srt file).
+async function prepareVoices(page, settings) {
+  const problems = [];
+  const cues = [];
+  // the caption styles go in whenever a page has auto captions, voiced or not (narrated.html
+  // previews them at a reading pace before any voice exists)
+  await page.evaluate((css) => {
+    if (!document.querySelector('.say.auto')) return;
+    const style = document.createElement('style');
+    style.textContent = css;
+    document.head.appendChild(style);
+  }, captions.CAPTION_CSS);
+  const clips = settings.voiceClips || [];
+  if (!clips.length) return { problems, cues };
+  if (!hasFfmpeg()) {
+    problems.push('ffmpeg is needed to measure voice clips and time captions; skipped');
+    return { problems, cues };
+  }
+  const sorted = [...clips].sort((a, b) => a.time - b.time);
+  for (const clip of clips) {
+    Object.assign(clip, prepareVoice(clip.file));
+    const name = path.basename(clip.file);
+    const end = clip.time + clip.length;
+    if (Number.isFinite(clip.sceneOut) && end > clip.sceneOut + 0.1) {
+      problems.push(`voice ${name} runs to ${end.toFixed(2)}s, past its scene's end at ${clip.sceneOut.toFixed(2)}s; give the scene ${(end - clip.sceneOut + 0.3).toFixed(1)}s more, or shorten the line`);
+    }
+    if (!clip.caption) continue;
+    const timing = await captions.alignWords(clip.prepared, clip.caption, { shift: clip.trimmed, sidecarFor: clip.file, whisper: !!settings.whisper });
+    for (const n of timing.notes) problems.push(`captions for ${name}: ${n}`);
+    clip.captionMethod = timing.method;
+    const chunks = captions.chunkWords(timing.words);
+    const next = sorted.find((c) => c.time > clip.time);
+    let hold = Number.isFinite(clip.sceneOut) ? clip.sceneOut : end + 0.5;
+    if (next) hold = Math.min(hold, next.time);
+    const html = captions.captionMarkup(chunks, clip.time, hold);
+    await page.evaluate(([index, markup]) => {
+      document.querySelector(`[data-voice-index="${index}"]`).innerHTML = markup;
+    }, [clip.index, html]);
+    chunks.forEach((c, i) => cues.push({
+      start: clip.time + c.start,
+      end: chunks[i + 1] ? clip.time + chunks[i + 1].start : Math.max(clip.time + c.end + 0.4, hold),
+      text: c.words.map((w) => w.text).join(' '),
+    }));
+  }
+  return { problems, cues: cues.sort((a, b) => a.start - b.start) };
+}
+
+// The voice clips' timing, for fitting scenes to them: when each line starts, how long it
+// runs once its leading silence is trimmed, and how much room its scene leaves.
+function describeVoices(clips) {
+  const rows = [...clips].sort((a, b) => a.time - b.time).map((c) => {
+    const end = c.time + c.length;
+    const room = Number.isFinite(c.sceneOut) ? `scene ends ${c.sceneOut.toFixed(2)}s (${c.sceneOut - end >= 0 ? '+' : ''}${(c.sceneOut - end).toFixed(2)}s)` : 'no scene end';
+    return `${path.basename(c.file).padEnd(16)} starts ${c.time.toFixed(2)}s  length ${c.length.toFixed(2)}s  ends ${end.toFixed(2)}s  ${room}${c.captionMethod ? `  captions: ${c.captionMethod}` : ''}`;
+  });
+  return rows.join('\n');
+}
+
 // Mixes spoken lines over the music and effects in `bedWav`, and writes the result to `out`
 // as a WAV. Returns problems to warn about.
 function mixVoice(clips, duration, bedWav, tmp, out) {
   const problems = [];
   const parts = [];
   let prevEnd = -Infinity;
-  [...clips].sort((a, b) => a.time - b.time).forEach((clip, i) => {
-    // each clip is cleaned up and leveled on its own, so lines recorded at different distances
-    // match: low rumble filtered, leading silence trimmed (the line starts at its cue), light
-    // compression
-    const raw = path.join(tmp, `voice-${i}-raw.wav`);
-    ffmpeg(['-i', clip.file, '-af', 'aresample=48000,aformat=channel_layouts=stereo,highpass=f=80,' +
-      'silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.08,' +
-      'acompressor=threshold=0.1:ratio=2.5:attack=15:release=200', '-c:a', 'pcm_s16le', raw]);
-    const { lufs } = measureAudio(raw);
-    const leveled = path.join(tmp, `voice-${i}.wav`);
-    ffmpeg(['-i', raw, '-af', `volume=${Number.isFinite(lufs) ? (VOICE_LUFS - lufs).toFixed(2) : 0}dB`, '-c:a', 'pcm_s16le', leveled]);
-    const len = probeDuration(leveled);
+  [...clips].sort((a, b) => a.time - b.time).forEach((clip) => {
+    if (!clip.prepared) Object.assign(clip, prepareVoice(clip.file));
     const name = path.basename(clip.file);
     if (clip.time < prevEnd - 0.05) problems.push(`voice ${name} starts at ${clip.time.toFixed(2)}s, before the previous line ends at ${prevEnd.toFixed(2)}s, so they overlap`);
-    if (clip.time + len > duration + 0.05) problems.push(`voice ${name} runs ${(clip.time + len - duration).toFixed(1)}s past the end of the video and will be cut off`);
-    prevEnd = clip.time + len;
-    parts.push({ file: leveled, time: clip.time });
+    if (clip.time + clip.length > duration + 0.05) problems.push(`voice ${name} runs ${(clip.time + clip.length - duration).toFixed(1)}s past the end of the video and will be cut off`);
+    prevEnd = clip.time + clip.length;
+    parts.push({ file: clip.prepared, time: clip.time });
   });
   const voiceWav = path.join(tmp, 'voice.wav');
   ffmpeg([...parts.flatMap((p) => ['-i', p.file]), '-filter_complex',
@@ -697,7 +792,7 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.sample) return sample(args);
   const [pagePath, outPath] = args.positional;
-  if (args.help || !pagePath || (!outPath && !args.stills && !args.check && !args.slides)) {
+  if (args.help || !pagePath || (!outPath && !args.stills && !args.check && !args.slides && !args.voiceLengths)) {
     console.log(fs.readFileSync(__filename, 'utf8').split('*/')[0].replace(/^[\s\S]*?\/\*/, '').replace(/^ \* ?/gm, ''));
     process.exit(args.help ? 0 : 2);
   }
@@ -709,8 +804,16 @@ async function main() {
   const { page, problems: fontProblems } = await openPage(browser, pagePath);
   const mediaProblems = await prepareMedia(page);
   const settings = await readPage(page);
+  settings.whisper = args.whisper;
   settings.problems.push(...fontProblems, ...mediaProblems, ...checkMusic(settings));
+  const voiced = await prepareVoices(page, settings);
+  settings.problems.push(...voiced.problems);
   for (const p of settings.problems) console.warn(`Warning: ${p}`);
+  if (args.voiceLengths) {
+    await browser.close();
+    console.log(settings.voiceClips.length ? describeVoices(settings.voiceClips) : 'No data-voice clips on this page.');
+    return;
+  }
 
   if (args.stills) {
     const outdir = args.outdir || path.join(path.dirname(path.resolve(pagePath)), 'stills');
@@ -792,6 +895,12 @@ async function main() {
   fs.rmSync(tmp, { recursive: true, force: true });
   for (const p of lintSeen.values()) console.warn(`Layout: ${describeLint(p)}`);
   console.log(`Wrote ${outPath}: ${WIDTH}x${HEIGHT}, ${duration}s at ${fps}fps, ${audio}`);
+  if (voiced.cues.length) {
+    // the captions as a track for the platforms' own caption upload (YouTube takes .srt)
+    const srt = outPath.replace(/\.[^./]+$/, '') + '.srt';
+    fs.writeFileSync(srt, captions.toSrt(voiced.cues.filter((c) => c.start < duration)));
+    console.log(`Wrote ${srt}: ${voiced.cues.length} caption cues`);
+  }
 }
 
 if (require.main === module) {
@@ -804,4 +913,5 @@ if (require.main === module) {
 module.exports = {
   WIDTH, HEIGHT, loadPlaywright, launchBrowser, openPage, prepareMedia, readPage, checkMusic, checkMix, mixVoice, seek,
   lintLayout, lintTimeline, describeLint, slideTimes, writeSoundtrack, measureAudio, muxSoundtrack,
+  prepareVoice, prepareVoices, describeVoices, probeDuration,
 };
