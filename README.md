@@ -20,6 +20,9 @@ brand-voice config, and works on its own or chained together. Nothing
 posts or sends without your explicit approval. Using OpenAI Codex? See
 [Using with Codex](#using-with-codex).
 
+If it saves you time, a star on the repo helps other people find it.
+Made something with it? [Share it in Show and tell](https://github.com/marcosmodly/marketing-skill/discussions/categories/show-and-tell).
+
 ## What you can do with it
 
 - **Competitor analysis:** research a rival and get a SWOT, messaging
@@ -1042,6 +1045,16 @@ scripts/
     beats.js             # a music track's tempo, beats, bars, and drops, to cut a video on its beat
     templates/           # 6 marketing + 22 everyday starting pages, built from templates/build.py and fyp.py
 ```
+
+## Share what you made
+
+Made a content calendar, a cold email batch, a video, or a launch post
+with these skills? Post it in
+[Show and tell](https://github.com/marcosmodly/marketing-skill/discussions/categories/show-and-tell),
+along with which skills you ran and anything that didn't work the way you
+expected. Questions go in
+[Q&A](https://github.com/marcosmodly/marketing-skill/discussions/categories/q-a),
+and bugs in [Issues](https://github.com/marcosmodly/marketing-skill/issues).
 
 ## Contributors
 
