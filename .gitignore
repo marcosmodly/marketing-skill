@@ -3,6 +3,7 @@ __pycache__/
 
 # video renderer (scripts/video): installed deps and rendered output
 node_modules/
+scripts/video/package-lock.json
 state/videos/*.mp4
 stills/
 state/videos/assets/*

@@ -93,8 +93,9 @@ command below.
      team video. Ask for it up front. Never invent it (see "Formatting
      rules").
    - The look, if the video will be rendered locally: real backgrounds
-     (stock photos, stock video clips, or AI-generated images; see step 3)
-     behind the text, or the plain gradient. Backgrounds are the default
+     (stock photos, stock video clips, or AI-generated images; see
+     `references/video-rendering.md`) behind the text, or the plain
+     gradient. Backgrounds are the default
      when a source is available; they make the video feel produced rather
      than like a slide.
    - The hook/angle and core message — what should stop the scroll in the
@@ -160,36 +161,15 @@ command below.
    - **Local rendering (no connector needed):** this plugin's own
      `${CLAUDE_PLUGIN_ROOT}/scripts/video/render.js` turns an animated HTML
      page into a finished 9:16 MP4 with an original soundtrack in the
-     project's sonic identity, plus sound effects synced to what's on
-     screen. Scenes can sit on stock photos, stock video clips, or AI
-     images. Be plain about what it makes. It's motion graphics (kinetic
-     text, shapes, UI mockups) over those backgrounds, not filmed footage of
-     the user's product or people, and the only voiceover is one the user
-     records or supplies. It suits
-     the types `video-types.md` marks Render or Render + your assets, not
-     anything that needs real people or places on camera. Check it's
-     usable with `node --version` (18+), `ffmpeg -version`, and `node -e
-     "require('playwright')"` run from `scripts/video`. If anything is
+     project's sonic identity, over stock photos, stock clips, or AI images.
+     Be plain about what it makes: motion graphics, not filmed footage of
+     the user's product or people. Read
+     `${CLAUDE_PLUGIN_ROOT}/references/video-rendering.md` ("What it makes")
+     for what it suits and how to check it's usable; if anything is
      missing, give the user the one-time setup from README's "Rendering a
      short-form video locally" section rather than installing it unasked.
-     If it's usable, offer it alongside any connected tool. It costs nothing
-     to run.
-   - **Background media for a local render:**
-     - **Stock photos and clips:** `${CLAUDE_PLUGIN_ROOT}/scripts/video/media.js`
-       searches Pexels (`PEXELS_API_KEY`) and Pixabay (`PIXABAY_API_KEY`),
-       both free keys, and Openverse (photos only, no key). It downloads
-       into the page's `assets/` folder and records each file's license
-       and required credit in `CREDITS.md` there. With no keys set, say
-       that Openverse is the only source and it has no video clips, and
-       point to the free keys rather than going without.
-     - **AI-generated images:** only with a connected image tool. That's
-       Figma Weave once the user's Figma account is linked (find the model
-       with `weave_find_model`, then `weave_run_model`, which quotes a cost
-       first), or Higgsfield. Show the quoted cost and get an explicit yes
-       before every run, since it spends the user's credits. Download each
-       result into `assets/` and record it with `node
-       ${CLAUDE_PLUGIN_ROOT}/scripts/video/media.js credit <file> --ai
-       "<tool / model>" --prompt "<prompt>"`.
+     If it's usable, offer it alongside any connected tool. It costs
+     nothing to run.
    - **If nothing is connected and local rendering isn't set up:** say so
      plainly and recommend current free options instead of blocking on a
      connector. As of this writing,
@@ -282,129 +262,13 @@ command below.
    an editor (CapCut works for this too).
 
    **Rendering locally instead** (step 3's local option, once the user
-   opts in):
-   - Copy the template `video-types.md` or `fyp-formats.md` names, from
-     `${CLAUDE_PLUGIN_ROOT}/scripts/video/templates/`, to
-     `${CLAUDE_PLUGIN_ROOT}/state/videos/<date>-<slug>.html`. There are six
-     marketing templates (`promo`, `how-to`, `testimonial`, `faq`,
-     `announcement`, `team`) and 22 everyday ones (`pov`, `tier-list`,
-     `text-chat`, `storytime`, and the rest listed in `fyp-formats.md`).
-     Put any images the user supplied in `state/videos/assets/`. Rewrite its
-     scenes to the step 4 script: one scene per beat, the hook readable
-     within the first second, and every line of text inside the `.scene`
-     box (each platform's UI covers the bottom quarter and right edge).
-     Keep the template's colors and type unless `brand-voice.md` says
-     otherwise. Everyday templates use TikTok Sans, the platform's own
-     caption font, and the shared pieces (captions, stickers, stamps, chat
-     and notification mockups, tier lists, polls, timers) documented at the
-     top of `promo.html`.
-   - **The sound:** set the `<body>` music attributes from the Sonic
-     Identity in `brand-voice.md`: `data-music`, `data-bpm`, `data-key`,
-     `data-mode`, `data-energy`, `data-motif`.
-     - Testimonials and sensitive topics use `data-music="calm"`, keeping
-       the project's key and hook.
-     - An announcement can raise energy one step.
-     - An everyday post can take its template's genre (`phonk` under a
-       "nobody: / me:", `lofi` under a text skit), keeping the identity's
-       key and hook, within what the brand voice allows (see "Everyday and
-       FYP posts" in `sound-guide.md`). Its meme cues (`scratch`, `boom`,
-       `rimshot`, `ding`, `buzzer`, and the rest) are listed there; one or
-       two per video is plenty.
-     - Add `data-break="<start>-<end>"` under a quote or any moment the
-       words should carry alone.
-     - **No identity saved yet:** propose two from
-       `${CLAUDE_PLUGIN_ROOT}/references/sound-guide.md`, each with one line
-       on why it fits. Render a preview of each (`node
-       ${CLAUDE_PLUGIN_ROOT}/scripts/video/render.js --sample <genre>
-       <out.m4a> --motif ... --key ... --mode ... --energy ...`, a few
-       seconds each). Send both to the user to listen to, and save
-       their pick to `brand-voice.md` before rendering. You can't hear
-       audio, so their ear decides.
-     - **The user has a licensed track they'd rather use:** put it in
-       `assets/`, set `data-music-src` and `data-music-start`, and record its
-       license with `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/media.js credit
-       <file> --source ... --license ...`. Don't use a track without a license note.
-       Then read its rhythm: `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/beats.js
-       assets/<file> --align <end of the hook, s> --duration <length>`. If
-       the confidence is 0.5 or more, use the `data-music-start` it prints
-       and move scene changes and key cues onto its bar (or beat) times; if
-       it's lower, don't snap anything and time scenes to the voice or reading
-       pace. Tell the user what you did ("104 BPM, started at 0:32 so the drop
-       hits as the hook ends, cuts on the bar"), and send an `--audio-only`
-       render to check the sync, since you can't hear it.
-     - **Longer than about 45 seconds:** the generated music repeats the
-       same few bars and wears thin, so ask for a licensed track instead.
-       The renderer warns about it.
-     - **A voiceover:** the user's own recording, a free generated voice
-       from `${CLAUDE_PLUGIN_ROOT}/scripts/video/voice.js` (Kokoro, runs
-       locally, no key or cost; see "A free generated voice" in
-       `sound-guide.md` for setup, and send the user `--audition` samples
-       to pick a voice, since you can't hear them), or a voice they
-       generate with a service they have their own key for. Write the
-       script line by line, ask them to record each line as its own file
-       (`voice-1.m4a`, `voice-2.m4a`, ...), and put the files in `assets/`.
-       Add `data-voice="assets/voice-1.m4a"` to the element each line
-       belongs to; it plays at that element's `--voice` time, or `--in`.
-       For one continuous take, use `<body data-voice-src="..."
-       data-voice-start="...">` instead. Time each scene to its line's
-       length (`ffprobe` the file). The renderer trims the silence before
-       each line, levels the lines to match, and ducks the music and
-       effects under the voice. Under a voice, keep sound effects to scene
-       changes; the renderer warns past one every 3 seconds. Never imitate
-       a real person's voice without their permission, and if the voice
-       is AI-generated, have the user check whether the platform asks for
-       an AI-content label.
-   - **The backgrounds:** every scene has an empty `.bg` slot timed to it.
-     - **What to search for:** for each scene, pick a setting or mood that
-       fits the beat and the project's audience (e.g. "small bakery
-       counter morning", "city at night aerial"). Not the product, a
-       person, or a result.
-     - **Fetching:** run `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/media.js
-       search "<query>" --out ${CLAUDE_PLUGIN_ROOT}/state/videos/assets
-       [--type video]` for each, or generate AI images (step 3).
-     - **Placing:** put `<img class="bg-media" src="assets/<file>" alt="">`,
-       or `<video class="bg-media" src="assets/<clip>">`, in the slot.
-     - **Look:** a consistent set reads as produced. Prefer the same
-       light and palette across scenes. Use `class="bg blur"` on busy
-       images, and `class="bg tint"` to pull mismatched ones toward the
-       brand color.
-     - **People and real things:** a testimonial's or team video's person
-       is always their own photo, never stock or AI.
-   - Set `<body data-duration>` to the script's length and `data-drop` to
-     when the hook ends, so the beat drops as the body starts. Put
-     `data-sfx` cues only on moments that should land: words popping in,
-     list items, a checkmark, a button press, a scene change. A sound on
-     everything reads as noise. The comment at the top of `promo.html`
-     documents the sounds, music settings, background slots, and
-     attributes, and each template's own comment says what to replace.
-     Replace every bracketed placeholder; never ship one.
-   - Preview before the full render, which takes a couple of minutes:
-     - `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/render.js <page> --check`
-       lints the whole timeline in seconds: text outside the safe area,
-       spilling out of its box, clipped, or running into other text or a
-       card. Fix everything it lists (usually by shortening the line) and
-       run it again until it's clean.
-     - `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/render.js <page> --slides`
-       writes each scene's settled frame as a PNG to a `slides/` folder next
-       to the page (`--stills <times>` picks the moments instead). Look at
-       every one for what a lint can't judge: legibility over the
-       background, emoji, and whether the joke reads.
-     - The renderer darkens bright backgrounds automatically; for a busy
-       one, add `blur` or a heavier `--shade` on the slot.
-     - Those `--slides` PNGs double as a photo carousel (TikTok photo mode,
-       an Instagram carousel). Offer that for `slideshow` and any list-style
-       post.
-   - Render: `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/render.js <page>
-     ${CLAUDE_PLUGIN_ROOT}/state/videos/<date>-<slug>.mp4`. The output is
-     1080×1920, 30fps H.264 with AAC audio mixed to about −14 LUFS, which
-     is what all three platforms expect. That file is what `--platform
-     youtube` uploads directly.
-   - **Credits and labels:** copy the credit line from `assets/CREDITS.md`
-     into every platform's caption or description when it says one is
-     required (Pexels, CC BY photos, some tracks). If any AI image is
-     photorealistic, tell the user to switch on the platform's AI-content
-     label when posting. TikTok, YouTube, and Instagram all ask for it for
-     realistic synthetic scenes.
+   opts in): follow `${CLAUDE_PLUGIN_ROOT}/references/video-rendering.md`
+   from top to bottom. In short: copy the template the type or format
+   names to `state/videos/<date>-<slug>.html` and rewrite its scenes to
+   the step 4 script; set the music from the Sonic Identity; add the
+   voiceover, backgrounds, and cues; run `--check` until clean and look at
+   every `--slides` frame; then render, and carry any required credit
+   line into each platform's caption. Never ship a bracketed placeholder.
 
    **Filmed types instead:** deliver a shot list in the Video Script
    section: each beat as a shot (what's in frame, who says what, how long),
@@ -595,74 +459,7 @@ that applies to this run, per step 7 above.
 
 ## Example output
 
-> Fictional example: a 35-second script for a "one-click export" feature,
-> all three platforms, no video-generation tool connected this run.
-
-```markdown
-## Video Script
-**Type:** Explainer (one feature), script only this run.
-
-**Hook (0–2s):** On-screen text over a cluttered desktop: "Exporting
-reports used to take me 20 minutes." No voiceover yet — works sound-off.
-
-**Body:**
-- 2–8s: Screen-capture of the old way — five separate export dialogs
-  stacked open. VO: "Five tools. Five exports. Every single week."
-- 8–18s: Cut to the new flow — one button, one click. On-screen text:
-  "Now: one click." VO: "Now it's one click. Pick a report, pick a
-  format, done."
-- 18–28s: Report appears instantly with a clean checkmark animation. VO:
-  "No templates to rebuild. No copy-pasting between tools."
-- 28–35s: Cut back to creator on camera (or text card if no on-camera
-  footage). VO: "It's live for every customer today."
-
-**CTA (33–35s):** On-screen text: "Try it free — link in bio."
-
-**Audio:** Upbeat, minimal trending-style instrumental under the VO,
-dropping out briefly at the "one click" beat for emphasis. Check each
-platform's current trending-sounds page before picking an actual track —
-this skill can't look up what's trending today.
-
-## YouTube Shorts
-**Title (34 chars):** One Click Killed My Export Chaos
-**Description (128 chars):** Exporting reports used to eat 20 minutes a
-week. Now it's one click. Free to try today. #Shorts #productivity #saas
-**Hashtags:** #Shorts #productivity #saas
-**Suggested posting window:** Tuesday–Thursday, ~11am–4pm local audience
-time (general benchmark, not this channel's own data).
-**Format:** 9:16, 35s.
-
-## Instagram Reels
-**Caption (118 chars):** Exporting reports used to eat 20 minutes a
-week. Now it's one click. No templates, no copy-pasting. Free to try
-today. #productivity #saas #buildinpublic
-**Hashtags:** #productivity #saas #buildinpublic
-**Suggested posting window:** ~6–9am or ~7–11pm local audience time,
-8pm called out specifically in current benchmark research.
-**Format:** 9:16, 35s.
-
-## TikTok
-**Caption (97 chars):** POV: exporting used to take 20 minutes. now
-it's one click and i'm never going back #productivity #saas
-**Hashtags:** #productivity #saas
-**Suggested posting window:** Evening/after-hours skews stronger in
-current benchmark research; matching when the audience is actually online
-matters more than the exact hour.
-**Format:** 9:16, 35s.
-
-## Generation Status
-No video-generation tool was connected this session, and local rendering
-isn't set up (ffmpeg is missing), so nothing was actually generated. The
-script above is the deliverable. Recommended free option: CapCut (free,
-no watermark, built for exactly this vertical-video edit). Install ffmpeg
-and this skill can render it locally next time from `how-to.html` with
-your screenshots; or, with Higgsfield, Canva, or another video tool
-connected, it can generate from the per-beat descriptions above.
-
-## Next Step
-Nothing has been sent. Generate or edit the clip (CapCut or your tool of
-choice) using the shot list above, then either post manually at the
-suggested windows, or say the word to queue this into
-`state/content-calendar.md` or hand it to `publish-pipeline` for a real
-send.
-```
+`${CLAUDE_PLUGIN_ROOT}/references/short-form-video-example.md` has a full
+worked example (a 35-second explainer for all three platforms, script
+only, with character counts, hashtags, posting windows, and an honest
+Generation Status). Read it before the first package in a session.
