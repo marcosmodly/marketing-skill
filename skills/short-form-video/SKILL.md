@@ -208,7 +208,10 @@ command below.
      on-screen text callout, or a visual surprise — written to work with
      the sound off, since a large share of viewers decide whether to keep
      watching before audio ever registers. State explicitly what's on
-     screen and what text overlay (if any) appears in this window.
+     screen and what text overlay (if any) appears in this window. Offer
+     three hooks, each from a different pattern in
+     `${CLAUDE_PLUGIN_ROOT}/references/hooks.md`, and let the user pick
+     (or render them all as variants to test).
    - **The body, beat by beat:** for each beat, what's shown, any on-screen
      text/caption cue, any spoken line or voiceover, and an approximate
      timestamp/duration — the same structure as `visual-brief-generator`'s
@@ -399,8 +402,9 @@ State plainly whether an actual video was generated this run, via which
 tool (or rendered locally, which is motion graphics with an original
 soundtrack, not footage), where the file was saved, which backgrounds were
 used (stock, with provider, or AI, with tool), the sound (genre and hook,
-or the licensed track), and the voice (recorded or generated, which voice)
-and how captions were timed — or that none was
+or the licensed track), the voice (recorded or generated, which voice)
+and how captions were timed, which hook variants were rendered, and the
+cover frame and its `--cover-ms` — or that none was
 connected/used and this script/package is the deliverable, plus which
 free tool was recommended if nothing was connected, and the exact setup
 fix for any tool that was listed but not usable yet (step 3).

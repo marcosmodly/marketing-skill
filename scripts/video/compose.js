@@ -30,7 +30,8 @@
  * Voices come from voice.js (Kokoro, free and local; `npm install kokoro-js` once) unless
  * `recordings` points at the user's own files. The music follows the Sonic Identity saved in
  * references/brand-voice.md, one energy step lower so it sits under the voice, with scene
- * changes moved onto its beat. Without --out, the page goes to state/videos/<date>-<slug>.html,
+ * changes moved onto its beat, and the look follows its Visual Identity (brand.js), end card
+ * included. Without --out, the page goes to state/videos/<date>-<slug>.html,
  * with media and voice files in state/videos/assets/.
  */
 const fs = require('fs');
@@ -38,6 +39,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const { parseScript } = require('./voice');
 const { prepareVoice } = require('./render');
+const { visualIdentity, applyIdentity } = require('./brand');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const TEMPLATE = path.join(__dirname, 'templates', 'narrated.html');
@@ -265,11 +267,16 @@ ${sceneHtml}
 </body>
 </html>
 `;
-  fs.writeFileSync(page, doc);
+  // the brand's colors, font, and end card, from the Visual Identity
+  const look = visualIdentity();
+  const branded = look ? applyIdentity(doc, look, { pageDir: dir }) : { html: doc, changes: [], problems: [] };
+  fs.writeFileSync(page, branded.html);
 
   console.log(`Wrote ${page}: ${scenes.length} lines, ${duration}s`);
   for (const s of scenes) console.log(`  ${String(s.n).padStart(2)}. ${s.start.toFixed(2)}–${s.end.toFixed(2)}s  ${s.clip}${s.media ? `  bg ${s.media}` : ''}  ${s.text.slice(0, 48)}${s.text.length > 48 ? '...' : ''}`);
   console.log(`  sound: ${musicSrc ? `licensed track ${musicSrc}` : `${sound.music}${sound.music !== 'none' ? `, ${sound.bpm} BPM, ${sound.key} ${sound.mode || ''}, energy ${sound.energy}, cuts on the beat` : ''}`}${identity ? ' (the Sonic Identity)' : ' (the template default; no Sonic Identity saved yet)'}`);
+  console.log(`  look: ${branded.changes.length ? branded.changes.join('; ') : 'the template default; no Visual Identity saved yet'}`);
+  for (const p of branded.problems) console.warn(`Note: ${p}`);
   if (!meta.hook) console.warn('Note: no hook in the frontmatter, so the first frame has no text. Add "hook: ..." to stop the scroll.');
   if (musicSrc) console.warn(`Note: set data-music-start from beats.js (node beats.js ${musicSrc} --align ${drop} --duration ${duration}) and record the track's license with media.js credit.`);
   if (!args.noCheck) {

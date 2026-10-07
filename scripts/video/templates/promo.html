@@ -70,6 +70,17 @@
         wraps at --hit.
     A photo or clip can go in a .pane, .side, or .cell too, as
     <img class="bg-media" src="...">.
+  - The hook: give the first thing on screen class "now" instead of an
+    entrance (pop, rise, ...), so it shows on frame 0, which is the default
+    cover and the moment a viewer decides to stay. render.js --check warns
+    when the first frame has no text.
+  - Hook variants: data-variant="a" (or "b", "c") on the elements that
+    differ; render.js --variants a,b,c renders one video per variant.
+  - Captions synced to a voice line: <div class="say auto"
+    data-voice="assets/voice-2.wav" style="--voice:3.4s">The line.</div>
+    (render.js times them to the clip; see captions.js).
+  - .endcard: the logo and handle at the end, added by brand.js from the
+    Visual Identity in references/brand-voice.md.
   - Images (screenshots, photos, logos) go in an assets/ folder next to the
     page and load with a relative src. People, products, and results must be
     real ones the user supplied; stock and AI images are only for settings
@@ -155,6 +166,18 @@
                            rgba(10,10,14,var(--shade, .35)); }
   body:has(.bg-media) { --muted: #d2d1d8; }
   body:has(.bg-media) .scene, body:has(.bg-media) .stage { text-shadow: 0 2px 6px rgba(0,0,0,.35), 0 4px 30px rgba(0,0,0,.55); }
+
+  /* on screen from the very first frame, with a small settle instead of an entrance: for the
+     hook, since the first frame is the default cover and the moment a viewer decides to stay */
+  .now { animation: nowIn .5s cubic-bezier(.2,.8,.2,1) 0s both, fadeOut .3s ease-in var(--out, 999s) forwards; }
+  @keyframes nowIn { from { transform: scale(1.05); } to { transform: none; } }
+
+  /* the end card brand.js adds: the logo and handle, landing on the sonic logo */
+  .endcard { position: absolute; left: 90px; right: 150px; top: 330px; bottom: 470px; z-index: 5;
+             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 34px; text-align: center;
+             animation: fadeIn .35s ease-out var(--in, 999s) both; }
+  .endcard .logo { max-width: 380px; max-height: 300px; object-fit: contain; animation: popIn .55s cubic-bezier(.2,.9,.3,1.25) var(--in, 999s) both; }
+  .endcard .handle { font-size: 60px; font-weight: 800; letter-spacing: -1px; animation: riseIn .45s cubic-bezier(.2,.8,.2,1) calc(var(--in, 999s) + .15s) both; }
 
   /* ---- everyday / FYP kit ---- */
   body.fyp { font-family: "TikTok Sans", "Inter", "Liberation Sans", "Noto Color Emoji", sans-serif; text-wrap: pretty; }
@@ -406,7 +429,7 @@
   <div class="bg" style="--in:20.45s; --dur:3.55s"></div>
   <!-- Scene 1 (0–3s): hook, readable sound-off -->
   <div class="scene" style="--out:2.75s">
-    <div class="huge pop" style="--in:.05s" data-sfx="pop">Stop writing</div>
+    <div class="huge now" style="--in:.05s" data-sfx="pop">Stop writing</div>
     <div class="huge pop" style="--in:.4s" data-sfx="pop">marketing</div>
     <div class="huge pop" style="--in:.75s" data-sfx="pop">posts</div>
     <div class="huge pop accent" style="--in:1.1s" data-sfx="pop">by hand.</div>

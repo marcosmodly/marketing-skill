@@ -196,6 +196,38 @@ settings, background slots, and attributes, and each template's own
 comment says what to replace. Replace every bracketed placeholder; never
 ship one.
 
+## The hook, the look, and the cover
+
+- **The hook is on screen from frame 0.** The first frame is the default
+  cover and the moment a viewer decides to stay. Every template's hook has
+  class `now` (shown at once, with a small settle) instead of an entrance;
+  keep it that way when rewriting, and `--check` fails a page whose first
+  frame or first second has no text. It also fails text that leaves before
+  it can be read (about four words a second), and notes stretches over 3
+  seconds where nothing changes ("Pacing", advice only).
+- **Hook variants.** To test hooks, put each version on the same page with
+  `data-variant="a"`, `"b"`, `"c"` on the elements that differ (usually
+  just the hook caption; everything else stays shared). `render.js <page>
+  out.mp4 --variants a,b,c` writes `out-a.mp4`, `out-b.mp4`, ... and
+  `--check` checks every variant. Write the three from different patterns
+  in `hooks.md`. Instagram's trial reels, or one variant per platform, are
+  ways to test them.
+- **The brand's look.** Run `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/brand.js
+  <page>` after rewriting a template. It applies the Visual Identity from
+  `brand-voice.md` (colors, display font) and, on marketing and narrated
+  pages, adds a 1.6-second end card with the logo and handle after the
+  last scene, landing with the sonic logo. It warns when the colors are too
+  low in contrast to read. Running it again replaces what it added.
+  `compose.js` does this itself. With no Visual Identity saved yet, ask
+  for one (colors from their site or a description, a font, the logo, the
+  handle) and save it there first, or keep the template's look.
+- **The cover.** `render.js <page> --cover 0` writes the cover frame as a
+  PNG next to the page and checks its text sits inside the 3:4 crop the
+  profile grids show; with a render (`render.js <page> out.mp4 --cover 0`)
+  it lands next to the video. Pass the time it prints to
+  `publish_direct.py --cover-ms` (TikTok and Instagram), or host the PNG
+  and pass `--cover-url` (Instagram). YouTube's cover is picked in its app.
+
 ## Preview, then render
 
 The full render takes a couple of minutes, so preview first:

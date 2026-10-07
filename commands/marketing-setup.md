@@ -39,7 +39,11 @@ ask the user.
    that fit the audience and tone (genre, tempo, key and mode, energy,
    hook, and one line on why). They can hear previews with that guide's
    `--sample` commands, or at the first render. Save a pick; otherwise
-   leave the placeholder.
+   leave the placeholder. Then offer a **visual identity**: brand colors
+   (a website link or a description is enough; you pick the hex values
+   for accent, background, and text), a Google Fonts display font, a logo
+   file, and the account handle. Save what they give under Visual
+   Identity.
 5. Write the answers into the same file. Keep every existing `##`
    heading exactly as it is, replacing only the placeholder text under
    each, so every skill's reads keep working. Replace the first line with
@@ -47,7 +51,8 @@ ask the user.
    using today's date.
 6. Confirm in one line: `Saved: priority=<...>, content_types=<...>,
    audience=<...>, tone=<...>, format=<...>` (plus `sound=<genre, key,
-   hook>` if chosen), and note they can re-run this or edit the file.
+   hook>` and `look=<accent, font>` if chosen), and note they can re-run
+   this or edit the file.
 
 ## Rules
 

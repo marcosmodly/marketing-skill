@@ -39,6 +39,19 @@ run youtube env YOUTUBE_ACCESS_TOKEN=$fake python3 $d --platform youtube --title
 run instagram env META_PAGE_ACCESS_TOKEN=$fake IG_USER_ID=1 python3 $d --platform instagram --text hi --video-url https://example.com/v.mp4 --dry-run
 run tiktok env TIKTOK_ACCESS_TOKEN=$fake python3 $d --platform tiktok --text hi --video-url https://example.com/v.mp4 --dry-run
 
+# covers: TikTok takes a frame time, Instagram a frame time or an image URL
+out=$(env TIKTOK_ACCESS_TOKEN=$fake python3 $d --platform tiktok --text hi --video-url https://example.com/v.mp4 --cover-ms 1500 --dry-run 2>&1)
+grep -q '"video_cover_timestamp_ms": 1500' <<<"$out" || { echo "FAIL: tiktok --cover-ms"; echo "$out"; exit 1; }
+echo "ok: tiktok cover"
+out=$(env META_PAGE_ACCESS_TOKEN=$fake IG_USER_ID=1 python3 $d --platform instagram --text hi --video-url https://example.com/v.mp4 --cover-ms 1500 --dry-run 2>&1)
+grep -q 'thumb_offset=1500' <<<"$out" || { echo "FAIL: instagram --cover-ms"; echo "$out"; exit 1; }
+echo "ok: instagram cover"
+if env YOUTUBE_ACCESS_TOKEN=$fake python3 $d --platform youtube --title hi --text hi --video-path /tmp/smoke-video.mp4 --made-for-kids false --cover-ms 0 --dry-run >/dev/null 2>&1; then
+  echo "FAIL: youtube accepted --cover-ms"
+  exit 1
+fi
+echo "ok: youtube refuses a cover"
+
 if env DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/1/$fake python3 $d --platform discord --text hi >/dev/null 2>&1; then
   echo "FAIL: publish_direct.py ran with neither --dry-run nor --confirmed"
   exit 1

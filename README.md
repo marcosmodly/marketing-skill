@@ -672,6 +672,12 @@ the video asynchronously afterward, so confirm the actual result (TikTok's
 own status-fetch endpoint, or checking the account directly) before
 reporting a send as done.
 
+**Covers:** `--cover-ms` picks the cover frame on TikTok
+(`video_cover_timestamp_ms`) and Instagram (`thumb_offset`), and
+`--cover-url` gives Instagram a cover image instead; `render.js --cover`
+prints the value for the frame it checked. YouTube's Shorts cover is
+chosen in its app.
+
 None of this blocks the default path: `short-form-video` always produces
 the full script, caption, and hashtags regardless of whether any of this
 is set up, and posting it yourself by hand — download or generate the
@@ -785,7 +791,18 @@ node voice.js --audition samples "One line to try."       # the same line in fou
 node compose.js script.md                                 # a narrated video page from a script: voice, backgrounds, synced captions
 node render.js page.html --voice-lengths                  # each voice line's start, length, and room in its scene
 node captions.js assets/voice-1.wav --text "the line"     # when each word of a line is said
+node brand.js page.html                                   # the Visual Identity: colors, font, a logo end card
+node render.js page.html out.mp4 --variants a,b --cover 0 # one video per hook variant, plus the cover frame
 ```
+
+Every page's hook is on screen from the first frame, which is also the
+default cover, and `--check` fails a page whose first frame has no text or
+whose text leaves before it can be read. Hook variants (`data-variant`)
+render several versions of one video to test, and `--cover` writes the
+cover frame, checked against the 3:4 crop the profile grids show.
+`brand.js` applies the Visual Identity saved in `brand-voice.md` (colors,
+a display font, and an end card with the logo and handle that lands with
+the sonic logo), the visual counterpart of the Sonic Identity.
 
 Every render lints its layout as it goes: text outside the area the
 platforms' buttons and captions leave clear, text spilling out of its box
@@ -1043,6 +1060,8 @@ references/
   outreach-strategy.md   # email-outreach's own config: ICP, angle, offer, cadence (hand-edited or guided setup)
   video-types.md         # 23 marketing video types: goal, short-form beats, and how each gets made (hand-editable)
   sound-guide.md         # music genres, sound effects, how to pick a project's sonic identity, a hook library, licensed tracks
+  hooks.md               # hook patterns by goal, written to work with the sound off, and how to test them
+  video-rendering.md     # the local render procedure short-form-video follows
   fyp-formats.md         # 22 everyday / FYP formats: why each works, beats, copy at two tones, weekly mix and rotation
 state/
   content-calendar.md    # calendar/history index (generated + appended to, hand-editable)
@@ -1060,6 +1079,7 @@ scripts/
     voice.js             # free local voiceover (Kokoro): a script -> one WAV per line
     captions.js          # word timing for a voice line, caption chunks, and .srt files
     compose.js           # a narrated video page from a script: voice, backgrounds, synced captions
+    brand.js             # applies the Visual Identity to a page: colors, font, logo end card
     beats.js             # a music track's tempo, beats, bars, and drops, to cut a video on its beat
     templates/           # 7 marketing + 22 everyday starting pages, built from templates/build.py and fyp.py
 ```

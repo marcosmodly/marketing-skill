@@ -19,6 +19,21 @@ Skills that read "our changelog" for source material read this file too.
   trimmed from both ends, `--voice-lengths` lists each line's start, length,
   and room in its scene, and a line running past its scene is reported.
 - `voice.js` writes each line's sentence timings next to its WAV.
+- **The hook is on screen from the first frame** in every template (a new
+  `now` class), since that frame is the default cover and the swipe
+  decision. `--check` and `check.js` now fail a page with a blank first
+  frame or first second, or with text that leaves before it can be read,
+  and note stretches over 3 seconds where nothing changes.
+- **Visual Identity**: colors, a display font, a logo, and a handle saved in
+  `brand-voice.md` (asked for in setup), applied by `scripts/video/brand.js`
+  (and by `compose.js`), with an end card after the last scene that lands
+  with the sonic logo, and contrast warnings.
+- **Hook variants**: `data-variant` on a page, and `render.js --variants
+  a,b,c` renders one video per hook; `--check` and `check.js` check each.
+  `references/hooks.md` has hook patterns by goal.
+- **Covers**: `render.js --cover <t>` writes the cover frame and checks it
+  against the 3:4 profile-grid crop; `publish_direct.py --cover-ms` sets it
+  on TikTok and Instagram, and `--cover-url` gives Instagram a cover image.
 - `short-form-video`'s local-render steps moved to
   `references/video-rendering.md`, and its worked example to
   `references/short-form-video-example.md`, so script-only runs load less.

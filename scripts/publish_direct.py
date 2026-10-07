@@ -369,6 +369,14 @@ def parse_args():
                          help="--platform tiktok only. Defaults to SELF_ONLY (private), the only level TikTok accepts "
                               "until your app passes its audit. Checked against the creator's own allowed options "
                               "(creator_info) before posting.")
+    parser.add_argument("--cover-ms", type=int,
+                         help="--platform tiktok and instagram only: the frame to use as the cover, in milliseconds "
+                              "from the start (TikTok's video_cover_timestamp_ms, Instagram's thumb_offset). "
+                              "render.js --cover prints the value for the frame it checked. Without it, both "
+                              "use their own default (TikTok: the first frame).")
+    parser.add_argument("--cover-url", help="--platform instagram only: a public URL of a 9:16 cover image (Instagram's "
+                                             "cover_url, e.g. the render.js --cover PNG, hosted). Takes priority over "
+                                             "--cover-ms if both are given.")
     parser.add_argument("--disable-duet", action="store_true", help="--platform tiktok only. Off (duets allowed) unless passed.")
     parser.add_argument("--disable-comment", action="store_true", help="--platform tiktok only. Off (comments allowed) unless passed.")
     parser.add_argument("--disable-stitch", action="store_true", help="--platform tiktok only. Off (stitching allowed) unless passed.")
@@ -745,12 +753,20 @@ def run_instagram(args):
     secrets = [env["META_PAGE_ACCESS_TOKEN"]]
     base = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{env['IG_USER_ID']}"
     create_url = f"{base}/media"
-    create_body = urllib.parse.urlencode({
+    fields = {
         "media_type": "REELS",
         "video_url": args.video_url,
         "caption": caption,
-        "access_token": env["META_PAGE_ACCESS_TOKEN"],
-    }).encode("utf-8")
+    }
+    # the cover: an image URL, or a frame of the video (cover_url wins if both are sent)
+    if args.cover_url:
+        fields["cover_url"] = args.cover_url
+        if args.cover_ms is not None:
+            print("Note: both --cover-url and --cover-ms given; Instagram uses cover_url and ignores thumb_offset.", file=sys.stderr)
+    if args.cover_ms is not None:
+        fields["thumb_offset"] = str(args.cover_ms)
+    fields["access_token"] = env["META_PAGE_ACCESS_TOKEN"]
+    create_body = urllib.parse.urlencode(fields).encode("utf-8")
 
     if args.dry_run:
         print("=== DRY RUN: no request sent ===")
@@ -939,6 +955,8 @@ def run_tiktok(args):
         "disable_comment": args.disable_comment,
         "disable_stitch": args.disable_stitch,
     }
+    if args.cover_ms is not None:
+        post_info["video_cover_timestamp_ms"] = args.cover_ms
     source_info = {
         "source": "PULL_FROM_URL",
         "video_url": args.video_url,
@@ -1042,6 +1060,24 @@ def main():
             file=sys.stderr,
         )
         sys.exit(2)
+
+    if args.cover_ms is not None or args.cover_url:
+        if args.platform == "youtube":
+            print(
+                "--cover-ms/--cover-url aren't supported for --platform youtube: this script can't set a "
+                "Shorts cover through the API. Pick the cover frame in the YouTube app after uploading.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        if args.platform not in ("instagram", "tiktok"):
+            print("--cover-ms and --cover-url are for --platform instagram and tiktok only.", file=sys.stderr)
+            sys.exit(2)
+        if args.cover_url and args.platform == "tiktok":
+            print("TikTok takes a cover frame, not an image: use --cover-ms instead of --cover-url.", file=sys.stderr)
+            sys.exit(2)
+        if args.cover_ms is not None and args.cover_ms < 0:
+            print("--cover-ms is a time in milliseconds from the start, so it can't be negative.", file=sys.stderr)
+            sys.exit(2)
 
     if args.platform in VIDEO_RUNNERS:
         sys.exit(VIDEO_RUNNERS[args.platform](args))

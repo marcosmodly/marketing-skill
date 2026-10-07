@@ -42,8 +42,8 @@ FYP_TEMPLATES["pov.html"] = dict(
     body="""
   <!-- 0–3.4s: the setup -->
   <div class="scene center" style="--out:3.2s">
-    <div class="sticker pop" style="--in:.1s" data-sfx="pop">POV</div>
-    <div class="cap pop" style="--in:.45s; margin-top: 34px" data-sfx="swish"><span>you finally sent every invoice before Friday</span></div>
+    <div class="sticker now" style="--in:.1s" data-sfx="pop">POV</div>
+    <div class="cap now" style="--in:.45s; margin-top: 34px" data-sfx="swish"><span>you finally sent every invoice before Friday</span></div>
     <div class="emoji" style="--in:1.5s; margin-top: 30px">😌</div>
   </div>
 
@@ -65,7 +65,7 @@ FYP_TEMPLATES["pov.html"] = dict(
   <!-- 10.4–12s: soft close -->
   <div class="scene center">
     <div class="cap hl pop" style="--in:10.45s" data-sfx="chime"><span>reminders that send themselves</span></div>
-    <div class="small fade" style="--in:10.9s; margin-top: 24px">follow for more freelancer life</div>
+    <div class="small fade" style="--in:10.6s; margin-top: 24px">follow for more freelancer life</div>
   </div>
 """)
 
@@ -88,7 +88,7 @@ FYP_TEMPLATES["nobody-me.html"] = dict(
     body="""
   <!-- 0–3.4s: the setup, building into the drop -->
   <div class="scene" style="--out:3.2s">
-    <div class="cap out left rise" style="--in:.1s" data-sfx="pop">nobody:</div>
+    <div class="cap out left now" style="--in:.1s" data-sfx="pop">nobody:</div>
     <div class="cap out left rise" style="--in:.8s; margin-top: 34px" data-sfx="pop">absolutely no one:</div>
     <div class="cap out left rise" style="--in:1.6s; margin-top: 34px" data-sfx="pop">me at 2am:</div>
   </div>
@@ -130,7 +130,7 @@ FYP_TEMPLATES["expectation-reality.html"] = dict(
   <!-- 0–10s: expectation, then reality -->
   <div class="scene" style="--out:9.8s">
     <div class="split">
-      <div class="pane rise" style="--in:.1s" data-sfx="swish">
+      <div class="pane now" style="--in:.1s" data-sfx="swish">
         <div class="sticker light">expectation</div>
         <div class="emoji" style="--in:.6s">😎</div>
         <div class="cap"><span>working for yourself: set your own hours</span></div>
@@ -163,7 +163,7 @@ FYP_TEMPLATES["tell-me-without.html"] = dict(
     body="""
   <!-- 0–2.8s: the prompt -->
   <div class="scene center" style="--out:2.6s">
-    <div class="cap pop" style="--in:.1s" data-sfx="pop"><span>tell me you're a freelancer</span></div>
+    <div class="cap now" style="--in:.1s" data-sfx="pop"><span>tell me you're a freelancer</span></div>
     <div class="cap hl pop" style="--in:.8s; margin-top: 18px" data-sfx="pop"><span>without telling me you're a freelancer</span></div>
   </div>
 
@@ -201,7 +201,7 @@ FYP_TEMPLATES["makes-sense.html"] = dict(
     body="""
   <!-- 0–12s: the title, with five items swapping in under it -->
   <div class="scene top" style="--out:11.8s">
-    <div class="cap pop" style="--in:.1s" data-sfx="pop"><span>things that just make sense ✨</span></div>
+    <div class="cap now" style="--in:.1s" data-sfx="pop"><span>things that just make sense ✨</span></div>
     <div class="stack" style="flex: 1">
       <div class="swap" style="--in:1.2s; --out:3.1s" data-sfx="ding">
         <div class="emoji" style="--in:1.2s; margin: 0 auto 20px">🧾</div><div class="cap dark"><span>invoices that send themselves</span></div></div>
@@ -237,7 +237,7 @@ FYP_TEMPLATES["starter-pack.html"] = dict(
     body="""
   <!-- 0–9.5s: the pack -->
   <div class="scene top" style="--out:9.3s">
-    <div class="cap pop" style="--in:.1s" data-sfx="pop"><span>the freelancer starter pack</span></div>
+    <div class="cap now" style="--in:.1s" data-sfx="pop"><span>the freelancer starter pack</span></div>
     <div class="grid" style="margin-top: 40px">
       <div class="cell pop" style="--in:1.0s" data-sfx="pop"><div class="e">☕</div>the third coffee</div>
       <div class="cell pop" style="--in:1.6s" data-sfx="pop"><div class="e">🎧</div>noise-cancelling everything</div>
@@ -275,7 +275,7 @@ FYP_TEMPLATES["tier-list.html"] = dict(
     body="""
   <!-- 0–14s: the list -->
   <div class="scene top" style="--out:13.8s">
-    <div class="cap pop" style="--in:.1s" data-sfx="pop"><span>ranking ways to get paid faster</span></div>
+    <div class="cap now" style="--in:.1s" data-sfx="pop"><span>ranking ways to get paid faster</span></div>
     <div class="stack now">
       <div class="cap dark swap" style="--in:1.0s; --out:2.6s" data-sfx="swish"><span>🔔 auto reminders</span></div>
       <div class="cap dark swap" style="--in:3.0s; --out:4.6s" data-sfx="swish"><span>💰 a deposit up front</span></div>
@@ -329,7 +329,7 @@ FYP_TEMPLATES["this-or-that.html"] = dict(
     body="""
   <!-- 0–11.8s: three rounds -->
   <div class="scene top" style="--out:11.6s">
-    <div class="cap pop" style="--in:.1s" data-sfx="pop"><span>this or that: freelancer edition</span></div>
+    <div class="cap now" style="--in:.1s" data-sfx="pop"><span>this or that: freelancer edition</span></div>
     <div class="stack" style="flex: 1">
       <div class="round swap" style="--in:1.0s; --out:4.4s; --end:4.2s" data-sfx="swish tick:end">
         <div class="label accent">round 1 of 3</div>
@@ -376,8 +376,8 @@ FYP_TEMPLATES["hot-take.html"] = dict(
     body="""
   <!-- 0–4.8s: the take -->
   <div class="scene center" style="--out:4.6s">
-    <div class="sticker yellow pop" style="--in:.1s" data-sfx="horn">unpopular opinion</div>
-    <div class="cap pop" style="--in:.7s; margin-top: 34px" data-sfx="swish"><span>invoices should go out the day the work ends.</span></div>
+    <div class="sticker yellow now" style="--in:.1s" data-sfx="horn">unpopular opinion</div>
+    <div class="cap now" style="--in:.7s; margin-top: 34px" data-sfx="swish"><span>invoices should go out the day the work ends.</span></div>
     <div class="cap dark pop" style="--in:2.3s; margin-top: 18px" data-sfx="pop"><span>not "at the end of the month."</span></div>
   </div>
 
@@ -417,7 +417,7 @@ FYP_TEMPLATES["flags.html"] = dict(
     body="""
   <!-- 0–5.8s: green flags -->
   <div class="scene top" style="--out:5.6s">
-    <div class="cap pop" style="--in:.1s" data-sfx="pop"><span>green flags in a client</span></div>
+    <div class="cap now" style="--in:.1s" data-sfx="pop"><span>green flags in a client</span></div>
     <div class="flag slide" style="--in:1.0s" data-sfx="ding">pays the deposit without asking</div>
     <div class="flag slide" style="--in:2.1s" data-sfx="ding">sends all the feedback in one email</div>
     <div class="flag slide" style="--in:3.2s" data-sfx="ding">says "take your time" and means it</div>
@@ -455,8 +455,8 @@ FYP_TEMPLATES["quiz.html"] = dict(
     body="""
   <!-- 0–6.8s: puzzle 1 -->
   <div class="scene center" style="--out:6.6s">
-    <div class="sticker yellow pop" style="--in:.1s" data-sfx="pop">guess it in 3 seconds</div>
-    <div class="puzzle pop" style="--in:.6s" data-sfx="swish">📧 ☝️ 📧</div>
+    <div class="sticker yellow now" style="--in:.1s" data-sfx="pop">guess it in 3 seconds</div>
+    <div class="puzzle now" style="--in:.6s" data-sfx="swish">📧 ☝️ 📧</div>
     <div class="cap dark fade" style="--in:1.0s"><span>a phrase every inbox knows</span></div>
     <div class="stack answer">
       <div class="gone" style="--in:1.6s; --out:4.6s">
@@ -501,7 +501,7 @@ FYP_TEMPLATES["rating.html"] = dict(
     body="""
   <!-- 0–11s: four sign-offs, rated -->
   <div class="scene top" style="--out:10.8s">
-    <div class="cap pop" style="--in:.1s" data-sfx="pop"><span>rating email sign-offs ✍️</span></div>
+    <div class="cap now" style="--in:.1s" data-sfx="pop"><span>rating email sign-offs ✍️</span></div>
     <div class="stack" style="flex: 1">
       <div class="rate swap" style="--in:1.0s; --out:3.3s" data-sfx="swish">
         <div class="mail">Best,</div><div class="stamp" style="--in:1.9s" data-sfx="pop">6/10</div></div>
@@ -535,7 +535,7 @@ FYP_TEMPLATES["text-chat.html"] = dict(
     body="""
   <!-- 0–12.6s: the chat -->
   <div class="scene top" style="--out:12.4s">
-    <div class="chat rise" style="--in:.1s">
+    <div class="chat now" style="--in:.1s">
       <div class="chat-head"><i class="av">🙂</i><div><b>client</b><small>online</small></div></div>
       <div class="chat-body">
         <div class="msg them"><div class="bub" style="--in:.8s" data-sfx="ping">hey! quick change on the logo</div></div>
@@ -572,7 +572,7 @@ FYP_TEMPLATES["notifications.html"] = dict(
   <!-- 0–9s: the lock screen fills up -->
   <div class="scene top" style="--out:8.8s">
     <div class="lock">
-      <div class="clock rise" style="--in:.1s">7:02</div>
+      <div class="clock now" style="--in:.1s">7:02</div>
       <div class="date rise" style="--in:.25s">Monday</div>
       <div class="notifs">
         <div class="notif" style="--in:1.0s" data-sfx="ping"><i class="app">🗓️</i>
@@ -609,8 +609,8 @@ FYP_TEMPLATES["post-card.html"] = dict(
     body="""
   <!-- 0–3s: the setup -->
   <div class="scene center" style="--out:2.8s">
-    <div class="sticker pop" style="--in:.1s" data-sfx="pop">POV</div>
-    <div class="cap pop" style="--in:.5s; margin-top: 30px" data-sfx="swish"><span>you finally raised your rates</span></div>
+    <div class="sticker now" style="--in:.1s" data-sfx="pop">POV</div>
+    <div class="cap now" style="--in:.5s; margin-top: 30px" data-sfx="swish"><span>you finally raised your rates</span></div>
   </div>
 
   <!-- 3–11s: the post -->
@@ -653,7 +653,7 @@ FYP_TEMPLATES["loading.html"] = dict(
     body="""
   <!-- 0–7.9s: loading, stalling, error -->
   <div class="scene top" style="--out:7.7s">
-    <div class="cap pop" style="--in:.1s" data-sfx="pop"><span>monday morning, loading motivation…</span></div>
+    <div class="cap now" style="--in:.1s" data-sfx="pop"><span>monday morning, loading motivation…</span></div>
     <div class="progress" style="--in:.9s; --pct:99; --for:3.6s; margin-top: 60px"></div>
     <div class="pctline fade" style="--in:.9s"><b class="count pct" style="--in:.9s; --to:99; --for:3.6s; --ease:cubic-bezier(.15,.85,.25,1)"></b></div>
     <div class="popup pop" style="--in:4.8s; margin-top: 46px" data-sfx="glitch">
@@ -692,8 +692,8 @@ FYP_TEMPLATES["storytime.html"] = dict(
     body=f"""
   <!-- 0–15.4s: the story, chunk by chunk -->
   <div class="scene top" style="--out:15.2s">
-    <div class="tags"><div class="sticker pop" style="--in:.1s" data-sfx="pop">storytime</div>
-      <div class="sticker yellow pop" style="--in:.3s; rotate: 3deg">part 1</div></div>
+    <div class="tags"><div class="sticker now" style="--in:.1s" data-sfx="pop">storytime</div>
+      <div class="sticker yellow now" style="--in:.3s; rotate: 3deg">part 1</div></div>
     <div class="stack" style="flex: 1">
       <div class="say gone" style="--in:.5s; --out:2.5s">{words("so I once sent an invoice", .5)}</div>
       <div class="say gone" style="--in:2.6s; --out:4.5s">{words("to the wrong client.", 2.6)}</div>
@@ -728,8 +728,8 @@ FYP_TEMPLATES["countdown.html"] = dict(
     body="""
   <!-- 0–2s: the promise -->
   <div class="scene center" style="--out:1.9s">
-    <div class="sticker yellow pop" style="--in:.1s" data-sfx="pop">save this 📌</div>
-    <div class="cap pop" style="--in:.45s; margin-top: 30px" data-sfx="swish"><span>5 ways to get paid faster</span></div>
+    <div class="sticker yellow now" style="--in:.1s" data-sfx="pop">save this 📌</div>
+    <div class="cap now" style="--in:.45s; margin-top: 30px" data-sfx="swish"><span>5 ways to get paid faster</span></div>
   </div>
 
   <!-- 2–14.2s: 5 to 1 -->
@@ -771,8 +771,8 @@ FYP_TEMPLATES["day-in-life.html"] = dict(
     body="""
   <!-- 0–2.2s: title -->
   <div class="scene center" style="--out:2.0s">
-    <div class="sticker pop" style="--in:.1s" data-sfx="pop">day in my life</div>
-    <div class="cap pop" style="--in:.45s; margin-top: 30px" data-sfx="swish"><span>freelance designer edition</span></div>
+    <div class="sticker now" style="--in:.1s" data-sfx="pop">day in my life</div>
+    <div class="cap now" style="--in:.45s; margin-top: 30px" data-sfx="swish"><span>freelance designer edition</span></div>
   </div>
 
   <!-- 2.2–13.2s: five moments -->
@@ -819,7 +819,7 @@ FYP_TEMPLATES["reveal.html"] = dict(
     body="""
   <!-- 0–3s: the tease -->
   <div class="scene center" style="--out:2.9s">
-    <div class="cap pop" style="--in:.1s" data-sfx="pop"><span>we've been working on something 👀</span></div>
+    <div class="cap now" style="--in:.1s" data-sfx="pop"><span>we've been working on something 👀</span></div>
   </div>
 
   <!-- 3–4.6s: wait for it -->
@@ -860,7 +860,7 @@ FYP_TEMPLATES["before-after.html"] = dict(
     body="""
   <!-- 0–9.8s: before, wipe, after -->
   <div class="scene top" style="--out:9.6s">
-    <div class="cap pop" style="--in:.1s" data-sfx="pop"><span>my inbox: monday vs friday</span></div>
+    <div class="cap now" style="--in:.1s" data-sfx="pop"><span>my inbox: monday vs friday</span></div>
     <div class="wipe rise" style="--in:.5s; --at:4.0s; margin-top: 34px" data-sfx="whoosh:at">
       <div class="side"><div class="sticker light">monday</div>
         <div class="emoji" style="--in:.9s">📥</div><div class="big">412 unread</div></div>
@@ -899,8 +899,8 @@ FYP_TEMPLATES["slideshow.html"] = dict(
     body=f"""
   <!-- 0–2.5s: title slide -->
   <div class="scene bottom" style="--out:2.35s">
-    <div class="sticker yellow pop" style="--in:.1s" data-sfx="pop">save this 📌</div>
-    <div class="cap left pop" style="--in:.4s; margin-top: 24px" data-sfx="swish"><span>5 small habits that make freelancing easier</span></div>
+    <div class="sticker yellow now" style="--in:.1s" data-sfx="pop">save this 📌</div>
+    <div class="cap left now" style="--in:.4s; margin-top: 24px" data-sfx="swish"><span>5 small habits that make freelancing easier</span></div>
   </div>
 {slide(1, 5, 2.5, 5, "send the invoice the day you finish")}
 {slide(2, 5, 5, 7.5, "keep one day a week free of meetings")}
