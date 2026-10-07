@@ -56,6 +56,9 @@ app, not here.
 - **Fit to goal:** comment bait for reach and comments, story and
   countdown for saves and follows, UI skits and meme captions for shares.
   One clear call to action per post: comment, save, follow, or tag.
+- **Hooks:** each template's hook is on screen from the first frame (class
+  `now`), since it's the cover and the swipe decision. `hooks.md` has the
+  patterns, and hook variants render several versions of one post to test.
 - **Trends:** the skill may search the web for what's trending this week,
   but only as a hint: trends move faster than search results, so check in
   the app before relying on one. Prefer an evergreen format with a fresh
@@ -250,6 +253,10 @@ tones (playful / professional) to show how the voice changes it.
 - **Copy:** "so I once sent an invoice to the wrong client." / "Our first
   customer found us by accident."
 - **Skip it** without a real story; never invent one.
+- **Told aloud:** for a storytime with a voiceover (the user's own voice
+  works best), use `narrated.html` through `compose.js`: one chunk of the
+  story per line, captions synced to the voice, and the "storytime" sticker
+  idea as the hook.
 
 ### Top-5 countdown (`countdown.html`, 16s)
 - **Beats:** the promise with a "save this" sticker → tips 5 to 1, a

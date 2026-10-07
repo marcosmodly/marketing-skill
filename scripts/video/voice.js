@@ -13,7 +13,8 @@
  *
  * <script> is a text or Markdown file. Numbered lines ("1. ...") become voice-1.wav,
  * voice-2.wav, ...; with no numbered lines, each paragraph is a line. Anything after the
- * first "## " heading is ignored, so notes can follow the script.
+ * first "## " heading is ignored, so notes can follow the script. Each WAV gets a .json next
+ * to it with its sentences' start and end times, which captions.js uses to time captions.
  *
  * One-time setup, from this folder: `npm install kokoro-js` (about 600 MB, mostly the ONNX
  * runtime). The first run also downloads the model (about 90 MB) from Hugging Face and
@@ -102,23 +103,29 @@ async function loadModel(quality) {
 }
 
 // Speaks one line, sentence by sentence (the model handles a few hundred characters at a
-// time), with a short pause between sentences. Returns { samples, rate }.
+// time), with a short pause between sentences. Returns { samples, rate, sentences }, where
+// sentences holds each sentence's text and start and end in seconds (captions.js uses them as
+// exact boundaries when timing word-by-word captions).
 async function speak(tts, text, voice, speed) {
   const chunks = [];
+  const texts = [];
   let rate = 24000;
-  for await (const { audio } of tts.stream(text, { voice, speed })) {
+  for await (const { text: said, audio } of tts.stream(text, { voice, speed })) {
     rate = audio.sampling_rate;
     chunks.push(audio.audio);
+    texts.push(typeof said === 'string' ? said.trim() : null);
   }
   const gap = Math.round(SENTENCE_GAP * rate);
   const total = chunks.reduce((n, c) => n + c.length, 0) + gap * Math.max(0, chunks.length - 1);
   const samples = new Float32Array(total);
+  const sentences = [];
   let at = 0;
   chunks.forEach((c, i) => {
     samples.set(c, at);
+    sentences.push({ text: texts[i], start: +(at / rate).toFixed(3), end: +((at + c.length) / rate).toFixed(3) });
     at += c.length + (i < chunks.length - 1 ? gap : 0);
   });
-  return { samples, rate };
+  return { samples, rate, sentences: sentences.every((x) => x.text) ? sentences : [] };
 }
 
 async function main() {
@@ -166,9 +173,11 @@ async function main() {
   const tts = await loadModel(args.quality);
   fs.mkdirSync(args.out, { recursive: true });
   for (const { n, text } of lines) {
-    const { samples, rate } = await speak(tts, text, voice, speed);
+    const { samples, rate, sentences } = await speak(tts, text, voice, speed);
     const file = path.join(args.out, `${args.prefix || 'voice-'}${n}.wav`);
     fs.writeFileSync(file, wav(samples, rate));
+    // sentence timings for captions.js, next to the clip
+    fs.writeFileSync(file.replace(/\.wav$/, '.json'), JSON.stringify({ text, voice, speed, sentences }, null, 2) + '\n');
     console.log(`${file}: ${(samples.length / rate).toFixed(2)}s  ${text.slice(0, 50)}${text.length > 50 ? '...' : ''}`);
   }
 }

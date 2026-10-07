@@ -6,7 +6,9 @@
  *
  * For each page:
  * - layout lint over the whole timeline (safe zone, overflow, clipping,
- *   text running into other text or elements)
+ *   text running into other text or elements), and the retention checks: text on
+ *   the first frame, nothing too brief to read, and pacing notes
+ * - every hook variant (data-variant) separately
  * - every data-sfx cue and music setting resolves, and media and fonts load
  * - a contact sheet of each scene's settled frame, to look over by eye
  * - the soundtrack, measured: about -14 LUFS, true peak at or under -1 dBTP
@@ -46,14 +48,17 @@ function contactSheet(files, out) {
   return run.status === 0 ? out : null;
 }
 
-async function checkPage(browser, pagePath, outDir, withAudio) {
-  const name = path.basename(pagePath, '.html');
-  const result = { name, page: pagePath, problems: [], lint: [], slides: 0, audio: null, sheet: null };
+async function checkPage(browser, pagePath, outDir, withAudio, variant) {
+  const name = path.basename(pagePath, '.html') + (variant ? `-${variant}` : '');
+  const result = { name, page: pagePath, problems: [], lint: [], pacing: [], slides: 0, audio: null, sheet: null };
   const { page, problems: fontProblems } = await r.openPage(browser, pagePath);
   try {
+    if (variant) await r.applyVariant(page, variant);
     const mediaProblems = await r.prepareMedia(page);
     const settings = await r.readPage(page);
     result.problems.push(...fontProblems, ...settings.problems, ...mediaProblems, ...r.checkMusic(settings));
+    // voice lines measured and captions placed before linting, so the lint covers them
+    result.problems.push(...(await r.prepareVoices(page, settings)).problems);
     const duration = settings.duration;
     if (!(duration > 0)) {
       result.problems.push('no <body data-duration>');
@@ -63,7 +68,9 @@ async function checkPage(browser, pagePath, outDir, withAudio) {
     result.music = settings.musicFile ? 'licensed track' : settings.music;
     result.cues = settings.cues.length;
 
-    result.lint = await r.lintTimeline(page, duration);
+    const lint = await r.lintTimeline(page, duration);
+    result.lint = lint.filter((p) => !p.advice);
+    result.pacing = lint.filter((p) => p.advice);
 
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), `check-${name}-`));
     const times = await r.slideTimes(page, duration);
@@ -109,10 +116,16 @@ async function main() {
   const browser = await r.launchBrowser(chromium);
   const results = [];
   for (const p of pages) {
-    process.stderr.write(`checking ${path.basename(p)}... `);
-    const res = await checkPage(browser, p, args.out, withAudio);
-    process.stderr.write(res.problems.length || res.lint.length ? `${res.problems.length + res.lint.length} to fix\n` : 'ok\n');
-    results.push(res);
+    // a page with hook variants is checked once per variant
+    const probe = await r.openPage(browser, p);
+    const variants = await r.variantsOf(probe.page);
+    await probe.page.close();
+    for (const v of variants.length ? variants : [null]) {
+      process.stderr.write(`checking ${path.basename(p)}${v ? ` [variant ${v}]` : ''}... `);
+      const res = await checkPage(browser, p, args.out, withAudio, v);
+      process.stderr.write(res.problems.length || res.lint.length ? `${res.problems.length + res.lint.length} to fix\n` : 'ok\n');
+      results.push(res);
+    }
   }
   await browser.close();
 
@@ -128,8 +141,9 @@ async function main() {
     '',
   ];
   for (const x of results) {
-    if (!x.problems.length && !x.lint.length) continue;
-    lines.push(`## ${x.name}`, '', ...x.problems.map((p) => `- ${p}`), ...x.lint.map((p) => `- Layout: ${r.describeLint(p)}`), '');
+    if (!x.problems.length && !x.lint.length && !x.pacing.length) continue;
+    lines.push(`## ${x.name}`, '', ...x.problems.map((p) => `- ${p}`), ...x.lint.map((p) => `- Layout: ${r.describeLint(p)}`),
+      ...x.pacing.map((p) => `- Pacing (advice, not a failure): ${r.describeLint(p)}`), '');
   }
   lines.push('Contact sheets (each scene\'s settled frame) are next to this report as <page>.png; look them over for anything a lint can\'t judge: legibility, emoji, and whether it looks good.', '');
   fs.writeFileSync(path.join(args.out, 'report.md'), lines.join('\n'));

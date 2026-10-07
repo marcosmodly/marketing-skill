@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  repo:
+    name: Repo checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Skills, commands, manifests, and paths
+        run: python3 scripts/ci/lint_repo.py
+      - name: Publish scripts (dry run only)
+        run: bash scripts/ci/smoke_publish.sh
+      - name: Templates are in sync with build.py
+        run: |
+          python3 scripts/video/templates/build.py
+          git diff --exit-code -- scripts/video/templates
+
+  video:
+    name: Video templates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install the renderer
+        working-directory: scripts/video
+        run: |
+          npm install
+          npx playwright install --with-deps chromium
+      - name: Check every template
+        working-directory: scripts/video
+        run: node check.js --out check-report
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: check-report
+          path: scripts/video/check-report

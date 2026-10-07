@@ -8,6 +8,9 @@
   are placeholder UI drawn in CSS; for a real product, swap a screen's
   contents for a screenshot (portrait, ideally 1170x2532 or similar):
     <img class="shot" src="assets/step-1.png" alt="">
+  or a screen recording of the step, which render.js cuts to the screen's
+  own shape so nothing is lost off the top or bottom:
+    <video class="shot" src="assets/step-1.mp4" data-loop="false"></video>
   and move its .tap ring onto the thing the viewer should tap. To add or
   drop a step, copy or remove a .step-title / .screen pair and shift the
   later --in / --out / --tap times.
@@ -94,6 +97,18 @@
                            rgba(10,10,14,var(--shade, .35)); }
   body:has(.bg-media) { --muted: #d2d1d8; }
   body:has(.bg-media) .scene, body:has(.bg-media) .stage { text-shadow: 0 2px 6px rgba(0,0,0,.35), 0 4px 30px rgba(0,0,0,.55); }
+
+  /* on screen from the very first frame, with a small settle instead of an entrance: for the
+     hook, since the first frame is the default cover and the moment a viewer decides to stay */
+  .now { animation: nowIn .5s cubic-bezier(.2,.8,.2,1) 0s both, fadeOut .3s ease-in var(--out, 999s) forwards; }
+  @keyframes nowIn { from { transform: scale(1.05); } to { transform: none; } }
+
+  /* the end card brand.js adds: the logo and handle, landing on the sonic logo */
+  .endcard { position: absolute; left: 90px; right: 150px; top: 330px; bottom: 470px; z-index: 5;
+             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 34px; text-align: center;
+             animation: fadeIn .35s ease-out var(--in, 999s) both; }
+  .endcard .logo { max-width: 380px; max-height: 300px; object-fit: contain; animation: popIn .55s cubic-bezier(.2,.9,.3,1.25) var(--in, 999s) both; }
+  .endcard .handle { font-size: 60px; font-weight: 800; letter-spacing: -1px; animation: riseIn .45s cubic-bezier(.2,.8,.2,1) calc(var(--in, 999s) + .15s) both; }
 
   /* ---- everyday / FYP kit ---- */
   body.fyp { font-family: "TikTok Sans", "Inter", "Liberation Sans", "Noto Color Emoji", sans-serif; text-wrap: pretty; }
@@ -319,7 +334,7 @@
 
   <!-- 0–2.5s: hook -->
   <div class="scene" style="--out:2.3s">
-    <div class="big pop" style="--in:.05s" data-sfx="pop">How to set up</div>
+    <div class="big now" style="--in:.05s" data-sfx="pop">How to set up</div>
     <div class="big pop" style="--in:.4s" data-sfx="pop">recurring invoices</div>
     <div class="big pop accent" style="--in:.8s" data-sfx="pop">in 3 steps.</div>
   </div>

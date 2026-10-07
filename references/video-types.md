@@ -12,14 +12,20 @@ For a longer survey of the formats, see Sparkhouse's
 
 - **Render:** `scripts/video/render.js` makes it from text alone, as motion
   graphics (kinetic text, shapes, UI mockups) with an original soundtrack.
+- **Narrate:** a voiceover over one background per line, with captions
+  synced to the voice (`narrated.html`, built from a script by
+  `scripts/video/compose.js`). The voice is the user's own takes or a free
+  generated one.
 - **Render + your assets:** renderable, but only with real material from
   you, such as screenshots, photos, a logo, a customer's actual words, or
   real numbers. The skill asks for these and never invents them.
 - **Generate:** an AI video tool (Higgsfield, Figma Weave) can produce
   footage-style shots. This spends that tool's credits.
 - **Film:** needs real footage of real people or places. The skill gives
-  you a phone shot list, filming tips, and edit notes instead of a
-  finished video.
+  you a phone shot list, filming tips, and edit notes. Once you've filmed
+  a talking-head take, `scripts/video/cut.js` cuts out the pauses and
+  makes the finished video from it: your clip with its own sound,
+  captions, the hook, your music, and your end card.
 - **Cut-down:** a long-form format. The short is a promo or a highlight of
   it, not the thing itself.
 
@@ -56,12 +62,12 @@ and has to work with the sound off.
 
 ### Brand story / brand film
 - **Goal:** emotional connection; the origin or mission story.
-- **Made by:** Film or Generate for the full version. Render can do a text-led "story in five lines" short.
+- **Made by:** Film or Generate for the full version. Narrate (`narrated.html`) tells it in five spoken lines over atmospheric backgrounds; Render can do a text-only "story in five lines" short.
 - **Beats:** the moment it started → the problem you saw → what you did about it → where it is now → the line you want remembered.
 
 ### Explainer
 - **Goal:** consideration; make the value proposition obvious.
-- **Made by:** Render (`promo.html` or `how-to.html`).
+- **Made by:** Narrate (`narrated.html`), or Render (`promo.html` or `how-to.html`).
 - **Beats:** the problem → how it works in three simple steps → the outcome → CTA. One idea per scene, no jargon.
 
 ### Animation & motion graphics
@@ -71,17 +77,17 @@ and has to work with the sound off.
 
 ### Product demo
 - **Goal:** consideration; show the product doing the job in a real use case.
-- **Made by:** Render + your assets (`how-to.html` with real screenshots), or Film (a screen recording or the physical product).
+- **Made by:** Render + your assets (`how-to.html` with real screenshots or screen recordings in the phone frame), or Film (the physical product).
 - **Beats:** the job to be done → the product doing it, feature by feature (one per scene) → the result → CTA. Show, don't list.
 
 ### Tutorial / how-to
 - **Goal:** consideration and retention; teach a specific task.
-- **Made by:** Render + your assets (`how-to.html` with real screenshots), or Film (a screen recording).
+- **Made by:** Render + your assets (`how-to.html` with real screenshots, or a screen recording of each step in the phone frame).
 - **Beats:** "How to X in N steps" → one step per scene, each with the exact tap or click → "Done" → CTA (save it, follow for more).
 
 ### Educational / tips
 - **Goal:** awareness; useful on its own, so people share and save it.
-- **Made by:** Render (`promo.html` as a list, or `faq.html`).
+- **Made by:** Narrate (`narrated.html`, one tip per line), or Render (`promo.html` as a list, or `faq.html`).
 - **Beats:** a promise ("3 things I wish I knew about X") → one tip per beat → a payoff line → CTA (follow for more). Tips should be correct and specific; check facts before drafting.
 
 ### FAQ
@@ -169,6 +175,7 @@ project's sonic identity in `brand-voice.md` (see `sound-guide.md`).
 | Type | Background | Sound |
 |---|---|---|
 | Ad, brand profile, explainer, educational, presentation | A setting or mood that fits each beat; clips for energy | The identity |
+| Narrated (any type told as a voiceover) | One setting per line, the same light and palette throughout | The identity, one energy step lower under the voice |
 | Product demo, how-to | Real screenshots in the phone frame, over a soft (blurred) setting | The identity |
 | FAQ, myth vs fact | One calm setting, blurred, so the text leads | The identity |
 | Announcement; event, webinar, or live promo | Bold photos or energetic clips | The identity, energy +1 |
@@ -183,12 +190,19 @@ team member, the product, or a result.
 ## Filming notes (for Film types)
 
 When a type needs footage, the skill's Generation Status says so and gives
-a phone shot list instead of a video:
+a phone shot list. For a talking-head take (an FAQ answered on camera, a
+founder's story, an interview answer, an on-camera testimonial with the
+person's permission), `cut.js` then turns the raw take into the finished
+video; for anything with several shots, edit it in CapCut or similar.
 - Shoot vertical (9:16) at 1080×1920 or higher, in daylight or facing a
   window, with the phone at eye level.
 - Record audio close to the speaker (a clip-on mic if possible); viewers
   forgive soft video long before bad sound.
 - Get each shot in a few takes of 3–6 seconds, plus a few seconds of
   silence before and after for cutting.
-- Edit in CapCut or similar: cut on the action, add captions (most people
-  watch muted), and keep the first second the most interesting one.
+- For one talking-head take, don't trim it yourself: `cut.js` removes the
+  pauses and captions it. Pauses longer than about a third of a second
+  are cut, so speak naturally and leave clear gaps between thoughts.
+- For several shots, edit in CapCut or similar: cut on the action, add
+  captions (most people watch muted), and keep the first second the most
+  interesting one.

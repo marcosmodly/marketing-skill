@@ -73,3 +73,18 @@ proposes two options with audio previews and saves your pick here; see
 - Energy: 3 (of 5)
 - Hook: 1 5 3 5 | 6 5 3 2
 - Why: clean and optimistic, for technical buyers; no hype
+
+## Visual Identity
+Not yet configured. The look of every video rendered for this project:
+its colors, a display font, and the logo and handle on the end card that
+lands with the sonic logo, so every video looks like the same brand.
+`short-form-video` (or `/marketing-skill:marketing-setup`) asks for it and
+saves it here, and `scripts/video/brand.js` applies it to a page. Once
+set, it looks like:
+
+- Accent: #2f6fed
+- Background: #0b1020
+- Text: #f5f7ff
+- Font: Space Grotesk
+- Logo: state/videos/assets/logo.png
+- Handle: @yourbrand

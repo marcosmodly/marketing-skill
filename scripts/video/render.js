@@ -8,11 +8,13 @@
  * The page animates with CSS animations (or the Web Animations API). This
  * script pauses every animation and seeks it frame by frame in headless
  * Chromium, so the output is frame-exact no matter how slow the machine is.
- * See templates/promo.html for the page conventions, and the README section
+ * See templates/promo.html for the page conventions, and docs/video.md,
  * "Rendering a short-form video locally".
  *
  * Usage:
- *   node render.js <page.html> <out.mp4> [--duration 24] [--fps 30] [--silent]
+ *   node render.js <page.html> <out.mp4> [--duration 24] [--fps 30] [--silent] [--workers 3]
+ *   node render.js <page.html> <out.mp4> --draft                   # half size at 15fps, fast, to check timing
+ *   node render.js --batch <page.html> ... [--outdir dir]          # each page to <page>.mp4, every variant, in one run
  *   node render.js <page.html> --stills 1.5,6,12 [--outdir dir]   # preview PNGs (default: stills/ next to the page)
  *   node render.js <page.html> --slides [--outdir dir]             # each scene's settled frame as a PNG, for
  *                                                                   # TikTok photo mode / Instagram carousels
@@ -20,10 +22,18 @@
  *   node render.js <page.html> <out.m4a> --audio-only              # just the soundtrack, in seconds
  *   node render.js --sample <genre> <out.m4a> [--motif "1 3 5 6 | 5 3 2 -"] [--key C] [--mode major]
  *                  [--bpm 118] [--energy 3] [--duration 12]          # audition a sound with no page at all
+ *   node render.js <page.html> --voice-lengths                     # each voice line's start, length, and room in its scene
+ *   node render.js <page.html> --cover 0 [--outdir dir]            # the cover frame as a PNG, checked against the 3:4 grid crop
+ *                                                                   # (with <out.mp4>, it's written next to the video too)
+ *   node render.js <page.html> <out.mp4> --variants a,b,c          # one video per hook variant: out-a.mp4, out-b.mp4, ...
+ *                                                                   # (--variant a for just one; --check checks them all)
  *
  * A voiceover goes in with <body data-voice-src="assets/voice.m4a"> (one take, starting at
  * data-voice-start) or data-voice="assets/line-2.m4a" on any element (plays at its --voice
- * or --in time). The music and effects duck under it.
+ * or --in time). The music and effects duck under it. An element with class "say auto" and a
+ * data-voice clip gets word-by-word captions of its own text, timed to the clip (captions.js;
+ * add --whisper to time them with Whisper instead), and a render with captions also writes
+ * an .srt next to the video. Every voice line is checked against its scene's end.
  *
  * Every run lints the layout: text outside the platforms' safe zone,
  * overflowing or clipped, or colliding with other text is reported with its
@@ -40,6 +50,7 @@ const os = require('os');
 const path = require('path');
 const { fileURLToPath, pathToFileURL } = require('url');
 const { buildSoundtrack, wavBuffer, parseMotif, SOUNDS, GENRES } = require('./soundtrack');
+const captions = require('./captions');
 
 const WIDTH = 1080;
 const HEIGHT = 1920;
@@ -71,7 +82,11 @@ function parseArgs(argv) {
     else if (a === '--audio-only') args.audioOnly = true;
     else if (a === '--check') args.check = true;
     else if (a === '--slides') args.slides = true;
-    else if (['--duration', '--fps', '--stills', '--outdir', '--sample', '--motif', '--key', '--mode', '--bpm', '--energy'].includes(a)) args[a.slice(2)] = argv[++i];
+    else if (a === '--voice-lengths') args.voiceLengths = true;
+    else if (a === '--whisper') args.whisper = true;
+    else if (a === '--draft') args.draft = true;
+    else if (a === '--batch') args.batch = true;
+    else if (['--duration', '--fps', '--stills', '--outdir', '--sample', '--motif', '--key', '--mode', '--bpm', '--energy', '--variant', '--variants', '--cover', '--workers'].includes(a)) args[a.slice(2)] = argv[++i];
     else if (a === '-h' || a === '--help') args.help = true;
     else args.positional.push(a);
   }
@@ -219,9 +234,13 @@ function meanLuma(file) {
 // Images are decoded up front. Returns problems to warn about.
 async function prepareMedia(page) {
   const problems = [];
+  // A clip that fills the frame (a background) is cut to 1080x1920. One in a smaller box, like a
+  // screen recording in the phone frame, is cut to that box's own shape instead, so a tall
+  // recording isn't cropped to 9:16 first and then cropped again to fit the box.
   const videos = await page.evaluate(() => [...document.querySelectorAll('video')].map((v, i) => {
     v.dataset.renderIndex = String(i);
-    return v.currentSrc || v.src || v.querySelector('source')?.src || '';
+    const full = !!v.closest('.bg') || !v.offsetWidth || !v.offsetHeight;
+    return { src: v.currentSrc || v.src || v.querySelector('source')?.src || '', w: full ? 0 : v.offsetWidth, h: full ? 0 : v.offsetHeight };
   }));
   const cacheDir = path.join(os.tmpdir(), 'render-video-cache');
   if (videos.length && !hasFfmpeg()) {
@@ -229,7 +248,11 @@ async function prepareMedia(page) {
     return problems;
   }
   for (let i = 0; i < videos.length; i++) {
-    const src = videos[i];
+    const { src, w, h } = videos[i];
+    // twice the box's size for sharpness, within the frame, in even numbers for the encoder
+    const scale = w ? Math.min(2, WIDTH / w, HEIGHT / h) : 1;
+    const W = w ? 2 * Math.round((w * scale) / 2) : WIDTH;
+    const H = h ? 2 * Math.round((h * scale) / 2) : HEIGHT;
     if (!src.startsWith('file:')) {
       problems.push(`video ${src || '(no src)'} isn't a local file; download it into assets/ first (media.js does this)`);
       continue;
@@ -240,12 +263,12 @@ async function prepareMedia(page) {
       continue;
     }
     const st = fs.statSync(file);
-    const key = crypto.createHash('sha1').update(`${file}|${st.size}|${st.mtimeMs}`).digest('hex').slice(0, 16);
+    const key = crypto.createHash('sha1').update(`${file}|${st.size}|${st.mtimeMs}|${W}x${H}`).digest('hex').slice(0, 16);
     const dir = path.join(cacheDir, key);
     if (!fs.existsSync(path.join(dir, 'done'))) {
       fs.rmSync(dir, { recursive: true, force: true });
       fs.mkdirSync(dir, { recursive: true });
-      ffmpeg(['-i', file, '-vf', 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30',
+      ffmpeg(['-i', file, '-vf', `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=30`,
         '-q:v', '3', path.join(dir, '%05d.jpg')]);
       fs.writeFileSync(path.join(dir, 'done'), '');
     }
@@ -256,6 +279,7 @@ async function prepareMedia(page) {
       for (const { name, value } of v.attributes) if (!['src', 'autoplay', 'loop', 'muted', 'controls', 'playsinline', 'preload', 'data-render-index'].includes(name)) img.setAttribute(name, value);
       img.dataset.frames = framesUrl;
       img.dataset.count = String(n);
+      img.dataset.srcFile = v.currentSrc || v.src || v.querySelector('source')?.src || '';
       img.src = `${framesUrl}/00001.jpg`;
       img.alt = '';
       v.replaceWith(img);
@@ -391,20 +415,112 @@ async function lintLayout(page, seconds) {
   }, [seconds, SAFE_ZONE]);
 }
 
-// Lints the page every `step` seconds, and returns each problem once (at its first time).
+// What text is readable right now, and whether anything is moving: each visible text element
+// (an id that stays with it across seeks, its word count, and whether it's a caption synced to
+// a voice), and `active` if any finite animation outside the background is mid-flight.
+async function textSnapshot(page) {
+  return page.evaluate(() => {
+    const out = { texts: [], active: false };
+    const opacity = (el) => {
+      let o = 1;
+      for (let e = el; e && e !== document.documentElement; e = e.parentElement) {
+        const cs = getComputedStyle(e);
+        if (cs.display === 'none' || cs.visibility === 'hidden') return 0;
+        o *= parseFloat(cs.opacity);
+      }
+      return o;
+    };
+    for (const el of document.body.querySelectorAll('*')) {
+      if (el.closest('.bg, .bg-media, [data-lint="off"], script, style')) continue;
+      if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+      if (opacity(el) < 0.5) continue;
+      if (!el.dataset.lintId) el.dataset.lintId = String((window.lintIds = (window.lintIds || 0) + 1));
+      const text = el.textContent.trim().replace(/\s+/g, ' ');
+      out.texts.push({ id: el.dataset.lintId, words: text.split(' ').length, text: text.slice(0, 48), synced: !!el.closest('.say') });
+    }
+    for (const a of document.getAnimations()) {
+      const target = a.effect && a.effect.target;
+      if (!target || target.closest('.bg, .glow')) continue;
+      const c = a.effect.getComputedTiming();
+      if (c.activeDuration === Infinity || c.localTime === null) continue;
+      if (c.localTime > c.delay && c.localTime < c.delay + c.activeDuration) {
+        out.active = true;
+        break;
+      }
+    }
+    return out;
+  });
+}
+
+// Retention checks over the sampled timeline: the first frame (the default cover, and the moment
+// a viewer decides to stay) and the first second need text; every caption needs to stay up
+// long enough to read (allowing one sample of slack); and, as advice rather than a failure,
+// the screen shouldn't sit unchanged for more than STATIC_LIMIT seconds outside a data-break.
+// Captions synced to a voice are exempt from the reading check, since they're heard as read.
+const READ_WORDS_PER_SECOND = 4;
+const STATIC_LIMIT = 3;
+function retentionProblems(samples, duration, step, breaks) {
+  const problems = [];
+  if (!samples.filter((x) => x.t <= 1 + 1e-6).some((x) => x.texts.length)) {
+    problems.push({ t: 0, kind: 'no text on screen in the first second', text: '', detail: 'viewers decide in that second, sound off; put the hook on screen from frame 0 (class "now")' });
+  } else if (!samples[0].texts.length) {
+    problems.push({ t: 0, kind: 'the first frame has no text', text: '', detail: 'it\'s the default cover and the swipe decision; give the hook class "now" instead of an entrance' });
+  }
+  const shown = new Map();
+  for (const x of samples) {
+    for (const tx of x.texts) {
+      const e = shown.get(tx.id) || { ...tx, first: x.t, count: 0 };
+      e.count++;
+      shown.set(tx.id, e);
+    }
+  }
+  for (const e of shown.values()) {
+    if (e.synced || e.words < 3) continue;
+    const need = e.words / READ_WORDS_PER_SECOND + 0.2;
+    const up = e.count * step;
+    if (up + step < need) {
+      problems.push({ t: e.first, kind: 'is on screen too briefly to read', text: e.text, detail: `about ${up.toFixed(1)}s for ${e.words} words; give it ${need.toFixed(1)}s, or cut words` });
+    }
+  }
+  const inBreak = (a, b) => breaks.some(([s, e]) => a >= s - 0.3 && b <= e + 0.3);
+  let since = 0;
+  let prev = null;
+  for (const x of samples) {
+    const sig = x.texts.map((tx) => tx.id).sort().join(',');
+    if (x.active || sig !== prev) {
+      if (x.t - since > STATIC_LIMIT && since < duration - 1.5 && !inBreak(since, x.t)) {
+        problems.push({ t: since, kind: 'nothing changes on screen', text: '', advice: true, detail: `${since.toFixed(2)}–${x.t.toFixed(2)}s; fine for a punchline or a list to scan, otherwise add a beat (a new line, a cue, a background change)` });
+      }
+      since = x.t;
+    }
+    prev = sig;
+  }
+  return problems;
+}
+
+const parseBreaks = (v) => String(v || '').split(',').map((w) => /^\s*(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*$/.exec(w)).filter(Boolean).map((m) => [parseFloat(m[1]), parseFloat(m[2])]);
+
+// Lints the page every `step` seconds, and returns each problem once (at its first time):
+// the layout at every sample, then the retention checks over the whole timeline.
 async function lintTimeline(page, duration, step = 0.25) {
   const seen = new Map();
+  const samples = [];
   for (let t = 0; t <= duration + 1e-6; t += step) {
-    await seek(page, Math.min(t, duration - 0.01));
-    for (const p of await lintLayout(page, Math.min(t, duration - 0.01))) {
+    const at = Math.min(t, duration - 0.01);
+    await seek(page, at);
+    for (const p of await lintLayout(page, at)) {
       const key = `${p.kind}|${p.text}`;
       if (!seen.has(key)) seen.set(key, p);
     }
+    samples.push({ t: at, ...(await textSnapshot(page)) });
   }
-  return [...seen.values()];
+  const breaks = parseBreaks(await page.evaluate(() => document.body.dataset.break));
+  return [...seen.values(), ...retentionProblems(samples, duration, step, breaks)];
 }
 
-const describeLint = (p) => `${p.t.toFixed(2)}s: "${p.text}" ${p.kind}${p.detail ? ` (${p.detail})` : ''}`;
+const describeLint = (p) => `${p.t.toFixed(2)}s: ${p.text ? `"${p.text}" ` : ''}${p.kind}${p.detail ? ` (${p.detail})` : ''}`;
+// Advice (pacing notes) is shown but doesn't fail a check.
+const lintLabel = (p) => (p.advice ? 'Pacing' : 'Layout');
 
 // The settled moment of each scene, just before it leaves: one per .scene, .gone, or .swap exit,
 // plus the end. <body data-slides="2.6,6.8,..."> overrides. Used for --slides and check.js.
@@ -452,13 +568,47 @@ async function readPage(page) {
     // spoken lines: one take on <body>, and/or one clip per element at its --voice (or --in) time
     const voices = [];
     if (d.voiceSrc) voices.push({ src: new URL(d.voiceSrc, location.href).href, time: num(d.voiceStart) || 0 });
-    for (const el of document.querySelectorAll('[data-voice]')) {
+    document.querySelectorAll('[data-voice]').forEach((el, index) => {
       const cs = getComputedStyle(el);
       let time = toSeconds(cs.getPropertyValue('--voice'));
       if (Number.isNaN(time)) time = toSeconds(cs.getPropertyValue('--in'));
-      if (Number.isNaN(time)) problems.push(`data-voice="${el.dataset.voice}" but the element has no --voice or --in time`);
-      else voices.push({ src: new URL(el.dataset.voice, location.href).href, time });
-    }
+      if (Number.isNaN(time)) {
+        problems.push(`data-voice="${el.dataset.voice}" but the element has no --voice or --in time`);
+        return;
+      }
+      el.dataset.voiceIndex = String(index);
+      const scene = el.closest('.scene');
+      const sceneOut = scene ? toSeconds(scene.style.getPropertyValue('--out')) : NaN;
+      // <div class="say auto" data-voice="..."> gets word-by-word captions of its own text
+      const caption = el.matches('.say.auto') ? el.textContent.replace(/\s+/g, ' ').trim() : '';
+      voices.push({ src: new URL(el.dataset.voice, location.href).href, time, index, sceneOut, caption });
+    });
+    // A filmed clip that keeps its own sound: <video data-audio> plays it in sync with the
+    // picture, from data-offset seconds into the file, while the clip is on screen. Captions for
+    // it go in <div class="say auto" data-clip="<the video's id>">the words said</div>.
+    const captionFor = new Map();
+    for (const el of document.querySelectorAll('.say.auto[data-clip]')) captionFor.set(el.dataset.clip, el);
+    document.querySelectorAll('[data-audio]').forEach((el, k) => {
+      const src = el.dataset.srcFile || el.currentSrc || el.src;
+      const cs = getComputedStyle(el);
+      const time = toSeconds(cs.getPropertyValue('--in')) || 0;
+      const holder = el.closest('.bg') || el.closest('.scene');
+      const sceneOut = holder ? toSeconds(holder.style.getPropertyValue('--out')) : NaN;
+      const capEl = el.id ? captionFor.get(el.id) : null;
+      let index;
+      if (capEl) {
+        index = `clip-${k}`;
+        capEl.dataset.voiceIndex = index;
+        captionFor.delete(el.id);
+      }
+      voices.push({
+        src, time, index, sceneOut, sync: true, offset: parseFloat(el.dataset.offset) || 0,
+        // the sound stops when the clip leaves the screen
+        maxLength: Number.isFinite(sceneOut) ? Math.max(0, sceneOut - time) : undefined,
+        caption: capEl ? capEl.textContent.replace(/\s+/g, ' ').trim() : '',
+      });
+    });
+    for (const id of captionFor.keys()) problems.push(`a caption has data-clip="${id}" but no <video data-audio id="${id}"> was found`);
     return {
       cues,
       problems,
@@ -520,7 +670,7 @@ function checkMusic(settings) {
   for (const v of settings.voices || []) {
     const file = v.src.startsWith('file:') ? fileURLToPath(v.src) : '';
     if (!file || !fs.existsSync(file)) problems.push(`voice clip not found (${file || v.src}); leaving it out`);
-    else settings.voiceClips.push({ file, time: v.time });
+    else settings.voiceClips.push({ ...v, file });
   }
   return problems;
 }
@@ -539,6 +689,7 @@ function checkMix(settings, duration) {
   return problems;
 }
 
+const hasAudioStream = (file) => /audio/.test(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', file], { encoding: 'utf8' }).stdout);
 const probeDuration = (file) => parseFloat(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', file], { encoding: 'utf8' }).stdout);
 
 // Mixes a licensed track (trimmed, faded) under the generated sound effects, dipping it a
@@ -579,29 +730,118 @@ function measureAudio(file, filter = '') {
 const VOICE_LUFS = -26;
 const BED_UNDER_VOICE = 7;
 
+// Cleans up and levels one spoken line, so lines recorded at different distances match: low
+// rumble filtered, silence trimmed from both ends (the line starts at its cue, and its length
+// is the speech itself), light compression, then leveled to VOICE_LUFS. Cached across runs.
+// Returns { prepared, length, trimmed }, where trimmed is how much silence came off the start.
+const VOICE_CACHE = path.join(os.tmpdir(), 'render-video-cache', 'voice');
+//
+// A filmed clip's sound ({ sync: true }) keeps its silences, so it stays in step with the
+// picture; `offset` and `maxLength` pick the stretch that plays.
+function prepareVoice(file, { sync = false, offset = 0, maxLength } = {}) {
+  const st = fs.statSync(file);
+  const key = crypto.createHash('sha1').update(`${file}|${st.size}|${st.mtimeMs}|${VOICE_LUFS}|2|${sync}|${offset}|${maxLength}`).digest('hex').slice(0, 16);
+  const prepared = path.join(VOICE_CACHE, `${key}.wav`);
+  const meta = `${prepared}.json`;
+  if (!fs.existsSync(meta)) {
+    fs.mkdirSync(VOICE_CACHE, { recursive: true });
+    const raw = path.join(VOICE_CACHE, `${key}-raw.wav`);
+    const lead = path.join(VOICE_CACHE, `${key}-lead.wav`);
+    const window = [...(offset ? ['-ss', String(offset)] : []), ...(maxLength ? ['-t', String(maxLength)] : [])];
+    // the leading trim on its own first, to know how much it took off
+    ffmpeg([...window, '-i', file, '-vn', '-af', 'aresample=48000,aformat=channel_layouts=stereo,highpass=f=80' +
+      (sync ? '' : ',silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.08'), '-c:a', 'pcm_s16le', lead]);
+    const trimmed = sync ? 0 : Math.max(0, probeDuration(file) - offset - probeDuration(lead));
+    // trailing silence: reversed, trimmed like the start, reversed back
+    ffmpeg(['-i', lead, '-af', (sync ? '' : 'areverse,silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.15,areverse,') +
+      'acompressor=threshold=0.1:ratio=2.5:attack=15:release=200', '-c:a', 'pcm_s16le', raw]);
+    const { lufs } = measureAudio(raw);
+    ffmpeg(['-i', raw, '-af', `volume=${Number.isFinite(lufs) ? (VOICE_LUFS - lufs).toFixed(2) : 0}dB`, '-c:a', 'pcm_s16le', prepared]);
+    fs.rmSync(raw, { force: true });
+    fs.rmSync(lead, { force: true });
+    fs.writeFileSync(meta, JSON.stringify({ length: probeDuration(prepared), trimmed }));
+  }
+  return { prepared, ...JSON.parse(fs.readFileSync(meta, 'utf8')) };
+}
+
+// Prepares every voice clip before any frame is captured, so the page can use real line
+// lengths: checks each line fits its scene, and puts word-by-word captions in every
+// <div class="say auto" data-voice>. Returns { problems, cues } (cues for an .srt file).
+async function prepareVoices(page, settings) {
+  const problems = [];
+  const cues = [];
+  // the caption styles go in whenever a page has auto captions, voiced or not (narrated.html
+  // previews them at a reading pace before any voice exists)
+  await page.evaluate((css) => {
+    if (!document.querySelector('.say.auto')) return;
+    const style = document.createElement('style');
+    style.textContent = css;
+    document.head.appendChild(style);
+  }, captions.CAPTION_CSS);
+  const clips = settings.voiceClips || [];
+  if (!clips.length) return { problems, cues };
+  if (!hasFfmpeg()) {
+    problems.push('ffmpeg is needed to measure voice clips and time captions; skipped');
+    return { problems, cues };
+  }
+  const sorted = [...clips].sort((a, b) => a.time - b.time);
+  for (const clip of [...clips]) {
+    const name = path.basename(clip.file);
+    if (clip.sync && !hasAudioStream(clip.file)) {
+      problems.push(`${name} has data-audio but no sound track; it plays silent`);
+      clips.splice(clips.indexOf(clip), 1);
+      continue;
+    }
+    Object.assign(clip, prepareVoice(clip.file, clip));
+    const end = clip.time + clip.length;
+    if (Number.isFinite(clip.sceneOut) && end > clip.sceneOut + 0.1) {
+      problems.push(`voice ${name} runs to ${end.toFixed(2)}s, past its scene's end at ${clip.sceneOut.toFixed(2)}s; give the scene ${(end - clip.sceneOut + 0.3).toFixed(1)}s more, or shorten the line`);
+    }
+    if (!clip.caption) continue;
+    const timing = await captions.alignWords(clip.prepared, clip.caption, { shift: clip.trimmed, sidecarFor: clip.file, whisper: !!settings.whisper });
+    for (const n of timing.notes) problems.push(`captions for ${name}: ${n}`);
+    clip.captionMethod = timing.method;
+    const chunks = captions.chunkWords(timing.words);
+    const next = sorted.find((c) => c.time > clip.time);
+    let hold = Number.isFinite(clip.sceneOut) ? clip.sceneOut : end + 0.5;
+    if (next) hold = Math.min(hold, next.time);
+    const html = captions.captionMarkup(chunks, clip.time, hold);
+    await page.evaluate(([index, markup]) => {
+      document.querySelector(`[data-voice-index="${index}"]`).innerHTML = markup;
+    }, [clip.index, html]);
+    chunks.forEach((c, i) => cues.push({
+      start: clip.time + c.start,
+      end: chunks[i + 1] ? clip.time + chunks[i + 1].start : Math.max(clip.time + c.end + 0.4, hold),
+      text: c.words.map((w) => w.text).join(' '),
+    }));
+  }
+  return { problems, cues: cues.sort((a, b) => a.start - b.start) };
+}
+
+// The voice clips' timing, for fitting scenes to them: when each line starts, how long it
+// runs once its leading silence is trimmed, and how much room its scene leaves.
+function describeVoices(clips) {
+  const rows = [...clips].sort((a, b) => a.time - b.time).map((c) => {
+    const end = c.time + c.length;
+    const room = Number.isFinite(c.sceneOut) ? `scene ends ${c.sceneOut.toFixed(2)}s (${c.sceneOut - end >= 0 ? '+' : ''}${(c.sceneOut - end).toFixed(2)}s)` : 'no scene end';
+    return `${path.basename(c.file).padEnd(16)} starts ${c.time.toFixed(2)}s  length ${c.length.toFixed(2)}s  ends ${end.toFixed(2)}s  ${room}${c.captionMethod ? `  captions: ${c.captionMethod}` : ''}`;
+  });
+  return rows.join('\n');
+}
+
 // Mixes spoken lines over the music and effects in `bedWav`, and writes the result to `out`
 // as a WAV. Returns problems to warn about.
 function mixVoice(clips, duration, bedWav, tmp, out) {
   const problems = [];
   const parts = [];
   let prevEnd = -Infinity;
-  [...clips].sort((a, b) => a.time - b.time).forEach((clip, i) => {
-    // each clip is cleaned up and leveled on its own, so lines recorded at different distances
-    // match: low rumble filtered, leading silence trimmed (the line starts at its cue), light
-    // compression
-    const raw = path.join(tmp, `voice-${i}-raw.wav`);
-    ffmpeg(['-i', clip.file, '-af', 'aresample=48000,aformat=channel_layouts=stereo,highpass=f=80,' +
-      'silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.08,' +
-      'acompressor=threshold=0.1:ratio=2.5:attack=15:release=200', '-c:a', 'pcm_s16le', raw]);
-    const { lufs } = measureAudio(raw);
-    const leveled = path.join(tmp, `voice-${i}.wav`);
-    ffmpeg(['-i', raw, '-af', `volume=${Number.isFinite(lufs) ? (VOICE_LUFS - lufs).toFixed(2) : 0}dB`, '-c:a', 'pcm_s16le', leveled]);
-    const len = probeDuration(leveled);
+  [...clips].sort((a, b) => a.time - b.time).forEach((clip) => {
+    if (!clip.prepared) Object.assign(clip, prepareVoice(clip.file, clip));
     const name = path.basename(clip.file);
     if (clip.time < prevEnd - 0.05) problems.push(`voice ${name} starts at ${clip.time.toFixed(2)}s, before the previous line ends at ${prevEnd.toFixed(2)}s, so they overlap`);
-    if (clip.time + len > duration + 0.05) problems.push(`voice ${name} runs ${(clip.time + len - duration).toFixed(1)}s past the end of the video and will be cut off`);
-    prevEnd = clip.time + len;
-    parts.push({ file: leveled, time: clip.time });
+    if (clip.time + clip.length > duration + 0.05) problems.push(`voice ${name} runs ${(clip.time + clip.length - duration).toFixed(1)}s past the end of the video and will be cut off`);
+    prevEnd = clip.time + clip.length;
+    parts.push({ file: clip.prepared, time: clip.time });
   });
   const voiceWav = path.join(tmp, 'voice.wav');
   ffmpeg([...parts.flatMap((p) => ['-i', p.file]), '-filter_complex',
@@ -693,105 +933,319 @@ function sample(args) {
   console.log(`Wrote ${out}: ${duration}s ${audio}`);
 }
 
+// Renders frames [from, to) at `fps` into one H.264 file. The frames are split across `workers`
+// browsers, each rendering a contiguous run into its own segment, and the segments are joined
+// without re-encoding. `open(browser)` returns a page ready to seek, set up the same way in
+// every worker; `onFrame(page, t)` runs before each capture (the layout lint uses it). `scale`
+// below 1 captures smaller frames, for drafts.
+async function renderFrames({ chromium, open, from = 0, to, fps, workers = 1, file, crf = 18, preset = 'slow', tune,
+  scale = 1, width = WIDTH, height = HEIGHT, onFrame }) {
+  const total = to - from;
+  const count = Math.max(1, Math.min(workers, Math.ceil(total / fps)));
+  const per = Math.ceil(total / count);
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'render-frames-'));
+  let done = 0;
+  const started = Date.now();
+  const progress = () => {
+    done++;
+    if (done % fps === 0 || done === total) {
+      const rate = done / Math.max(0.001, (Date.now() - started) / 1000);
+      process.stderr.write(`\rframe ${done}/${total} (${rate.toFixed(1)} fps, ~${Math.round((total - done) / rate)}s left)   `);
+    }
+  };
+  const clip = scale === 1 ? undefined : { x: 0, y: 0, width, height, scale };
+  const segment = async (first, last, out) => {
+    const browser = await launchBrowser(chromium);
+    try {
+      const page = await open(browser);
+      const cdp = await page.context().newCDPSession(page);
+      const encoder = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(fps), '-i', '-',
+        '-c:v', 'libx264', '-preset', preset, '-crf', String(crf), ...(tune ? ['-tune', tune] : []), '-pix_fmt', 'yuv420p',
+        '-profile:v', 'high', '-r', String(fps), out], { stdio: ['pipe', 'inherit', 'inherit'] });
+      const encoded = new Promise((resolve) => encoder.on('close', resolve));
+      for (let i = first; i < last; i++) {
+        await seek(page, i / fps);
+        if (onFrame) await onFrame(page, i / fps);
+        const { data } = await cdp.send('Page.captureScreenshot', { format: 'png', optimizeForSpeed: true, ...(clip ? { clip } : {}) });
+        if (!encoder.stdin.write(Buffer.from(data, 'base64'))) await new Promise((r) => encoder.stdin.once('drain', r));
+        progress();
+      }
+      encoder.stdin.end();
+      if ((await encoded) !== 0) throw new Error(`ffmpeg failed while encoding ${out}`);
+    } finally {
+      await browser.close();
+    }
+  };
+  const segments = [];
+  const jobs = [];
+  for (let w = 0; w < count; w++) {
+    const first = from + w * per;
+    const last = Math.min(to, first + per);
+    if (first >= last) break;
+    const out = path.join(tmp, `seg${w}.mp4`);
+    segments.push(out);
+    jobs.push(segment(first, last, out));
+  }
+  await Promise.all(jobs);
+  process.stderr.write('\n');
+  const list = path.join(tmp, 'segments.txt');
+  fs.writeFileSync(list, segments.map((f) => `file '${f}'`).join('\n'));
+  ffmpeg(['-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', '-movflags', '+faststart', file]);
+  fs.rmSync(tmp, { recursive: true, force: true });
+  return { seconds: (Date.now() - started) / 1000, workers: segments.length };
+}
+
+// Workers by default: one per core but one, up to four (each is a whole browser).
+const defaultWorkers = () => Math.max(1, Math.min(4, os.cpus().length - 1));
+
+// Hook variants: elements with data-variant="a" (or "a b") appear only in those variants.
+// Removes every other variant's elements, before media, sound cues, and voices are read.
+async function variantsOf(page) {
+  return page.evaluate(() => [...new Set([...document.querySelectorAll('[data-variant]')]
+    .flatMap((el) => el.dataset.variant.split(/[\s,]+/).filter(Boolean)))].sort());
+}
+async function applyVariant(page, variant) {
+  await page.evaluate((v) => {
+    for (const el of document.querySelectorAll('[data-variant]')) {
+      if (!el.dataset.variant.split(/[\s,]+/).includes(v)) el.remove();
+    }
+  }, variant);
+}
+
+// The profile grids on Instagram and TikTok show a 3:4 crop from the middle of a 9:16 cover
+// (1080x1440, from y=240 to y=1680), so the cover's text has to sit inside it.
+const GRID_CROP = { top: 240, bottom: 1680 };
+async function coverProblems(page, t) {
+  const boxes = await page.evaluate(() => {
+    const out = [];
+    for (const el of document.body.querySelectorAll('*')) {
+      if (el.closest('.bg, .bg-media, [data-lint="off"], script, style')) continue;
+      if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+      let o = 1;
+      for (let e = el; e && e !== document.documentElement; e = e.parentElement) {
+        const cs = getComputedStyle(e);
+        if (cs.display === 'none' || cs.visibility === 'hidden') { o = 0; break; }
+        o *= parseFloat(cs.opacity);
+      }
+      if (o < 0.5) continue;
+      const r = el.getBoundingClientRect();
+      out.push({ top: r.top, bottom: r.bottom, text: el.textContent.trim().replace(/\s+/g, ' ').slice(0, 48) });
+    }
+    return out;
+  });
+  if (!boxes.length) return [{ t, kind: 'the cover has no text', text: '', detail: 'pick a moment that shows the hook, or give the hook class "now" and use --cover 0' }];
+  return boxes.filter((b) => b.top < GRID_CROP.top || b.bottom > GRID_CROP.bottom)
+    .map((b) => ({ t, kind: 'is cut off in the profile grid', text: b.text, detail: `the grid shows y ${GRID_CROP.top}-${GRID_CROP.bottom} of the cover` }));
+}
+
+// Writes the cover at `t` seconds to `file`, and returns its problems.
+async function writeCover(page, t, file) {
+  await seek(page, t);
+  await page.screenshot({ path: file });
+  return [...await lintLayout(page, t), ...await coverProblems(page, t)];
+}
+
+// out.mp4 -> out-b.mp4, for one of several variants
+const withVariant = (file, variant, many) => (many && variant ? file.replace(/(\.[^./]+)?$/, (ext) => `-${variant}${ext || ''}`) : file);
+
+// Opens a page and sets it up for seeking: the variant, background clips, sound settings, and
+// voice lines with their captions. Every render worker sets its page up the same way.
+async function preparePage(browser, pagePath, args, variant) {
+  const { page, problems: fontProblems } = await openPage(browser, pagePath);
+  if (variant) await applyVariant(page, variant);
+  const mediaProblems = await prepareMedia(page);
+  const settings = await readPage(page);
+  settings.whisper = args.whisper;
+  settings.problems.push(...fontProblems, ...mediaProblems, ...checkMusic(settings));
+  const voiced = await prepareVoices(page, settings);
+  settings.problems.push(...voiced.problems);
+  return { page, settings, voiced };
+}
+
+// Opens the page (in one variant, if it has them) and does what was asked. Returns an exit code.
+async function runPage(browser, pagePath, outPath, args, variant, many) {
+  const label = variant ? ` [variant ${variant}]` : '';
+  const { page, settings, voiced } = await preparePage(browser, pagePath, args, variant);
+  for (const p of settings.problems) console.warn(`Warning${label}: ${p}`);
+  const pageDir = path.dirname(path.resolve(pagePath));
+  const pageBase = path.basename(pagePath).replace(/\.html?$/, '');
+  try {
+    if (args.voiceLengths) {
+      console.log(settings.voiceClips.length ? describeVoices(settings.voiceClips) : 'No data-voice clips on this page.');
+      return 0;
+    }
+    if (args.stills) {
+      const outdir = withVariant(args.outdir || path.join(pageDir, 'stills'), variant, many);
+      fs.mkdirSync(outdir, { recursive: true });
+      const lint = [];
+      for (const t of args.stills.split(',').map(Number)) {
+        await seek(page, t);
+        lint.push(...await lintLayout(page, t));
+        const file = path.join(outdir, `still_${t.toFixed(2)}s.png`);
+        await page.screenshot({ path: file });
+        console.log(file);
+      }
+      for (const p of lint) console.warn(`Layout${label}: ${describeLint(p)}`);
+      return 0;
+    }
+    if (args.cover !== undefined && !outPath) {
+      const file = withVariant(path.join(args.outdir || pageDir, `${pageBase}-cover.png`), variant, many);
+      if (args.outdir) fs.mkdirSync(args.outdir, { recursive: true });
+      const problems = await writeCover(page, Number(args.cover), file);
+      for (const p of problems) console.warn(`Cover${label}: ${describeLint(p)}`);
+      console.log(`${file} (post with --cover-ms ${Math.round(Number(args.cover) * 1000)})`);
+      return problems.length ? 1 : 0;
+    }
+
+    const duration = Number(args.duration || settings.duration);
+    if (!(duration > 0)) fail('Set the length with <body data-duration="24"> on the page, or pass --duration.');
+    for (const p of checkMix(settings, duration)) console.warn(`Warning${label}: ${p}`);
+    if (args.check) {
+      const lint = await lintTimeline(page, duration);
+      for (const p of lint) console.warn(`${lintLabel(p)}${label}: ${describeLint(p)}`);
+      const failing = lint.filter((p) => !p.advice);
+      console.log(failing.length ? `${failing.length} layout problem(s) in ${pagePath}${label}` : `No layout problems in ${pagePath}${label}`);
+      return failing.length || settings.problems.length ? 1 : 0;
+    }
+    if (args.slides) {
+      const outdir = withVariant(args.outdir || path.join(pageDir, 'slides'), variant, many);
+      fs.mkdirSync(outdir, { recursive: true });
+      const lint = [];
+      const times = await slideTimes(page, duration);
+      for (let i = 0; i < times.length; i++) {
+        await seek(page, times[i]);
+        lint.push(...await lintLayout(page, times[i]));
+        const file = path.join(outdir, `slide_${String(i + 1).padStart(2, '0')}.png`);
+        await page.screenshot({ path: file });
+        console.log(file);
+      }
+      for (const p of lint) console.warn(`Layout${label}: ${describeLint(p)}`);
+      return 0;
+    }
+    const out = withVariant(outPath, variant, many);
+    if (args.audioOnly) {
+      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'render-'));
+      const { audio } = writeSoundtrack(settings, duration, tmp, null, out);
+      fs.rmSync(tmp, { recursive: true, force: true });
+      console.log(`Wrote ${out}: ${duration}s ${audio}`);
+      return 0;
+    }
+    // a draft is half size at 15fps, quick to make and enough to check timing and sync
+    const fps = Number(args.fps || (args.draft ? 15 : 30));
+    const frames = Math.round(duration * fps);
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'render-'));
+    const videoOnly = path.join(tmp, 'video.mp4');
+    const lintSeen = new Map();
+    let lintEvery = 0;
+    const timing = await renderFrames({
+      chromium: args.chromium,
+      open: async (b) => (await preparePage(b, pagePath, args, variant)).page,
+      to: frames, fps, file: videoOnly,
+      workers: Number(args.workers || defaultWorkers()),
+      ...(args.draft ? { scale: 0.5, preset: 'ultrafast', crf: 26 } : {}),
+      onFrame: async (p, t) => {
+        if (lintEvery++ % 8) return;
+        for (const x of await lintLayout(p, t)) if (!lintSeen.has(`${x.kind}|${x.text}`)) lintSeen.set(`${x.kind}|${x.text}`, x);
+      },
+    });
+    let coverFile = '';
+    let coverIssues = [];
+    if (args.cover !== undefined) {
+      coverFile = out.replace(/\.[^./]+$/, '') + '-cover.png';
+      coverIssues = await writeCover(page, Number(args.cover), coverFile);
+    }
+
+    let audio = 'silent track';
+    if (args.silent) muxSilence(videoOnly, out);
+    else ({ audio } = writeSoundtrack(settings, duration, tmp, videoOnly, out));
+    fs.rmSync(tmp, { recursive: true, force: true });
+    for (const p of lintSeen.values()) console.warn(`Layout${label}: ${describeLint(p)}`);
+    const size = args.draft ? `${WIDTH / 2}x${HEIGHT / 2} draft` : `${WIDTH}x${HEIGHT}`;
+    console.log(`Wrote ${out}: ${size}, ${duration}s at ${fps}fps, ${audio} (rendered in ${Math.round(timing.seconds)}s on ${timing.workers} worker${timing.workers === 1 ? '' : 's'})`);
+    if (voiced.cues.length) {
+      // the captions as a track for the platforms' own caption upload (YouTube takes .srt)
+      const srt = out.replace(/\.[^./]+$/, '') + '.srt';
+      fs.writeFileSync(srt, captions.toSrt(voiced.cues.filter((c) => c.start < duration)));
+      console.log(`Wrote ${srt}: ${voiced.cues.length} caption cues`);
+    }
+    if (coverFile) {
+      for (const p of coverIssues) console.warn(`Cover${label}: ${describeLint(p)}`);
+      console.log(`Wrote ${coverFile} (post with --cover-ms ${Math.round(Number(args.cover) * 1000)})`);
+    }
+    return 0;
+  } finally {
+    await page.close();
+  }
+}
+
+// --batch: renders every page given, each to <page>.mp4 (in --outdir, or next to the page), every
+// hook variant of a page with variants, one after another. For a week of queued videos.
+async function batch(args) {
+  const pages = args.positional;
+  if (!pages.length) fail('Usage: node render.js --batch <page.html> [<page.html> ...] [--outdir dir] [--cover 0] [--draft]');
+  for (const p of pages) if (!fs.existsSync(p)) fail(`No page found at ${p}`);
+  requireFfmpeg();
+  const { chromium } = loadPlaywright();
+  args.chromium = chromium;
+  const browser = await launchBrowser(chromium);
+  const results = [];
+  for (const pagePath of pages) {
+    const out = path.join(args.outdir || path.dirname(path.resolve(pagePath)), `${path.basename(pagePath).replace(/\.html?$/, '')}.mp4`);
+    if (args.outdir) fs.mkdirSync(args.outdir, { recursive: true });
+    const probe = await openPage(browser, pagePath);
+    const found = await variantsOf(probe.page);
+    await probe.page.close();
+    for (const v of found.length ? found : [null]) {
+      console.log(`\n== ${pagePath}${v ? ` [variant ${v}]` : ''}`);
+      let code;
+      try {
+        code = await runPage(browser, pagePath, out, args, v, found.length > 1);
+      } catch (e) {
+        console.error(e.message || e);
+        code = 1;
+      }
+      results.push({ page: pagePath, variant: v, out: withVariant(out, v, found.length > 1), ok: code === 0 });
+    }
+  }
+  await browser.close();
+  console.log(`\nRendered ${results.filter((r) => r.ok).length} of ${results.length}:`);
+  for (const r of results) console.log(`  ${r.ok ? 'ok    ' : 'FAILED'} ${r.out}`);
+  process.exit(results.every((r) => r.ok) ? 0 : 1);
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.sample) return sample(args);
+  if (args.batch) return batch(args);
   const [pagePath, outPath] = args.positional;
-  if (args.help || !pagePath || (!outPath && !args.stills && !args.check && !args.slides)) {
+  if (args.help || !pagePath || (!outPath && !args.stills && !args.check && !args.slides && !args.voiceLengths && args.cover === undefined)) {
     console.log(fs.readFileSync(__filename, 'utf8').split('*/')[0].replace(/^[\s\S]*?\/\*/, '').replace(/^ \* ?/gm, ''));
     process.exit(args.help ? 0 : 2);
   }
   if (!fs.existsSync(pagePath)) fail(`No page found at ${pagePath}`);
-  if (!args.stills && !args.check && !args.slides) requireFfmpeg();
+  if (args.cover !== undefined && !(Number(args.cover) >= 0)) fail('--cover takes the time of the cover frame in seconds, e.g. --cover 0');
+  if (outPath && !args.stills && !args.check && !args.slides && !args.voiceLengths) requireFfmpeg();
 
   const { chromium } = loadPlaywright();
+  args.chromium = chromium;
   const browser = await launchBrowser(chromium);
-  const { page, problems: fontProblems } = await openPage(browser, pagePath);
-  const mediaProblems = await prepareMedia(page);
-  const settings = await readPage(page);
-  settings.problems.push(...fontProblems, ...mediaProblems, ...checkMusic(settings));
-  for (const p of settings.problems) console.warn(`Warning: ${p}`);
-
-  if (args.stills) {
-    const outdir = args.outdir || path.join(path.dirname(path.resolve(pagePath)), 'stills');
-    fs.mkdirSync(outdir, { recursive: true });
-    const lint = [];
-    for (const t of args.stills.split(',').map(Number)) {
-      await seek(page, t);
-      lint.push(...await lintLayout(page, t));
-      const file = path.join(outdir, `still_${t.toFixed(2)}s.png`);
-      await page.screenshot({ path: file });
-      console.log(file);
-    }
-    for (const p of lint) console.warn(`Layout: ${describeLint(p)}`);
-    await browser.close();
-    return;
+  const probe = await openPage(browser, pagePath);
+  const found = await variantsOf(probe.page);
+  await probe.page.close();
+  const asked = String(args.variants || args.variant || '').split(',').map((v) => v.trim()).filter(Boolean);
+  for (const v of asked) {
+    if (!found.includes(v)) fail(found.length ? `No variant "${v}" on this page (it has ${found.join(', ')}).` : `This page has no data-variant elements, so there's no variant "${v}".`);
   }
-
-  const duration = Number(args.duration || settings.duration);
-  if (!(duration > 0)) fail('Set the length with <body data-duration="24"> on the page, or pass --duration.');
-  for (const p of checkMix(settings, duration)) console.warn(`Warning: ${p}`);
-  if (args.check) {
-    const lint = await lintTimeline(page, duration);
-    await browser.close();
-    for (const p of lint) console.warn(`Layout: ${describeLint(p)}`);
-    console.log(lint.length ? `${lint.length} layout problem(s) in ${pagePath}` : `No layout problems in ${pagePath}`);
-    process.exit(lint.length || settings.problems.length ? 1 : 0);
+  let variants = asked.length ? asked : found;
+  const rendering = outPath && !args.stills && !args.check && !args.slides && !args.voiceLengths;
+  if (rendering && found.length && !asked.length) {
+    fail(`This page has hook variants (${found.join(', ')}). Render one with --variant ${found[0]}, or all with --variants ${found.join(',')}.`);
   }
-  if (args.slides) {
-    const outdir = args.outdir || path.join(path.dirname(path.resolve(pagePath)), 'slides');
-    fs.mkdirSync(outdir, { recursive: true });
-    const lint = [];
-    const times = await slideTimes(page, duration);
-    for (let i = 0; i < times.length; i++) {
-      await seek(page, times[i]);
-      lint.push(...await lintLayout(page, times[i]));
-      const file = path.join(outdir, `slide_${String(i + 1).padStart(2, '0')}.png`);
-      await page.screenshot({ path: file });
-      console.log(file);
-    }
-    for (const p of lint) console.warn(`Layout: ${describeLint(p)}`);
-    await browser.close();
-    return;
-  }
-  if (args.audioOnly) {
-    await browser.close();
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'render-'));
-    const { audio } = writeSoundtrack(settings, duration, tmp, null, outPath);
-    fs.rmSync(tmp, { recursive: true, force: true });
-    console.log(`Wrote ${outPath}: ${duration}s ${audio}`);
-    return;
-  }
-  const fps = Number(args.fps || 30);
-  const frames = Math.round(duration * fps);
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'render-'));
-  const videoOnly = path.join(tmp, 'video.mp4');
-
-  const encoder = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(fps), '-i', '-',
-    '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-r', String(fps),
-    '-movflags', '+faststart', videoOnly], { stdio: ['pipe', 'inherit', 'inherit'] });
-  const encoded = new Promise((resolve) => encoder.on('close', resolve));
-  const lintSeen = new Map();
-  for (let i = 0; i < frames; i++) {
-    await seek(page, i / fps);
-    if (i % 8 === 0) {
-      for (const p of await lintLayout(page, i / fps)) if (!lintSeen.has(`${p.kind}|${p.text}`)) lintSeen.set(`${p.kind}|${p.text}`, p);
-    }
-    const png = await page.screenshot({ type: 'png' });
-    if (!encoder.stdin.write(png)) await new Promise((r) => encoder.stdin.once('drain', r));
-    if (i % fps === 0) process.stderr.write(`\rframe ${i}/${frames}`);
-  }
-  encoder.stdin.end();
-  if ((await encoded) !== 0) fail('ffmpeg failed while encoding the frames.');
-  process.stderr.write(`\rframe ${frames}/${frames}\n`);
+  if (!variants.length) variants = [null];
+  let code = 0;
+  for (const v of variants) code = Math.max(code, await runPage(browser, pagePath, outPath, args, v, variants.length > 1));
   await browser.close();
-
-  let audio = 'silent track';
-  if (args.silent) muxSilence(videoOnly, outPath);
-  else ({ audio } = writeSoundtrack(settings, duration, tmp, videoOnly, outPath));
-  fs.rmSync(tmp, { recursive: true, force: true });
-  for (const p of lintSeen.values()) console.warn(`Layout: ${describeLint(p)}`);
-  console.log(`Wrote ${outPath}: ${WIDTH}x${HEIGHT}, ${duration}s at ${fps}fps, ${audio}`);
+  process.exit(code);
 }
 
 if (require.main === module) {
@@ -803,5 +1257,7 @@ if (require.main === module) {
 
 module.exports = {
   WIDTH, HEIGHT, loadPlaywright, launchBrowser, openPage, prepareMedia, readPage, checkMusic, checkMix, mixVoice, seek,
-  lintLayout, lintTimeline, describeLint, slideTimes, writeSoundtrack, measureAudio, muxSoundtrack,
+  lintLayout, lintTimeline, describeLint, lintLabel, slideTimes, textSnapshot, retentionProblems, writeSoundtrack, measureAudio, muxSoundtrack,
+  prepareVoice, prepareVoices, describeVoices, probeDuration, variantsOf, applyVariant, coverProblems,
+  renderFrames, preparePage, defaultWorkers,
 };

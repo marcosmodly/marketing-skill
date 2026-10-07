@@ -90,6 +90,18 @@
   body:has(.bg-media) { --muted: #d2d1d8; }
   body:has(.bg-media) .scene, body:has(.bg-media) .stage { text-shadow: 0 2px 6px rgba(0,0,0,.35), 0 4px 30px rgba(0,0,0,.55); }
 
+  /* on screen from the very first frame, with a small settle instead of an entrance: for the
+     hook, since the first frame is the default cover and the moment a viewer decides to stay */
+  .now { animation: nowIn .5s cubic-bezier(.2,.8,.2,1) 0s both, fadeOut .3s ease-in var(--out, 999s) forwards; }
+  @keyframes nowIn { from { transform: scale(1.05); } to { transform: none; } }
+
+  /* the end card brand.js adds: the logo and handle, landing on the sonic logo */
+  .endcard { position: absolute; left: 90px; right: 150px; top: 330px; bottom: 470px; z-index: 5;
+             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 34px; text-align: center;
+             animation: fadeIn .35s ease-out var(--in, 999s) both; }
+  .endcard .logo { max-width: 380px; max-height: 300px; object-fit: contain; animation: popIn .55s cubic-bezier(.2,.9,.3,1.25) var(--in, 999s) both; }
+  .endcard .handle { font-size: 60px; font-weight: 800; letter-spacing: -1px; animation: riseIn .45s cubic-bezier(.2,.8,.2,1) calc(var(--in, 999s) + .15s) both; }
+
   /* ---- everyday / FYP kit ---- */
   body.fyp { font-family: "TikTok Sans", "Inter", "Liberation Sans", "Noto Color Emoji", sans-serif; text-wrap: pretty; }
   .fyp .huge, .fyp .big { letter-spacing: -2px; }
@@ -289,7 +301,7 @@
 
   <!-- 0–12s: the title, with five items swapping in under it -->
   <div class="scene top" style="--out:11.8s">
-    <div class="cap pop" style="--in:.1s" data-sfx="pop"><span>things that just make sense ✨</span></div>
+    <div class="cap now" style="--in:.1s" data-sfx="pop"><span>things that just make sense ✨</span></div>
     <div class="stack" style="flex: 1">
       <div class="swap" style="--in:1.2s; --out:3.1s" data-sfx="ding">
         <div class="emoji" style="--in:1.2s; margin: 0 auto 20px">🧾</div><div class="cap dark"><span>invoices that send themselves</span></div></div>

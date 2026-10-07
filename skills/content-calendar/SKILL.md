@@ -122,7 +122,16 @@ command below.
      captions, comment bait, UI skits, story and everyday), and name the
      format in that row's `Notes` (e.g. `format: tier-list`) so the next
      batch can see what was used. Save the marketing types (an
-     announcement, a testimonial) for the dates they belong to.
+     announcement, a testimonial) for the dates they belong to. If
+     `${CLAUDE_PLUGIN_ROOT}/state/video-log.md` has about 10 or more rows
+     with numbers, lean the mix toward the formats and hook patterns that
+     held viewers longest on this account, and schedule at its own best
+     days and hours, keeping about one slot in ten an experiment; say what
+     the log showed and how many posts it rests on. If the user wants the
+     week's videos made too, render all of their pages in one run with
+     `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/render.js --batch <pages...>
+     --cover 0` and add each video's MP4, cover, and `.srt` paths to its
+     post file.
    - Reddit / Product Hunt / Hacker News / Indie Hackers / dev.to / Discord
      / Slack / Telegram slots: hand off to
      `${CLAUDE_PLUGIN_ROOT}/skills/community-post-generator/SKILL.md`

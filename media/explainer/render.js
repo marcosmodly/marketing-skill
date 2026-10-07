@@ -17,7 +17,7 @@
  *
  * Needs the same setup as scripts/video/render.js: Node 18+, ffmpeg, and Playwright.
  */
-const { spawn, spawnSync } = require('child_process');
+const { spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -72,27 +72,6 @@ async function open(browser, pagePath) {
   const errors = await page.evaluate(() => window.__errors || []);
   for (const e of errors) problems.push(`page script error: ${e}`);
   return { page, problems };
-}
-
-// One browser per worker: each renders a contiguous run of frames into its own segment.
-async function renderSegment(chromium, pagePath, first, last, fps, crf, file, progress) {
-  const browser = await video.launchBrowser(chromium);
-  const { page } = await open(browser, pagePath);
-  const cdp = await page.context().newCDPSession(page);
-  const encoder = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(fps), '-i', '-',
-    '-c:v', 'libx264', '-preset', 'slow', '-crf', String(crf), '-pix_fmt', 'yuv420p', '-profile:v', 'high',
-    '-tune', 'animation', '-r', String(fps), file], { stdio: ['pipe', 'inherit', 'inherit'] });
-  const done = new Promise((resolve) => encoder.on('close', resolve));
-  for (let i = first; i < last; i++) {
-    await video.seek(page, i / fps);
-    const { data } = await cdp.send('Page.captureScreenshot', { format: 'png', optimizeForSpeed: true });
-    if (!encoder.stdin.write(Buffer.from(data, 'base64'))) await new Promise((r) => encoder.stdin.once('drain', r));
-    progress();
-  }
-  encoder.stdin.end();
-  const code = await done;
-  await browser.close();
-  if (code !== 0) throw new Error(`ffmpeg failed on ${file}`);
 }
 
 // How long each recorded line actually speaks: from the first sound to the last, ignoring the
@@ -186,34 +165,13 @@ async function main() {
   const workers = Math.max(1, Number(args.workers || Math.max(1, os.cpus().length - 1)));
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'explainer-'));
   const total = to - from;
-  const per = Math.ceil(total / workers);
-  let doneFrames = 0;
   const started = Date.now();
-  const progress = () => {
-    doneFrames++;
-    if (doneFrames % fps === 0 || doneFrames === total) {
-      const rate = doneFrames / ((Date.now() - started) / 1000);
-      process.stderr.write(`\rframe ${doneFrames}/${total} (${rate.toFixed(1)} fps, ~${Math.round((total - doneFrames) / rate)}s left)   `);
-    }
-  };
-  const segments = [];
-  const jobs = [];
-  for (let w = 0; w < workers; w++) {
-    const first = from + w * per;
-    const last = Math.min(to, first + per);
-    if (first >= last) break;
-    const file = path.join(tmp, `seg${w}.mp4`);
-    segments.push(file);
-    jobs.push(renderSegment(chromium, pagePath, first, last, fps, crf, file, progress));
-  }
-  await Promise.all(jobs);
-  process.stderr.write('\n');
-
-  const list = path.join(tmp, 'segments.txt');
-  fs.writeFileSync(list, segments.map((f) => `file '${f}'`).join('\n'));
   const videoOnly = path.join(tmp, 'video.mp4');
-  const cat = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', videoOnly], { encoding: 'utf8' });
-  if (cat.status !== 0) throw new Error(`ffmpeg concat failed: ${cat.stderr}`);
+  // the shared parallel renderer: one browser per worker, each a contiguous run of frames
+  await video.renderFrames({
+    chromium, open: async (b) => (await open(b, pagePath)).page, from, to, fps, workers, file: videoOnly,
+    crf, tune: 'animation', width: WIDTH, height: HEIGHT,
+  });
 
   let audio = 'silent preview';
   if (preview || args.silent) {
