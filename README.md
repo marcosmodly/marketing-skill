@@ -754,7 +754,11 @@ it. You can also run the renderer yourself.
 
 **What it makes:** motion graphics (kinetic text, shapes, UI mockups) over
 real backgrounds, with music composed for your project, and a voiceover if
-you record one. It doesn't film your product or people. The output is 1080×1920
+you record one. It doesn't film your product or people, but it does finish
+footage you film: `cut.js` takes a talking-head take from your phone, cuts
+out the pauses, and makes the video from it with its own sound, captions,
+your hook, music, and end card, and screen recordings play in the how-to
+phone frame without being cropped. The output is 1080×1920
 (9:16), 30fps H.264 with AAC audio mixed to about −14 LUFS, which is what
 YouTube Shorts, Instagram Reels, and TikTok all expect.
 
@@ -793,6 +797,7 @@ node render.js page.html --voice-lengths                  # each voice line's st
 node captions.js assets/voice-1.wav --text "the line"     # when each word of a line is said
 node brand.js page.html                                   # the Visual Identity: colors, font, a logo end card
 node render.js page.html out.mp4 --variants a,b --cover 0 # one video per hook variant, plus the cover frame
+node cut.js take.mp4 --text "what's said" --page page.html # a filmed talking-head take: pauses cut, captioned, ready to render
 ```
 
 Every page's hook is on screen from the first frame, which is also the
@@ -1080,6 +1085,7 @@ scripts/
     captions.js          # word timing for a voice line, caption chunks, and .srt files
     compose.js           # a narrated video page from a script: voice, backgrounds, synced captions
     brand.js             # applies the Visual Identity to a page: colors, font, logo end card
+    cut.js               # a filmed talking-head take: pauses cut, captions, and a page to render it
     beats.js             # a music track's tempo, beats, bars, and drops, to cut a video on its beat
     templates/           # 7 marketing + 22 everyday starting pages, built from templates/build.py and fyp.py
 ```

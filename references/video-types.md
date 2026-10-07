@@ -22,8 +22,10 @@ For a longer survey of the formats, see Sparkhouse's
 - **Generate:** an AI video tool (Higgsfield, Figma Weave) can produce
   footage-style shots. This spends that tool's credits.
 - **Film:** needs real footage of real people or places. The skill gives
-  you a phone shot list, filming tips, and edit notes instead of a
-  finished video.
+  you a phone shot list, filming tips, and edit notes. Once you've filmed
+  a talking-head take, `scripts/video/cut.js` cuts out the pauses and
+  makes the finished video from it: your clip with its own sound,
+  captions, the hook, your music, and your end card.
 - **Cut-down:** a long-form format. The short is a promo or a highlight of
   it, not the thing itself.
 
@@ -75,12 +77,12 @@ and has to work with the sound off.
 
 ### Product demo
 - **Goal:** consideration; show the product doing the job in a real use case.
-- **Made by:** Render + your assets (`how-to.html` with real screenshots), or Film (a screen recording or the physical product).
+- **Made by:** Render + your assets (`how-to.html` with real screenshots or screen recordings in the phone frame), or Film (the physical product).
 - **Beats:** the job to be done → the product doing it, feature by feature (one per scene) → the result → CTA. Show, don't list.
 
 ### Tutorial / how-to
 - **Goal:** consideration and retention; teach a specific task.
-- **Made by:** Render + your assets (`how-to.html` with real screenshots), or Film (a screen recording).
+- **Made by:** Render + your assets (`how-to.html` with real screenshots, or a screen recording of each step in the phone frame).
 - **Beats:** "How to X in N steps" → one step per scene, each with the exact tap or click → "Done" → CTA (save it, follow for more).
 
 ### Educational / tips
@@ -188,12 +190,19 @@ team member, the product, or a result.
 ## Filming notes (for Film types)
 
 When a type needs footage, the skill's Generation Status says so and gives
-a phone shot list instead of a video:
+a phone shot list. For a talking-head take (an FAQ answered on camera, a
+founder's story, an interview answer, an on-camera testimonial with the
+person's permission), `cut.js` then turns the raw take into the finished
+video; for anything with several shots, edit it in CapCut or similar.
 - Shoot vertical (9:16) at 1080×1920 or higher, in daylight or facing a
   window, with the phone at eye level.
 - Record audio close to the speaker (a clip-on mic if possible); viewers
   forgive soft video long before bad sound.
 - Get each shot in a few takes of 3–6 seconds, plus a few seconds of
   silence before and after for cutting.
-- Edit in CapCut or similar: cut on the action, add captions (most people
-  watch muted), and keep the first second the most interesting one.
+- For one talking-head take, don't trim it yourself: `cut.js` removes the
+  pauses and captions it. Pauses longer than about a third of a second
+  are cut, so speak naturally and leave clear gaps between thoughts.
+- For several shots, edit in CapCut or similar: cut on the action, add
+  captions (most people watch muted), and keep the first second the most
+  interesting one.

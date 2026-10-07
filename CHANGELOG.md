@@ -34,6 +34,14 @@ Skills that read "our changelog" for source material read this file too.
 - **Covers**: `render.js --cover <t>` writes the cover frame and checks it
   against the 3:4 profile-grid crop; `publish_direct.py --cover-ms` sets it
   on TikTok and Instagram, and `--cover-url` gives Instagram a cover image.
+- **Your own footage.** `scripts/video/cut.js` turns a talking-head take
+  filmed on a phone into a finished video: it cuts out the pauses, times
+  captions to the cut, and writes a page with the clip full-frame and its
+  own sound, the hook, the music, and the end card. In any page,
+  `<video data-audio>` plays a clip's own sound in sync with it, and
+  `.say auto[data-clip]` captions it. Screen recordings in the how-to phone
+  frame are cut to the screen's shape instead of being cropped to 9:16
+  first.
 - `short-form-video`'s local-render steps moved to
   `references/video-rendering.md`, and its worked example to
   `references/short-form-video-example.md`, so script-only runs load less.

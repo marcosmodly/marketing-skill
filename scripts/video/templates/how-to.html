@@ -8,6 +8,9 @@
   are placeholder UI drawn in CSS; for a real product, swap a screen's
   contents for a screenshot (portrait, ideally 1170x2532 or similar):
     <img class="shot" src="assets/step-1.png" alt="">
+  or a screen recording of the step, which render.js cuts to the screen's
+  own shape so nothing is lost off the top or bottom:
+    <video class="shot" src="assets/step-1.mp4" data-loop="false"></video>
   and move its .tap ring onto the thing the viewer should tap. To add or
   drop a step, copy or remove a .step-title / .screen pair and shift the
   later --in / --out / --tap times.

@@ -196,6 +196,29 @@ settings, background slots, and attributes, and each template's own
 comment says what to replace. Replace every bracketed placeholder; never
 ship one.
 
+## Your own footage
+
+- **Screen recordings** go straight into the how-to phone frame:
+  `<video class="shot" src="assets/step-1.mp4" data-loop="false">` in a
+  `.screen`. The renderer cuts a clip in a smaller box to that box's own
+  shape, so a tall phone recording isn't cropped at the top and bottom.
+  The product shown must be the real one.
+- **A talking-head take** (filmed on a phone, one take): ask the user for
+  the clip and, word for word, what they say in it. Then
+  `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/cut.js <take.mp4> --text "<what's
+  said>" --hook "<hook>" --cta "<cta>" --page
+  ${CLAUDE_PLUGIN_ROOT}/state/videos/<date>-<slug>.html` cuts out the pauses
+  (`--min-pause`, default 0.35s), and writes a page with the clip full
+  frame and its own sound, captions synced to it, the hook from the first
+  frame, the music one energy step lower, and the brand's end card. It runs
+  `--check`; render as usual. Captions use the person's real words only,
+  never a tidied version, and only post people who agreed to it.
+- **By hand:** `<video class="bg-media" id="take" src="assets/take.mp4"
+  data-audio>` plays a clip's own sound in sync with it (from its
+  `data-offset`, while the clip is on screen), leveled like a voiceover
+  with the music ducked under it, and `<div class="say auto"
+  data-clip="take">what's said</div>` captions it.
+
 ## The hook, the look, and the cover
 
 - **The hook is on screen from frame 0.** The first frame is the default

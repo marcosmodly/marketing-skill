@@ -79,6 +79,12 @@
   - Captions synced to a voice line: <div class="say auto"
     data-voice="assets/voice-2.wav" style="--voice:3.4s">The line.</div>
     (render.js times them to the clip; see captions.js).
+  - Filmed clips with their own sound: <video class="bg-media" id="take"
+    src="assets/take.mp4" data-audio> plays the clip's sound in sync with
+    it, and <div class="say auto" data-clip="take">what's said</div>
+    captions it. scripts/video/cut.js cuts the pauses out of a take and
+    writes a page like this. A clip in a smaller box (a screen recording in
+    a phone frame) is cut to that box's shape.
   - .endcard: the logo and handle at the end, added by brand.js from the
     Visual Identity in references/brand-voice.md.
   - Images (screenshots, photos, logos) go in an assets/ folder next to the

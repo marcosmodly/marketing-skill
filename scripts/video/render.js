@@ -230,9 +230,13 @@ function meanLuma(file) {
 // Images are decoded up front. Returns problems to warn about.
 async function prepareMedia(page) {
   const problems = [];
+  // A clip that fills the frame (a background) is cut to 1080x1920. One in a smaller box, like a
+  // screen recording in the phone frame, is cut to that box's own shape instead, so a tall
+  // recording isn't cropped to 9:16 first and then cropped again to fit the box.
   const videos = await page.evaluate(() => [...document.querySelectorAll('video')].map((v, i) => {
     v.dataset.renderIndex = String(i);
-    return v.currentSrc || v.src || v.querySelector('source')?.src || '';
+    const full = !!v.closest('.bg') || !v.offsetWidth || !v.offsetHeight;
+    return { src: v.currentSrc || v.src || v.querySelector('source')?.src || '', w: full ? 0 : v.offsetWidth, h: full ? 0 : v.offsetHeight };
   }));
   const cacheDir = path.join(os.tmpdir(), 'render-video-cache');
   if (videos.length && !hasFfmpeg()) {
@@ -240,7 +244,11 @@ async function prepareMedia(page) {
     return problems;
   }
   for (let i = 0; i < videos.length; i++) {
-    const src = videos[i];
+    const { src, w, h } = videos[i];
+    // twice the box's size for sharpness, within the frame, in even numbers for the encoder
+    const scale = w ? Math.min(2, WIDTH / w, HEIGHT / h) : 1;
+    const W = w ? 2 * Math.round((w * scale) / 2) : WIDTH;
+    const H = h ? 2 * Math.round((h * scale) / 2) : HEIGHT;
     if (!src.startsWith('file:')) {
       problems.push(`video ${src || '(no src)'} isn't a local file; download it into assets/ first (media.js does this)`);
       continue;
@@ -251,12 +259,12 @@ async function prepareMedia(page) {
       continue;
     }
     const st = fs.statSync(file);
-    const key = crypto.createHash('sha1').update(`${file}|${st.size}|${st.mtimeMs}`).digest('hex').slice(0, 16);
+    const key = crypto.createHash('sha1').update(`${file}|${st.size}|${st.mtimeMs}|${W}x${H}`).digest('hex').slice(0, 16);
     const dir = path.join(cacheDir, key);
     if (!fs.existsSync(path.join(dir, 'done'))) {
       fs.rmSync(dir, { recursive: true, force: true });
       fs.mkdirSync(dir, { recursive: true });
-      ffmpeg(['-i', file, '-vf', 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30',
+      ffmpeg(['-i', file, '-vf', `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},fps=30`,
         '-q:v', '3', path.join(dir, '%05d.jpg')]);
       fs.writeFileSync(path.join(dir, 'done'), '');
     }
@@ -267,6 +275,7 @@ async function prepareMedia(page) {
       for (const { name, value } of v.attributes) if (!['src', 'autoplay', 'loop', 'muted', 'controls', 'playsinline', 'preload', 'data-render-index'].includes(name)) img.setAttribute(name, value);
       img.dataset.frames = framesUrl;
       img.dataset.count = String(n);
+      img.dataset.srcFile = v.currentSrc || v.src || v.querySelector('source')?.src || '';
       img.src = `${framesUrl}/00001.jpg`;
       img.alt = '';
       v.replaceWith(img);
@@ -570,6 +579,32 @@ async function readPage(page) {
       const caption = el.matches('.say.auto') ? el.textContent.replace(/\s+/g, ' ').trim() : '';
       voices.push({ src: new URL(el.dataset.voice, location.href).href, time, index, sceneOut, caption });
     });
+    // A filmed clip that keeps its own sound: <video data-audio> plays it in sync with the
+    // picture, from data-offset seconds into the file, while the clip is on screen. Captions for
+    // it go in <div class="say auto" data-clip="<the video's id>">the words said</div>.
+    const captionFor = new Map();
+    for (const el of document.querySelectorAll('.say.auto[data-clip]')) captionFor.set(el.dataset.clip, el);
+    document.querySelectorAll('[data-audio]').forEach((el, k) => {
+      const src = el.dataset.srcFile || el.currentSrc || el.src;
+      const cs = getComputedStyle(el);
+      const time = toSeconds(cs.getPropertyValue('--in')) || 0;
+      const holder = el.closest('.bg') || el.closest('.scene');
+      const sceneOut = holder ? toSeconds(holder.style.getPropertyValue('--out')) : NaN;
+      const capEl = el.id ? captionFor.get(el.id) : null;
+      let index;
+      if (capEl) {
+        index = `clip-${k}`;
+        capEl.dataset.voiceIndex = index;
+        captionFor.delete(el.id);
+      }
+      voices.push({
+        src, time, index, sceneOut, sync: true, offset: parseFloat(el.dataset.offset) || 0,
+        // the sound stops when the clip leaves the screen
+        maxLength: Number.isFinite(sceneOut) ? Math.max(0, sceneOut - time) : undefined,
+        caption: capEl ? capEl.textContent.replace(/\s+/g, ' ').trim() : '',
+      });
+    });
+    for (const id of captionFor.keys()) problems.push(`a caption has data-clip="${id}" but no <video data-audio id="${id}"> was found`);
     return {
       cues,
       problems,
@@ -650,6 +685,7 @@ function checkMix(settings, duration) {
   return problems;
 }
 
+const hasAudioStream = (file) => /audio/.test(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', file], { encoding: 'utf8' }).stdout);
 const probeDuration = (file) => parseFloat(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', file], { encoding: 'utf8' }).stdout);
 
 // Mixes a licensed track (trimmed, faded) under the generated sound effects, dipping it a
@@ -695,21 +731,25 @@ const BED_UNDER_VOICE = 7;
 // is the speech itself), light compression, then leveled to VOICE_LUFS. Cached across runs.
 // Returns { prepared, length, trimmed }, where trimmed is how much silence came off the start.
 const VOICE_CACHE = path.join(os.tmpdir(), 'render-video-cache', 'voice');
-function prepareVoice(file) {
+//
+// A filmed clip's sound ({ sync: true }) keeps its silences, so it stays in step with the
+// picture; `offset` and `maxLength` pick the stretch that plays.
+function prepareVoice(file, { sync = false, offset = 0, maxLength } = {}) {
   const st = fs.statSync(file);
-  const key = crypto.createHash('sha1').update(`${file}|${st.size}|${st.mtimeMs}|${VOICE_LUFS}|2`).digest('hex').slice(0, 16);
+  const key = crypto.createHash('sha1').update(`${file}|${st.size}|${st.mtimeMs}|${VOICE_LUFS}|2|${sync}|${offset}|${maxLength}`).digest('hex').slice(0, 16);
   const prepared = path.join(VOICE_CACHE, `${key}.wav`);
   const meta = `${prepared}.json`;
   if (!fs.existsSync(meta)) {
     fs.mkdirSync(VOICE_CACHE, { recursive: true });
     const raw = path.join(VOICE_CACHE, `${key}-raw.wav`);
     const lead = path.join(VOICE_CACHE, `${key}-lead.wav`);
+    const window = [...(offset ? ['-ss', String(offset)] : []), ...(maxLength ? ['-t', String(maxLength)] : [])];
     // the leading trim on its own first, to know how much it took off
-    ffmpeg(['-i', file, '-af', 'aresample=48000,aformat=channel_layouts=stereo,highpass=f=80,' +
-      'silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.08', '-c:a', 'pcm_s16le', lead]);
-    const trimmed = Math.max(0, probeDuration(file) - probeDuration(lead));
+    ffmpeg([...window, '-i', file, '-vn', '-af', 'aresample=48000,aformat=channel_layouts=stereo,highpass=f=80' +
+      (sync ? '' : ',silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.08'), '-c:a', 'pcm_s16le', lead]);
+    const trimmed = sync ? 0 : Math.max(0, probeDuration(file) - offset - probeDuration(lead));
     // trailing silence: reversed, trimmed like the start, reversed back
-    ffmpeg(['-i', lead, '-af', 'areverse,silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.15,areverse,' +
+    ffmpeg(['-i', lead, '-af', (sync ? '' : 'areverse,silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.15,areverse,') +
       'acompressor=threshold=0.1:ratio=2.5:attack=15:release=200', '-c:a', 'pcm_s16le', raw]);
     const { lufs } = measureAudio(raw);
     ffmpeg(['-i', raw, '-af', `volume=${Number.isFinite(lufs) ? (VOICE_LUFS - lufs).toFixed(2) : 0}dB`, '-c:a', 'pcm_s16le', prepared]);
@@ -741,9 +781,14 @@ async function prepareVoices(page, settings) {
     return { problems, cues };
   }
   const sorted = [...clips].sort((a, b) => a.time - b.time);
-  for (const clip of clips) {
-    Object.assign(clip, prepareVoice(clip.file));
+  for (const clip of [...clips]) {
     const name = path.basename(clip.file);
+    if (clip.sync && !hasAudioStream(clip.file)) {
+      problems.push(`${name} has data-audio but no sound track; it plays silent`);
+      clips.splice(clips.indexOf(clip), 1);
+      continue;
+    }
+    Object.assign(clip, prepareVoice(clip.file, clip));
     const end = clip.time + clip.length;
     if (Number.isFinite(clip.sceneOut) && end > clip.sceneOut + 0.1) {
       problems.push(`voice ${name} runs to ${end.toFixed(2)}s, past its scene's end at ${clip.sceneOut.toFixed(2)}s; give the scene ${(end - clip.sceneOut + 0.3).toFixed(1)}s more, or shorten the line`);
@@ -787,7 +832,7 @@ function mixVoice(clips, duration, bedWav, tmp, out) {
   const parts = [];
   let prevEnd = -Infinity;
   [...clips].sort((a, b) => a.time - b.time).forEach((clip) => {
-    if (!clip.prepared) Object.assign(clip, prepareVoice(clip.file));
+    if (!clip.prepared) Object.assign(clip, prepareVoice(clip.file, clip));
     const name = path.basename(clip.file);
     if (clip.time < prevEnd - 0.05) problems.push(`voice ${name} starts at ${clip.time.toFixed(2)}s, before the previous line ends at ${prevEnd.toFixed(2)}s, so they overlap`);
     if (clip.time + clip.length > duration + 0.05) problems.push(`voice ${name} runs ${(clip.time + clip.length - duration).toFixed(1)}s past the end of the video and will be cut off`);

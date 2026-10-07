@@ -189,8 +189,11 @@ command below.
    - **When the type needs real footage** ("Film" in `video-types.md`, such
      as behind the scenes, a vlog, UGC, or an on-camera testimonial), no
      tool can stand in for it. Say so, and plan to deliver a phone shot
-     list and edit notes (step 6) instead of a video. Don't offer to
-     render or generate a fake version of real people or real events.
+     list and edit notes (step 6) instead of a video. Once the user has
+     filmed a talking-head take, `scripts/video/cut.js` turns it into the
+     finished video (see "Your own footage" in `video-rendering.md`).
+     Don't offer to render or generate a fake version of real people or
+     real events.
    - **Either way, continue to step 4.** The script and packages below are
      the deliverable regardless of whether anything gets generated in this
      run — same rule `visual-brief-generator` follows.
@@ -281,7 +284,9 @@ command below.
    section: each beat as a shot (what's in frame, who says what, how long),
    plus the filming notes from `video-types.md` and edit notes (cut order,
    captions, where the hook text goes). Generation Status says plainly that
-   the video still needs to be filmed.
+   the video still needs to be filmed. When the user sends back a single
+   talking-head take, make it with `cut.js` (`video-rendering.md`, "Your
+   own footage"), with captions from their exact words.
 
 7. **Hand off.** Note the concrete next step for getting this posted:
    - **Manual (the default, always available):** generate or edit the
