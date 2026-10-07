@@ -12,7 +12,9 @@
  * "Rendering a short-form video locally".
  *
  * Usage:
- *   node render.js <page.html> <out.mp4> [--duration 24] [--fps 30] [--silent]
+ *   node render.js <page.html> <out.mp4> [--duration 24] [--fps 30] [--silent] [--workers 3]
+ *   node render.js <page.html> <out.mp4> --draft                   # half size at 15fps, fast, to check timing
+ *   node render.js --batch <page.html> ... [--outdir dir]          # each page to <page>.mp4, every variant, in one run
  *   node render.js <page.html> --stills 1.5,6,12 [--outdir dir]   # preview PNGs (default: stills/ next to the page)
  *   node render.js <page.html> --slides [--outdir dir]             # each scene's settled frame as a PNG, for
  *                                                                   # TikTok photo mode / Instagram carousels
@@ -82,7 +84,9 @@ function parseArgs(argv) {
     else if (a === '--slides') args.slides = true;
     else if (a === '--voice-lengths') args.voiceLengths = true;
     else if (a === '--whisper') args.whisper = true;
-    else if (['--duration', '--fps', '--stills', '--outdir', '--sample', '--motif', '--key', '--mode', '--bpm', '--energy', '--variant', '--variants', '--cover'].includes(a)) args[a.slice(2)] = argv[++i];
+    else if (a === '--draft') args.draft = true;
+    else if (a === '--batch') args.batch = true;
+    else if (['--duration', '--fps', '--stills', '--outdir', '--sample', '--motif', '--key', '--mode', '--bpm', '--energy', '--variant', '--variants', '--cover', '--workers'].includes(a)) args[a.slice(2)] = argv[++i];
     else if (a === '-h' || a === '--help') args.help = true;
     else args.positional.push(a);
   }
@@ -929,6 +933,71 @@ function sample(args) {
   console.log(`Wrote ${out}: ${duration}s ${audio}`);
 }
 
+// Renders frames [from, to) at `fps` into one H.264 file. The frames are split across `workers`
+// browsers, each rendering a contiguous run into its own segment, and the segments are joined
+// without re-encoding. `open(browser)` returns a page ready to seek, set up the same way in
+// every worker; `onFrame(page, t)` runs before each capture (the layout lint uses it). `scale`
+// below 1 captures smaller frames, for drafts.
+async function renderFrames({ chromium, open, from = 0, to, fps, workers = 1, file, crf = 18, preset = 'slow', tune,
+  scale = 1, width = WIDTH, height = HEIGHT, onFrame }) {
+  const total = to - from;
+  const count = Math.max(1, Math.min(workers, Math.ceil(total / fps)));
+  const per = Math.ceil(total / count);
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'render-frames-'));
+  let done = 0;
+  const started = Date.now();
+  const progress = () => {
+    done++;
+    if (done % fps === 0 || done === total) {
+      const rate = done / Math.max(0.001, (Date.now() - started) / 1000);
+      process.stderr.write(`\rframe ${done}/${total} (${rate.toFixed(1)} fps, ~${Math.round((total - done) / rate)}s left)   `);
+    }
+  };
+  const clip = scale === 1 ? undefined : { x: 0, y: 0, width, height, scale };
+  const segment = async (first, last, out) => {
+    const browser = await launchBrowser(chromium);
+    try {
+      const page = await open(browser);
+      const cdp = await page.context().newCDPSession(page);
+      const encoder = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(fps), '-i', '-',
+        '-c:v', 'libx264', '-preset', preset, '-crf', String(crf), ...(tune ? ['-tune', tune] : []), '-pix_fmt', 'yuv420p',
+        '-profile:v', 'high', '-r', String(fps), out], { stdio: ['pipe', 'inherit', 'inherit'] });
+      const encoded = new Promise((resolve) => encoder.on('close', resolve));
+      for (let i = first; i < last; i++) {
+        await seek(page, i / fps);
+        if (onFrame) await onFrame(page, i / fps);
+        const { data } = await cdp.send('Page.captureScreenshot', { format: 'png', optimizeForSpeed: true, ...(clip ? { clip } : {}) });
+        if (!encoder.stdin.write(Buffer.from(data, 'base64'))) await new Promise((r) => encoder.stdin.once('drain', r));
+        progress();
+      }
+      encoder.stdin.end();
+      if ((await encoded) !== 0) throw new Error(`ffmpeg failed while encoding ${out}`);
+    } finally {
+      await browser.close();
+    }
+  };
+  const segments = [];
+  const jobs = [];
+  for (let w = 0; w < count; w++) {
+    const first = from + w * per;
+    const last = Math.min(to, first + per);
+    if (first >= last) break;
+    const out = path.join(tmp, `seg${w}.mp4`);
+    segments.push(out);
+    jobs.push(segment(first, last, out));
+  }
+  await Promise.all(jobs);
+  process.stderr.write('\n');
+  const list = path.join(tmp, 'segments.txt');
+  fs.writeFileSync(list, segments.map((f) => `file '${f}'`).join('\n'));
+  ffmpeg(['-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', '-movflags', '+faststart', file]);
+  fs.rmSync(tmp, { recursive: true, force: true });
+  return { seconds: (Date.now() - started) / 1000, workers: segments.length };
+}
+
+// Workers by default: one per core but one, up to four (each is a whole browser).
+const defaultWorkers = () => Math.max(1, Math.min(4, os.cpus().length - 1));
+
 // Hook variants: elements with data-variant="a" (or "a b") appear only in those variants.
 // Removes every other variant's elements, before media, sound cues, and voices are read.
 async function variantsOf(page) {
@@ -979,9 +1048,9 @@ async function writeCover(page, t, file) {
 // out.mp4 -> out-b.mp4, for one of several variants
 const withVariant = (file, variant, many) => (many && variant ? file.replace(/(\.[^./]+)?$/, (ext) => `-${variant}${ext || ''}`) : file);
 
-// Opens the page (in one variant, if it has them) and does what was asked. Returns an exit code.
-async function runPage(browser, pagePath, outPath, args, variant, many) {
-  const label = variant ? ` [variant ${variant}]` : '';
+// Opens a page and sets it up for seeking: the variant, background clips, sound settings, and
+// voice lines with their captions. Every render worker sets its page up the same way.
+async function preparePage(browser, pagePath, args, variant) {
   const { page, problems: fontProblems } = await openPage(browser, pagePath);
   if (variant) await applyVariant(page, variant);
   const mediaProblems = await prepareMedia(page);
@@ -990,6 +1059,13 @@ async function runPage(browser, pagePath, outPath, args, variant, many) {
   settings.problems.push(...fontProblems, ...mediaProblems, ...checkMusic(settings));
   const voiced = await prepareVoices(page, settings);
   settings.problems.push(...voiced.problems);
+  return { page, settings, voiced };
+}
+
+// Opens the page (in one variant, if it has them) and does what was asked. Returns an exit code.
+async function runPage(browser, pagePath, outPath, args, variant, many) {
+  const label = variant ? ` [variant ${variant}]` : '';
+  const { page, settings, voiced } = await preparePage(browser, pagePath, args, variant);
   for (const p of settings.problems) console.warn(`Warning${label}: ${p}`);
   const pageDir = path.dirname(path.resolve(pagePath));
   const pageBase = path.basename(pagePath).replace(/\.html?$/, '');
@@ -1054,28 +1130,24 @@ async function runPage(browser, pagePath, outPath, args, variant, many) {
       console.log(`Wrote ${out}: ${duration}s ${audio}`);
       return 0;
     }
-    const fps = Number(args.fps || 30);
+    // a draft is half size at 15fps, quick to make and enough to check timing and sync
+    const fps = Number(args.fps || (args.draft ? 15 : 30));
     const frames = Math.round(duration * fps);
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'render-'));
     const videoOnly = path.join(tmp, 'video.mp4');
-
-    const encoder = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(fps), '-i', '-',
-      '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-r', String(fps),
-      '-movflags', '+faststart', videoOnly], { stdio: ['pipe', 'inherit', 'inherit'] });
-    const encoded = new Promise((resolve) => encoder.on('close', resolve));
     const lintSeen = new Map();
-    for (let i = 0; i < frames; i++) {
-      await seek(page, i / fps);
-      if (i % 8 === 0) {
-        for (const p of await lintLayout(page, i / fps)) if (!lintSeen.has(`${p.kind}|${p.text}`)) lintSeen.set(`${p.kind}|${p.text}`, p);
-      }
-      const png = await page.screenshot({ type: 'png' });
-      if (!encoder.stdin.write(png)) await new Promise((r) => encoder.stdin.once('drain', r));
-      if (i % fps === 0) process.stderr.write(`\rframe ${i}/${frames}`);
-    }
-    encoder.stdin.end();
-    if ((await encoded) !== 0) fail('ffmpeg failed while encoding the frames.');
-    process.stderr.write(`\rframe ${frames}/${frames}\n`);
+    let lintEvery = 0;
+    const timing = await renderFrames({
+      chromium: args.chromium,
+      open: async (b) => (await preparePage(b, pagePath, args, variant)).page,
+      to: frames, fps, file: videoOnly,
+      workers: Number(args.workers || defaultWorkers()),
+      ...(args.draft ? { scale: 0.5, preset: 'ultrafast', crf: 26 } : {}),
+      onFrame: async (p, t) => {
+        if (lintEvery++ % 8) return;
+        for (const x of await lintLayout(p, t)) if (!lintSeen.has(`${x.kind}|${x.text}`)) lintSeen.set(`${x.kind}|${x.text}`, x);
+      },
+    });
     let coverFile = '';
     let coverIssues = [];
     if (args.cover !== undefined) {
@@ -1088,7 +1160,8 @@ async function runPage(browser, pagePath, outPath, args, variant, many) {
     else ({ audio } = writeSoundtrack(settings, duration, tmp, videoOnly, out));
     fs.rmSync(tmp, { recursive: true, force: true });
     for (const p of lintSeen.values()) console.warn(`Layout${label}: ${describeLint(p)}`);
-    console.log(`Wrote ${out}: ${WIDTH}x${HEIGHT}, ${duration}s at ${fps}fps, ${audio}`);
+    const size = args.draft ? `${WIDTH / 2}x${HEIGHT / 2} draft` : `${WIDTH}x${HEIGHT}`;
+    console.log(`Wrote ${out}: ${size}, ${duration}s at ${fps}fps, ${audio} (rendered in ${Math.round(timing.seconds)}s on ${timing.workers} worker${timing.workers === 1 ? '' : 's'})`);
     if (voiced.cues.length) {
       // the captions as a track for the platforms' own caption upload (YouTube takes .srt)
       const srt = out.replace(/\.[^./]+$/, '') + '.srt';
@@ -1105,9 +1178,45 @@ async function runPage(browser, pagePath, outPath, args, variant, many) {
   }
 }
 
+// --batch: renders every page given, each to <page>.mp4 (in --outdir, or next to the page), every
+// hook variant of a page with variants, one after another. For a week of queued videos.
+async function batch(args) {
+  const pages = args.positional;
+  if (!pages.length) fail('Usage: node render.js --batch <page.html> [<page.html> ...] [--outdir dir] [--cover 0] [--draft]');
+  for (const p of pages) if (!fs.existsSync(p)) fail(`No page found at ${p}`);
+  requireFfmpeg();
+  const { chromium } = loadPlaywright();
+  args.chromium = chromium;
+  const browser = await launchBrowser(chromium);
+  const results = [];
+  for (const pagePath of pages) {
+    const out = path.join(args.outdir || path.dirname(path.resolve(pagePath)), `${path.basename(pagePath).replace(/\.html?$/, '')}.mp4`);
+    if (args.outdir) fs.mkdirSync(args.outdir, { recursive: true });
+    const probe = await openPage(browser, pagePath);
+    const found = await variantsOf(probe.page);
+    await probe.page.close();
+    for (const v of found.length ? found : [null]) {
+      console.log(`\n== ${pagePath}${v ? ` [variant ${v}]` : ''}`);
+      let code;
+      try {
+        code = await runPage(browser, pagePath, out, args, v, found.length > 1);
+      } catch (e) {
+        console.error(e.message || e);
+        code = 1;
+      }
+      results.push({ page: pagePath, variant: v, out: withVariant(out, v, found.length > 1), ok: code === 0 });
+    }
+  }
+  await browser.close();
+  console.log(`\nRendered ${results.filter((r) => r.ok).length} of ${results.length}:`);
+  for (const r of results) console.log(`  ${r.ok ? 'ok    ' : 'FAILED'} ${r.out}`);
+  process.exit(results.every((r) => r.ok) ? 0 : 1);
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.sample) return sample(args);
+  if (args.batch) return batch(args);
   const [pagePath, outPath] = args.positional;
   if (args.help || !pagePath || (!outPath && !args.stills && !args.check && !args.slides && !args.voiceLengths && args.cover === undefined)) {
     console.log(fs.readFileSync(__filename, 'utf8').split('*/')[0].replace(/^[\s\S]*?\/\*/, '').replace(/^ \* ?/gm, ''));
@@ -1118,6 +1227,7 @@ async function main() {
   if (outPath && !args.stills && !args.check && !args.slides && !args.voiceLengths) requireFfmpeg();
 
   const { chromium } = loadPlaywright();
+  args.chromium = chromium;
   const browser = await launchBrowser(chromium);
   const probe = await openPage(browser, pagePath);
   const found = await variantsOf(probe.page);
@@ -1149,4 +1259,5 @@ module.exports = {
   WIDTH, HEIGHT, loadPlaywright, launchBrowser, openPage, prepareMedia, readPage, checkMusic, checkMix, mixVoice, seek,
   lintLayout, lintTimeline, describeLint, lintLabel, slideTimes, textSnapshot, retentionProblems, writeSoundtrack, measureAudio, muxSoundtrack,
   prepareVoice, prepareVoices, describeVoices, probeDuration, variantsOf, applyVariant, coverProblems,
+  renderFrames, preparePage, defaultWorkers,
 };

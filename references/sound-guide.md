@@ -200,6 +200,10 @@ node scripts/video/media.js credit assets/track.mp3 --source "Pixabay Music" --l
 ```
 
 Places to get one (check each track's own terms; they vary):
+- **Openverse, from here:** `node scripts/video/media.js search "<mood>"
+  --type music --out <assets>` finds Creative Commons tracks that allow
+  commercial use and changes, saves each one's credit line, and reports
+  its tempo and beat confidence, ready for `beats.js`.
 - **YouTube Audio Library:** free, in YouTube Studio. Some tracks require a
   credit line, and the license is meant for YouTube.
 - **Pixabay Music:** free under the Pixabay Content License, including

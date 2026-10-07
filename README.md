@@ -678,6 +678,17 @@ reporting a send as done.
 prints the value for the frame it checked. YouTube's Shorts cover is
 chosen in its app.
 
+**How it did:** `publish_direct.py --platform youtube|instagram|tiktok
+--metrics --video-id <id>` reads a posted video's views, average watch,
+likes, comments, shares, and saves (read-only, so it needs no
+`--confirmed`) and prints a row for `state/video-log.md`. Once that log
+has about ten posts with numbers, `short-form-video` and
+`content-calendar` steer formats, hooks, and posting times by this
+account's own results. Like the rest of `publish_direct.py`, it's written
+against each platform's documented API without a live account to test
+on; YouTube's average-watch figure also needs the
+`yt-analytics.readonly` scope.
+
 None of this blocks the default path: `short-form-video` always produces
 the full script, caption, and hashtags regardless of whether any of this
 is set up, and posting it yourself by hand — download or generate the
@@ -780,7 +791,9 @@ Openverse photos are available (no video clips).
 **Usage:**
 
 ```
-node render.js templates/promo.html out.mp4             # full render, ~2 minutes for 24s
+node render.js templates/promo.html out.mp4             # full render, in parallel: well under a minute for 24s
+node render.js templates/promo.html out.mp4 --draft     # half size at 15fps, a few seconds, to check timing
+node render.js --batch week/*.html --outdir renders     # a week of pages in one run, every hook variant included
 node render.js templates/promo.html --check             # lint the layout over the whole timeline, in seconds
 node render.js templates/promo.html --slides            # each scene's settled frame as a PNG (also a carousel)
 node render.js templates/promo.html --stills 1.5,6,12   # preview frames at chosen times
@@ -788,6 +801,7 @@ node render.js templates/promo.html out.m4a --audio-only  # just the soundtrack,
 node render.js --sample pop out.m4a --motif "1 3 5 3 | 6 5 3 -" --key D   # audition a sound
 node render.js page.html out.mp4 --silent               # silent audio track instead of the soundtrack
 node media.js search "cozy coffee shop morning" --out assets --count 3     # stock photos (+ --type video)
+node media.js search "upbeat acoustic" --type music --out assets          # Creative Commons music, with tempo and credits
 node check.js                                            # QA every template: layout, cues, fonts, loudness
 node beats.js assets/track.mp3 --align 2 --duration 24   # a track's tempo and beats, started so its drop hits 2s
 node voice.js script.md --out assets --voice af_heart     # a free voiceover, one WAV per script line
@@ -1073,6 +1087,7 @@ state/
   posts/                  # one file per queued post's full content, linked from the index above
   outreach-log.md         # outreach queue/history + permanent suppression list (generated + appended to, hand-editable)
   outreach/               # one file per drafted email's full content, linked from the log above
+  video-log.md            # every posted video with its format, hook, and numbers; steers the next ones
 scripts/
   publish_webhook.py     # stdlib-only webhook sender (see --help)
   publish_direct.py      # stdlib-only direct-to-platform scaffold (LinkedIn/X/Meta/Reddit/Discord/Slack/Telegram/dev.to/YouTube/Instagram/TikTok), needs your own API credentials (see --help)

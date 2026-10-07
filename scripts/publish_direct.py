@@ -385,6 +385,12 @@ def parse_args():
                               "the video bytes. Instagram: how long to keep polling the media container while "
                               "it processes the video before giving up.")
     parser.add_argument("--timeout", type=float, default=15, help="Request timeout in seconds for ordinary (non-upload) calls (default: 15).")
+    parser.add_argument("--metrics", action="store_true",
+                         help="Read a posted video's numbers instead of posting (--platform youtube, instagram, or "
+                              "tiktok, with --video-id). Read-only, so it needs neither --dry-run nor --confirmed; "
+                              "--dry-run still previews the request. Prints a row for state/video-log.md.")
+    parser.add_argument("--video-id", help="--metrics only: the platform's ID for the posted video (YouTube video ID, "
+                                            "Instagram media ID, TikTok video ID).")
     parser.add_argument("--dry-run", action="store_true", help="Print the request(s) instead of sending them. Never makes a network call.")
     parser.add_argument("--confirmed", action="store_true",
                          help="Required to actually send. Only pass this after a human has seen the exact "
@@ -1043,6 +1049,114 @@ def run_tiktok(args):
     return 0
 
 
+def http_json(url, headers, timeout, body=None, method="GET"):
+    request = urllib.request.Request(url, data=body, headers=headers, method=method)
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return json.loads(response.read().decode("utf-8") or "{}")
+
+
+def metrics_requests(args):
+    """The read-only requests --metrics makes for each platform, as (label, method, url, headers,
+    body, secrets, optional) tuples. Best-effort against each platform's documented API, like the
+    rest of this script: confirm the metric names against the platform's docs if a call fails."""
+    vid = urllib.parse.quote(args.video_id, safe="")
+    if args.platform == "youtube":
+        env = require_env("YOUTUBE_ACCESS_TOKEN")
+        headers = {"Authorization": f"Bearer {env['YOUTUBE_ACCESS_TOKEN']}"}
+        today = time.strftime("%Y-%m-%d")
+        return [
+            ("statistics (YouTube Data API)", "GET",
+             f"https://www.googleapis.com/youtube/v3/videos?part=statistics&id={vid}", headers, None,
+             [env["YOUTUBE_ACCESS_TOKEN"]], False),
+            # average view percentage needs the yt-analytics.readonly scope on the same token
+            ("watch time (YouTube Analytics API)", "GET",
+             "https://youtubeanalytics.googleapis.com/v2/reports?ids=channel%3D%3DMINE&startDate=2005-01-01"
+             f"&endDate={today}&metrics=views%2CaverageViewDuration%2CaverageViewPercentage%2Cshares"
+             f"&filters=video%3D%3D{vid}", headers, None, [env["YOUTUBE_ACCESS_TOKEN"]], True),
+        ]
+    if args.platform == "instagram":
+        env = require_env("META_PAGE_ACCESS_TOKEN")
+        metric = "views,reach,likes,comments,shares,saved,ig_reels_avg_watch_time"
+        return [("insights (Instagram Graph API)", "GET",
+                 f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{vid}/insights?metric={metric}"
+                 f"&access_token={urllib.parse.quote(env['META_PAGE_ACCESS_TOKEN'], safe='')}", {}, None,
+                 [env["META_PAGE_ACCESS_TOKEN"]], False)]
+    env = require_env("TIKTOK_ACCESS_TOKEN")
+    body = json.dumps({"filters": {"video_ids": [args.video_id]}}).encode("utf-8")
+    return [("video stats (TikTok Display API, video.list scope)", "POST",
+             "https://open.tiktokapis.com/v2/video/query/?fields=id,view_count,like_count,comment_count,share_count,duration",
+             {"Authorization": f"Bearer {env['TIKTOK_ACCESS_TOKEN']}", "Content-Type": "application/json; charset=UTF-8"},
+             body, [env["TIKTOK_ACCESS_TOKEN"]], False)]
+
+
+def read_metrics(platform, answers):
+    """Pulls views, average watch, likes, comments, shares, and saves out of the answers."""
+    m = {}
+    if platform == "youtube":
+        stats = ((answers.get(0) or {}).get("items") or [{}])[0].get("statistics", {})
+        m.update(views=stats.get("viewCount"), likes=stats.get("likeCount"), comments=stats.get("commentCount"))
+        report = answers.get(1) or {}
+        heads = [h.get("name") for h in report.get("columnHeaders", [])]
+        if report.get("rows"):
+            row = dict(zip(heads, report["rows"][0]))
+            if row.get("averageViewPercentage") is not None:
+                m["avg_watch"] = f"{round(float(row['averageViewPercentage']))}%"
+            m["shares"] = row.get("shares")
+    elif platform == "instagram":
+        for item in (answers.get(0) or {}).get("data", []):
+            values = item.get("values") or [{}]
+            value = values[0].get("value", (item.get("total_value") or {}).get("value"))
+            m[{"views": "views", "likes": "likes", "comments": "comments", "shares": "shares", "saved": "saves",
+               "ig_reels_avg_watch_time": "avg_watch"}.get(item.get("name"), item.get("name"))] = value
+        if isinstance(m.get("avg_watch"), (int, float)):
+            m["avg_watch"] = f"{m['avg_watch'] / 1000:.1f}s"  # Instagram reports milliseconds
+    else:
+        video = (((answers.get(0) or {}).get("data") or {}).get("videos") or [{}])[0]
+        m.update(views=video.get("view_count"), likes=video.get("like_count"), comments=video.get("comment_count"),
+                 shares=video.get("share_count"))
+    return m
+
+
+def run_metrics(args):
+    if args.platform not in ("youtube", "instagram", "tiktok"):
+        print("--metrics works for --platform youtube, instagram, and tiktok.", file=sys.stderr)
+        return 2
+    if not args.video_id:
+        print("--metrics needs --video-id: the platform's ID for the posted video.", file=sys.stderr)
+        return 2
+    requests = metrics_requests(args)
+    if args.dry_run:
+        print("=== DRY RUN: no request sent ===")
+        for label, method, url, headers, body, secrets, _ in requests:
+            print(f"{label}:")
+            print(f"  {method} {redact(url, secrets)}")
+            for name, value in headers.items():
+                print(f"  {name}: {redact(value, secrets)}")
+            if body:
+                print(f"  Body: {redact(body.decode('utf-8'), secrets)}")
+        print("=== END DRY RUN ===")
+        return 0
+    answers = {}
+    for i, (label, method, url, headers, body, secrets, optional) in enumerate(requests):
+        try:
+            answers[i] = http_json(url, headers, args.timeout, body, method)
+        except urllib.error.HTTPError as e:
+            detail = redact(e.read().decode("utf-8", "replace")[:300], secrets)
+            print(f"{label}: HTTP {e.code} {detail}", file=sys.stderr)
+            if not optional:
+                return 1
+            print(f"(skipped: {label} is optional; for YouTube it needs the yt-analytics.readonly scope)", file=sys.stderr)
+        except urllib.error.URLError as e:
+            print(f"{label}: couldn't connect ({e.reason})", file=sys.stderr)
+            return 1
+    m = read_metrics(args.platform, answers)
+    print(json.dumps({"platform": args.platform, "video_id": args.video_id, **m}, indent=2))
+    cell = lambda k: "" if m.get(k) is None else str(m[k])  # noqa: E731
+    print("For state/video-log.md (Views | Avg watch | 3s hold | Likes | Comments | Shares | Saves | Updated):")
+    print(f"| {cell('views')} | {cell('avg_watch')} |  | {cell('likes')} | {cell('comments')} | {cell('shares')} | {cell('saves')} | {time.strftime('%Y-%m-%d')} |")
+    return 0
+
+
 VIDEO_RUNNERS = {
     "youtube": run_youtube,
     "instagram": run_instagram,
@@ -1052,6 +1166,10 @@ VIDEO_RUNNERS = {
 
 def main():
     args = parse_args()
+
+    # reading numbers posts nothing, so it skips the send gate below
+    if args.metrics:
+        sys.exit(run_metrics(args))
 
     if not args.dry_run and not args.confirmed:
         print(

@@ -42,6 +42,19 @@ Skills that read "our changelog" for source material read this file too.
   `.say auto[data-clip]` captions it. Screen recordings in the how-to phone
   frame are cut to the screen's shape instead of being cropped to 9:16
   first.
+- **Faster renders**: frames render in parallel across browsers (the
+  explainer's approach, now shared), with faster screenshots; a 12-second
+  template went from 76s to 25s on a 4-core machine. `--draft` makes a
+  half-size 15fps check in seconds, and `--batch` renders a week of pages,
+  every variant included.
+- **Licensed music**: `media.js search --type music` finds Creative
+  Commons tracks on Openverse that allow commercial use, records their
+  credits, and reports each one's tempo and beat confidence.
+- **Learning what works**: `state/video-log.md` records every posted
+  video, and `publish_direct.py --metrics` reads its numbers from YouTube,
+  Instagram, or TikTok. With about ten posts logged, `short-form-video`
+  and `content-calendar` steer formats, hooks, and posting times by the
+  account's own results.
 - `short-form-video`'s local-render steps moved to
   `references/video-rendering.md`, and its worked example to
   `references/short-form-video-example.md`, so script-only runs load less.

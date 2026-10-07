@@ -7,7 +7,7 @@
  * lines.
  *
  * Usage:
- *   node media.js search "<query>" --out <assets dir> [--type photo|video] [--count 3]
+ *   node media.js search "<query>" --out <assets dir> [--type photo|video|music] [--count 3]
  *                 [--provider pexels|pixabay|openverse]
  *   node media.js credit <file> --ai "<tool / model>" [--prompt "<prompt used>"]
  *   node media.js credit <file> --source "<library or site>" --license "<license>"
@@ -25,6 +25,10 @@
  *   downloads (--count is capped at 10).
  * - Openverse results are limited to licenses that allow commercial use and
  *   modification (no NC or ND); CC BY and BY-SA need a credit.
+ *
+ * --type music searches Openverse's audio (music only, the same license limits) for a track to
+ * use instead of the generated soundtrack, and reads each download's tempo with beats.js, so
+ * the track can be started where its drop lands on the hook and the scenes cut on its beat.
  * Every file lands in credits.json and CREDITS.md next to it, with the exact
  * credit line to use, if one is needed.
  */
@@ -164,6 +168,20 @@ const PROVIDERS = {
   openverse: {
     key: null,
     async search(q, type, n, cacheDir) {
+      if (type === 'music') {
+        const d = await getJson(`${BASES.openverse}/audio/?q=${encodeURIComponent(q)}&license_type=commercial,modification&category=music&mature=false&page_size=${Math.min(20, n * 4)}`, {}, cacheDir);
+        // long enough to sit under a whole short (Openverse gives the length in milliseconds)
+        return (d.results || []).filter((r) => r.url && (!r.duration || r.duration >= 20000)).map((r) => {
+          const free = ['cc0', 'pdm'].includes(r.license);
+          const license = r.license === 'pdm' ? 'Public Domain Mark'
+            : `${r.license === 'cc0' ? 'CC0' : `CC ${String(r.license).toUpperCase()}`} ${r.license_version || ''}`.trim();
+          return {
+            id: `openverse-audio-${r.id}`, url: r.url, duration: r.duration ? r.duration / 1000 : undefined, title: r.title,
+            creator: r.creator || 'unknown', source: r.foreign_landing_url, license,
+            required: !free, line: free ? '' : `"${r.title || 'Track'}" by ${r.creator || 'unknown'}, ${license}`,
+          };
+        });
+      }
       if (type !== 'photo') throw new ProviderError('has no video clips');
       const d = await getJson(`${BASES.openverse}/images/?q=${encodeURIComponent(q)}&license_type=commercial,modification&aspect_ratio=tall&size=large&mature=false&page_size=${Math.min(20, n * 3)}`, {}, cacheDir);
       return (d.results || []).filter((r) => !r.width || (r.width >= MIN_W * 0.75 && r.height >= MIN_H * 0.75)).map((r) => {
@@ -180,17 +198,24 @@ const PROVIDERS = {
   },
 };
 
-const EXTENSIONS = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov' };
+const EXTENSIONS = {
+  'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov',
+  'audio/mpeg': 'mp3', 'audio/mp3': 'mp3', 'audio/ogg': 'ogg', 'audio/wav': 'wav', 'audio/x-wav': 'wav', 'audio/flac': 'flac',
+  'audio/x-flac': 'flac', 'audio/mp4': 'm4a', 'audio/aac': 'aac',
+};
+const URL_EXTENSIONS = /\.(jpe?g|png|webp|mp4|webm|mov|mp3|ogg|wav|flac|m4a|aac)$/i;
 
 // Returns the file's bytes and an extension taken from its content type (Openverse URLs don't reliably have one).
 async function download(url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const type = (res.headers.get('content-type') || '').split(';')[0].trim();
-  if (!EXTENSIONS[type]) throw new Error(`not a supported image or video (${type || 'no content type'})`);
+  // some hosts send a generic content type; the file name says what it is
+  const fromUrl = (URL_EXTENSIONS.exec(new URL(url).pathname) || [])[1];
+  if (!EXTENSIONS[type] && !fromUrl) throw new Error(`not a supported image, video, or audio file (${type || 'no content type'})`);
   const len = Number(res.headers.get('content-length') || 0);
   if (len > MAX_VIDEO_BYTES) throw new Error(`too large (${Math.round(len / 1e6)} MB)`);
-  return { bytes: Buffer.from(await res.arrayBuffer()), ext: EXTENSIONS[type] };
+  return { bytes: Buffer.from(await res.arrayBuffer()), ext: EXTENSIONS[type] || fromUrl.toLowerCase().replace('jpeg', 'jpg') };
 }
 
 function loadCredits(dir) {
@@ -222,6 +247,18 @@ function saveCredits(dir, credits) {
   fs.writeFileSync(path.join(dir, 'CREDITS.md'), md.join('\n'));
 }
 
+// A track's tempo and how steady its beat is, from beats.js, so a fitting one can be picked
+// and the video cut on it.
+function rhythm(file) {
+  const run = spawnSync(process.execPath, [path.join(__dirname, 'beats.js'), file, '--json'], { encoding: 'utf8', maxBuffer: 1 << 26 });
+  try {
+    const d = JSON.parse(run.stdout);
+    return { bpm: d.bpm, beatConfidence: d.confidence, duration: d.duration };
+  } catch {
+    return {};
+  }
+}
+
 function nextName(dir, slug, ext) {
   for (let i = 1; ; i++) {
     const name = `${slug}-${i}.${ext}`;
@@ -234,8 +271,8 @@ async function search(args) {
   const out = args.out;
   const type = args.type || 'photo';
   const count = Math.min(MAX_COUNT, Math.max(1, Number(args.count || 3)));
-  if (!query || !out) fail('Usage: node media.js search "<query>" --out <assets dir> [--type photo|video] [--count 3] [--provider ...]');
-  if (!['photo', 'video'].includes(type)) fail('--type must be photo or video.');
+  if (!query || !out) fail('Usage: node media.js search "<query>" --out <assets dir> [--type photo|video|music] [--count 3] [--provider ...]');
+  if (!['photo', 'video', 'music'].includes(type)) fail('--type must be photo, video, or music.');
   if (args.provider && !PROVIDERS[args.provider]) fail(`Unknown --provider "${args.provider}" (use ${Object.keys(PROVIDERS).join(', ')}).`);
 
   let order;
@@ -246,6 +283,7 @@ async function search(args) {
   } else {
     order = Object.keys(PROVIDERS).filter((name) => !PROVIDERS[name].key || process.env[PROVIDERS[name].key]);
     if (type === 'video') order = order.filter((name) => name !== 'openverse');
+    if (type === 'music') order = ['openverse'];
     if (!order.length) {
       fail('Video clips need a Pexels or Pixabay key: set PEXELS_API_KEY or PIXABAY_API_KEY (both free).');
     }
@@ -280,6 +318,7 @@ async function search(args) {
       fs.writeFileSync(path.join(out, file), got.bytes);
       const entry = { file, id: c.id, provider: name, type, width: c.width, height: c.height, duration: c.duration,
                       creator: c.creator, source: c.source, license: c.license, required: c.required, line: c.line, query };
+      if (type === 'music') Object.assign(entry, { title: c.title }, rhythm(path.join(out, file)));
       // below full 1080x1920 it gets upscaled, so it will look soft once the Ken Burns zoom kicks in
       if (c.width && c.height && (Math.min(c.width, c.height) < MIN_W || Math.max(c.width, c.height) < MIN_H)) entry.soft = true;
       credits.push(entry);
@@ -291,7 +330,7 @@ async function search(args) {
       console.log(JSON.stringify({ provider: name, query, type, files }, null, 2));
       return;
     }
-    const what = type === 'photo' ? 'photos' : 'clips';
+    const what = { photo: 'photos', video: 'clips', music: 'tracks' }[type];
     problems.push(candidates.length && !fresh.length
       ? `${name}: every result for "${query}" is already in ${out}; try a different query`
       : `${name}: no usable ${what} at least ${MIN_W}x${MIN_H} for "${query}"`);

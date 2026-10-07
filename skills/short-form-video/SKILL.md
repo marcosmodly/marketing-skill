@@ -64,6 +64,15 @@ command below.
      product"/"our feature" — check `README*`, `CHANGELOG*`, and
      `docs/**/*.md` at the project root first if so, same convention as
      `content-repurposer`, before asking the user to describe it).
+   - **What has worked for this account.** Read
+     `${CLAUDE_PLUGIN_ROOT}/state/video-log.md` if it exists. With about
+     10 or more rows that have numbers, let them steer the choices below:
+     the formats, hook patterns, sounds, and lengths that held viewers
+     longest here, and the account's own best posting days and hours (they
+     replace the general windows in "Posting time guidance"). Say how many
+     posts a pattern rests on, treat small gaps as noise, and keep about one
+     in ten posts an experiment. With fewer rows, say the log is too thin
+     yet and use the general guidance.
    - Which platform(s) — default to all three (YouTube Shorts, Instagram
      Reels, TikTok) unless the user names only one or two.
    - Marketing video or everyday post. A marketing video sells or explains
@@ -312,6 +321,14 @@ command below.
      bare 2xx status alone (TikTok and Instagram both process the video
      *after* this script's request returns — see `publish_direct.py`'s own
      notes for each).
+   - **Log it.** When a video goes out (or the user says it did), add a row
+     to `${CLAUDE_PLUGIN_ROOT}/state/video-log.md`: date, platform, file,
+     format, hook and its pattern, variant, sound, length, and link or ID.
+     A few days later, offer to fill in its numbers: the user pastes them
+     from the platform's analytics, or `publish_direct.py --platform
+     <platform> --metrics --video-id <id>` fetches them where that
+     platform's credentials are set up (it prints the row's cells). Never
+     estimate a number that wasn't reported; leave the cell blank.
 
 ## When to use this skill
 

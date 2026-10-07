@@ -100,6 +100,14 @@ Set the `<body>` music attributes from the Sonic Identity in
   --motif ... --key ... --mode ... --energy ...`, a few seconds each). Send
   both to the user to listen to, and save their pick to `brand-voice.md`
   before rendering. You can't hear audio, so their ear decides.
+- **Finding a licensed track:** `node
+  ${CLAUDE_PLUGIN_ROOT}/scripts/video/media.js search "<mood or genre>"
+  --type music --out ${CLAUDE_PLUGIN_ROOT}/state/videos/assets --count 3`
+  downloads Creative Commons music from Openverse that allows commercial
+  use and changes, records each track's credit line, and reports its tempo
+  and how steady its beat is (from `beats.js`). Prefer a confidence of 0.5
+  or more for cutting on the beat. Send the user the files to listen to;
+  you can't hear them.
 - **The user has a licensed track they'd rather use:** put it in
   `assets/`, set `data-music-src` and `data-music-start`, and record its
   license with `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/media.js credit
@@ -271,7 +279,13 @@ Render: `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/render.js <page>
 ${CLAUDE_PLUGIN_ROOT}/state/videos/<date>-<slug>.mp4`. The output is
 1080×1920, 30fps H.264 with AAC audio mixed to about −14 LUFS, which is
 what all three platforms expect. That file is what `--platform youtube`
-uploads directly.
+uploads directly. Frames render in parallel (one browser per core but one,
+up to four; `--workers` sets it), so a 12-second video takes well under a
+minute on a laptop. For a quick look at timing and sync before the real
+render, `--draft` makes a half-size 15fps version in a fraction of the
+time; never post a draft. Several pages at once (a week of videos):
+`render.js --batch <page> <page> ... [--outdir dir] [--cover 0]` renders
+each to `<page>.mp4`, every hook variant included.
 
 ## Credits and labels
 

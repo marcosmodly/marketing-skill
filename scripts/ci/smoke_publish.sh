@@ -52,6 +52,13 @@ if env YOUTUBE_ACCESS_TOKEN=$fake python3 $d --platform youtube --title hi --tex
 fi
 echo "ok: youtube refuses a cover"
 
+# metrics: read-only, so it runs without --confirmed; checked here as a dry run
+for platform in youtube instagram tiktok; do
+  out=$(env YOUTUBE_ACCESS_TOKEN=$fake META_PAGE_ACCESS_TOKEN=$fake TIKTOK_ACCESS_TOKEN=$fake python3 $d --platform $platform --metrics --video-id 123 --dry-run 2>&1)
+  grep -q "DRY RUN" <<<"$out" && ! grep -q "$fake" <<<"$out" || { echo "FAIL: $platform --metrics"; echo "$out"; exit 1; }
+  echo "ok: $platform metrics"
+done
+
 if env DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/1/$fake python3 $d --platform discord --text hi >/dev/null 2>&1; then
   echo "FAIL: publish_direct.py ran with neither --dry-run nor --confirmed"
   exit 1
