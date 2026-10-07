@@ -157,8 +157,8 @@ command below.
      the user's Figma account linked to Weave (in Weave's own profile
      settings) before any of it works.
    - **Canva or any other connected visual-gen tool:** check the same way
-     (per this plugin's existing "Connecting a visual-generation tool"
-     README section) — if present, it's also a real option for generating
+     (per "Connecting a visual-generation tool" in this plugin's
+     `docs/video.md`) — if present, it's also a real option for generating
      or assembling the video.
    - **Listed but not usable yet:** a tool can show up this session and
      still not work — a connector waiting on authorization (Canva commonly
@@ -175,8 +175,8 @@ command below.
      the user's product or people. Read
      `${CLAUDE_PLUGIN_ROOT}/references/video-rendering.md` ("What it makes")
      for what it suits and how to check it's usable; if anything is
-     missing, give the user the one-time setup from README's "Rendering a
-     short-form video locally" section rather than installing it unasked.
+     missing, give the user the one-time setup from "Rendering a
+     short-form video locally" in `docs/video.md` rather than installing it unasked.
      If it's usable, offer it alongside any connected tool. It costs
      nothing to run.
    - **If nothing is connected and local rendering isn't set up:** say so
@@ -315,8 +315,8 @@ command below.
      real credentials set up for that platform. Each of those three posts
      actual video, not text, and each has a real access gate worth knowing
      about *before* assuming "just post it" is a one-step ask — see this
-     plugin's README section "Posting to YouTube Shorts, Instagram Reels &
-     TikTok" for the honest version of each platform's setup cost, and
+     plugin's `docs/publishing.md`, "Posting to YouTube Shorts, Instagram
+     Reels & TikTok", for the honest version of each platform's setup cost, and
      never claim a send succeeded, or that a video is actually live, from a
      bare 2xx status alone (TikTok and Instagram both process the video
      *after* this script's request returns — see `publish_direct.py`'s own

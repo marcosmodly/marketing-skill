@@ -55,6 +55,12 @@ Skills that read "our changelog" for source material read this file too.
   Instagram, or TikTok. With about ten posts logged, `short-form-video`
   and `content-calendar` steer formats, hooks, and posting times by the
   account's own results.
+- **A shorter README** that leads with a gallery of the templates
+  (`docs/gallery/`, rebuilt by `scripts/video/gallery.js`) and a summary
+  of making videos, with the long platform and tool sections moved,
+  word for word, to `docs/video.md`, `docs/publishing.md`,
+  `docs/community-posting.md`, and `docs/outreach.md`. CI now checks
+  every link and anchor in the README, docs, and references.
 - `short-form-video`'s local-render steps moved to
   `references/video-rendering.md`, and its worked example to
   `references/short-form-video-example.md`, so script-only runs load less.

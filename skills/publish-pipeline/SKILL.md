@@ -131,7 +131,7 @@ command below.
      Reddit, Discord, Slack, Telegram, or dev.to rather than handing off to
      their own automation, see `${CLAUDE_PLUGIN_ROOT}/scripts/publish_direct.py
      --help`. It only works if the user has already set up real API
-     credentials for that platform (see the plugin README) — check with
+     credentials for that platform (see the plugin's `docs/publishing.md`) — check with
      `--dry-run` first, same confirmation rules as above apply, and be
      explicit that this path is less proven than the webhook path since it
      talks to live platform APIs this plugin's author can't verify from
@@ -159,7 +159,7 @@ command below.
      2xx from dev.to's API means the article was accepted, not that a Tag
      Moderator won't strip a tag from it afterward. **Product Hunt, Hacker
      News, and Indie Hackers have no equivalent direct-send path, for
-     different reasons** (see README): Product Hunt's write API requires
+     different reasons** (see `docs/publishing.md`): Product Hunt's write API requires
      special approval from Product Hunt itself; Hacker News's API has no
      write/submit endpoint at all, for anyone; and Indie Hackers' API
      situation is unverified rather than confirmed either way, so it's

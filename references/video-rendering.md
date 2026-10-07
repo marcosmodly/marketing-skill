@@ -18,8 +18,8 @@ run.
 
 Check it's usable with `node --version` (18+), `ffmpeg -version`, and
 `node -e "require('playwright')"` run from `scripts/video`. If anything is
-missing, give the user the one-time setup from README's "Rendering a
-short-form video locally" section rather than installing it unasked.
+missing, give the user the one-time setup from "Rendering a short-form
+video locally" in `docs/video.md` rather than installing it unasked.
 
 ## A narrated video: compose.js
 

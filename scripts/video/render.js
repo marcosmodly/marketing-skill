@@ -8,7 +8,7 @@
  * The page animates with CSS animations (or the Web Animations API). This
  * script pauses every animation and seeks it frame by frame in headless
  * Chromium, so the output is frame-exact no matter how slow the machine is.
- * See templates/promo.html for the page conventions, and the README section
+ * See templates/promo.html for the page conventions, and docs/video.md,
  * "Rendering a short-form video locally".
  *
  * Usage:

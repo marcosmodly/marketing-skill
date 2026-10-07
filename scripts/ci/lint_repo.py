@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Repo checks that need no network or browser: skill frontmatter, command
-size, plugin manifests, and file paths the skills point at.
+size, plugin manifests, file paths the skills point at, and the links in
+the README, the docs, and the references.
 
 Run from anywhere: python3 scripts/ci/lint_repo.py
 Exits 1 and lists every problem found.
@@ -114,11 +115,47 @@ def check_paths():
                         problems.append(f"{rel(path)}: points at {target}, which doesn't exist")
 
 
+# GitHub's heading anchors: lowercase, punctuation dropped, spaces to hyphens
+def slug(heading):
+    return re.sub(r"[^a-z0-9 _-]", "", heading.strip().lower()).replace(" ", "-")
+
+
+def anchors(path):
+    text = open(path, encoding="utf-8").read()
+    text = re.sub(r"```.*?```", "", text, flags=re.S)
+    return {slug(m.group(1)) for m in re.finditer(r"^#{1,6} (.+)$", text, re.M)}
+
+
+MD_LINK = re.compile(r"\]\(([^)\s]+)\)")
+
+
+def check_links():
+    files = ["README.md", "EXAMPLE.md", "CHANGELOG.md"]
+    for base in ("docs", "references"):
+        files += [os.path.join(base, f) for f in sorted(os.listdir(os.path.join(ROOT, base))) if f.endswith(".md")]
+    for f in files:
+        path = os.path.join(ROOT, f)
+        if not os.path.isfile(path):
+            continue
+        text = re.sub(r"```.*?```", "", open(path, encoding="utf-8").read(), flags=re.S)
+        for m in MD_LINK.finditer(text):
+            target = m.group(1)
+            if re.match(r"^(https?:|mailto:)", target):
+                continue
+            file_part, _, anchor = target.partition("#")
+            dest = os.path.normpath(os.path.join(os.path.dirname(path), file_part)) if file_part else path
+            if not os.path.exists(dest):
+                problems.append(f"{f}: link to {target}, which doesn't exist")
+            elif anchor and dest.endswith(".md") and anchor not in anchors(dest):
+                problems.append(f"{f}: link to {target}, but {rel(dest)} has no heading with that anchor")
+
+
 def main():
     check_skills()
     check_commands()
     check_manifests()
     check_paths()
+    check_links()
     for p in problems:
         print(f"- {p}")
     print(f"{len(problems)} problem(s)" if problems else "Repo checks passed")

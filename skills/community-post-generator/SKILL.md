@@ -588,7 +588,7 @@ Use this exact section order, as Markdown `##` headings:
    dev.to article programmatically if the user already has the right
    credentials (a Reddit API app, a webhook URL for that Discord channel or
    Slack channel, a bot token plus that chat's ID for Telegram, or a dev.to
-   API key for dev.to; see that skill and the plugin README) — but these
+   API key for dev.to; see that skill and the plugin's `docs/publishing.md`) — but these
    don't share one friction profile, so don't present any of them with
    borrowed confidence from another:
    - Discord: sending is unambiguously the easy part — a webhook is close

@@ -166,7 +166,7 @@ two options above you want, and this skill will draft that version next.
 > ## Next Step
 > Nothing sent. If BuildSpace has a webhook set up for #showcase,
 > `publish-pipeline`'s direct-post path can send this immediately, no
-> approval queue involved — see the plugin README.
+> approval queue involved — see the plugin's `docs/publishing.md`.
 > ```
 >
 > Same natural-writing bar as every other draft (no em dashes, no

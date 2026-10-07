@@ -73,7 +73,8 @@ command below.
 
 5. **Report status honestly.** Never claim an asset was generated if no
    tool call actually happened. If no visual-gen tool is connected, say so
-   plainly and point to this plugin's README section on connecting one.
+   plainly and point to this plugin's `docs/video.md` ("Connecting a
+   visual-generation tool").
 
 ## When to use this skill
 
@@ -109,7 +110,7 @@ Color palette, tone, pacing, and sound/music direction (if video).
 ### Generation Status / Next Steps
 State plainly whether a connected tool was used to actually generate
 anything. If not, note how to connect a visual-gen MCP tool (see this
-plugin's README) or how to paste these prompts into a tool manually.
+plugin's `docs/video.md`) or how to paste these prompts into a tool manually.
 
 ## Formatting rules
 
@@ -168,6 +169,6 @@ quick cuts, no scene longer than 5s. Sound: upbeat, minimal, a single
 No connected image/video-generation tool was available in this session, so
 no asset was generated — this brief is the deliverable. To generate
 directly, connect a visual-gen MCP tool and re-run this skill (see this
-plugin's README), or paste the per-scene prompts above into your tool of
+plugin's `docs/video.md`), or paste the per-scene prompts above into your tool of
 choice.
 ```
