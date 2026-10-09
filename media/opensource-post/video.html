@@ -1,0 +1,385 @@
+<!doctype html>
+<!--
+  The r/opensource post's video (1920x1080, about 44 seconds).
+
+  The video is about how it was made: this page, rendered frame by frame by
+  scripts/video/render.js, with music from scripts/video/soundtrack.js (the
+  "tech" genre, 112 BPM, C major) instead of a licensed track, so everything
+  in it can be rebuilt from the repo. Reddit autoplays muted, so every point
+  is on screen; the music is a bonus, not the message.
+
+  Scenes cut on bar lines of the music (a bar is four beats at 112 BPM), and
+  the beat drops at DROP, when the hook's second line comes in.
+
+  Rendered with ../explainer/render.js (the landscape wrapper around
+  scripts/video/render.js); see README.md in this folder.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<title>Marketing Skills, r/opensource video</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@500;600;700;800&family=JetBrains+Mono:wght@500;700&display=block">
+<style>
+  :root {
+    --paper: #f3ede3;
+    --card: #fffdf9;
+    --ink: #16130f;
+    --ink2: #5c554b;
+    --line: #d9cebd;
+    --accent: #d2603a;
+    --accent-soft: #f6d6c6;
+    --ok: #2c8a56;
+    --warn: #a8741a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--paper); }
+  body { font-family: "Inter", "Liberation Sans", sans-serif; color: var(--ink); position: relative; -webkit-font-smoothing: antialiased; }
+  .abs { position: absolute; }
+  .serif { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; letter-spacing: -.01em; }
+  .mono { font-family: "JetBrains Mono", monospace; }
+  .scene { position: absolute; inset: 0; }
+  .mask { display: block; overflow: hidden; padding: .04em 0 .14em; margin: -.04em 0 -.14em; }
+  .mask > span { display: inline-block; white-space: nowrap; }
+  .hl { color: var(--accent); }
+  .card { background: var(--card); border: 2px solid var(--line); border-radius: 28px; box-shadow: 0 30px 60px -40px rgba(60,40,20,.35); }
+  .pill { display: inline-flex; align-items: center; gap: 14px; border-radius: 999px; white-space: nowrap; }
+  .typed { display: inline-block; overflow: hidden; white-space: pre; vertical-align: bottom; }
+
+  #grain { position: absolute; inset: -40px; background-image: radial-gradient(circle, rgba(22,19,15,.06) 1.4px, transparent 1.6px); background-size: 36px 36px; }
+  #wipeA, #wipeB { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; z-index: 8; }
+  #wipeA { background: var(--accent); }
+  #wipeB { background: var(--ink); }
+  #prog { position: absolute; left: 0; bottom: 0; width: 1920px; height: 8px; background: var(--accent); transform-origin: 0 50%; z-index: 9; }
+  #fade { position: absolute; inset: 0; background: var(--paper); z-index: 10; }
+
+  /* 1 */
+  .big { font-size: 170px; line-height: 1.02; }
+  .code { font: 500 40px/1.6 "JetBrains Mono"; color: var(--ink2); white-space: nowrap; }
+  .code div:first-child { color: var(--ink); }
+  .file { font: 700 48px/1 "JetBrains Mono"; padding: 22px 34px; border-radius: 20px; background: var(--card); border: 2px solid var(--line); white-space: nowrap; }
+  /* 2 */
+  .step { position: absolute; top: 300px; width: 340px; height: 300px; padding: 40px 30px; display: flex; flex-direction: column; justify-content: space-between; }
+  .step .name { font: 700 48px/1.1 "JetBrains Mono"; }
+  .step .what { font-size: 40px; font-weight: 600; color: var(--ink2); line-height: 1.2; }
+  .arrow { position: absolute; top: 410px; font: 700 70px/1 "Inter"; color: var(--accent); }
+  .cmd { font: 500 48px/1 "JetBrains Mono"; height: 92px; display: flex; align-items: center; white-space: pre; }
+  .cmd .p { color: var(--accent); }
+  /* 3 */
+  .genre { display: inline-flex; font: 600 44px/1 "Inter"; padding: 20px 30px; border: 2px solid var(--line); border-radius: 999px; background: var(--card); margin: 0 18px 20px 0; color: var(--ink2); }
+  .genre.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .motif { font: 700 96px/1 "JetBrains Mono"; white-space: pre; }
+  .motif span { display: inline-block; color: var(--line); }
+  /* 4 */
+  .phone { position: absolute; width: 300px; height: 533px; border-radius: 40px; overflow: hidden; border: 8px solid var(--ink); background: var(--ink); box-shadow: 0 40px 60px -30px rgba(40,25,10,.45); }
+  .phone img { width: 100%; height: 100%; display: block; }
+  /* 5 */
+  .tree { font: 500 46px/1 "JetBrains Mono"; }
+  .tree div { height: 72px; display: flex; align-items: center; white-space: nowrap; }
+  .tree i { font-style: normal; color: var(--accent); margin-right: 22px; }
+  /* 6 */
+  .st { position: absolute; top: 360px; height: 100px; border-radius: 999px; display: grid; place-items: center; font-size: 44px; font-weight: 700;
+        background: var(--card); border: 3px solid var(--line); color: var(--ink2); white-space: nowrap; }
+  .bubble { position: absolute; border-radius: 34px; padding: 30px 40px; font-size: 48px; font-weight: 600; line-height: 1.3; }
+</style>
+</head>
+<body data-music="tech" data-key="C" data-mode="major" data-energy="3">
+
+<div id="grain"></div>
+
+<!-- 1. the hook, on screen from the first frame -->
+<div class="scene" id="s1">
+  <div class="abs serif big" style="left:140px;top:170px" id="h1">This video is<br>an <span class="hl">HTML file</span>.</div>
+  <div class="abs" style="left:140px;top:600px;font-size:60px;font-weight:700;line-height:1.25" id="h1b" data-lines="Rendered frame by frame by the|open-source repo it's about."></div>
+  <div class="abs file" style="left:140px;top:820px" id="f1">video.html</div>
+  <div class="abs" style="left:524px;top:822px;font:700 64px/1 'Inter';color:var(--accent)" id="f2">→</div>
+  <div class="abs file" style="left:620px;top:820px" id="f3">video.mp4</div>
+  <div class="abs card code" style="left:1120px;top:150px;width:660px;padding:34px 30px" id="src">
+    <div>&lt;body data-music="tech"&gt;</div>
+    <div>&lt;div id="h1"&gt;</div>
+    <div>&nbsp;&nbsp;This video is</div>
+    <div>&nbsp;&nbsp;an <span class="hl">HTML file</span>.</div>
+    <div>&lt;/div&gt;</div>
+  </div>
+</div>
+
+<!-- 2. how it renders -->
+<div class="scene" id="s2">
+  <div class="abs serif" style="left:140px;top:90px;font-size:130px;line-height:1" data-lines="Pause. Seek. Screenshot." id="rHead"></div>
+  <div class="step card" style="left:140px" id="p1"><div class="name">page.html</div><div class="what">seekable animations</div></div>
+  <div class="arrow" style="left:500px" id="a1">→</div>
+  <div class="step card" style="left:573px" id="p2"><div class="name">Chromium</div><div class="what">headless, seeks every frame</div></div>
+  <div class="arrow" style="left:933px" id="a2">→</div>
+  <div class="step card" style="left:1006px" id="p3"><div class="name">ffmpeg</div><div class="what">H.264 + AAC at −14 LUFS</div></div>
+  <div class="arrow" style="left:1366px" id="a3">→</div>
+  <div class="step card" style="left:1439px;border-color:var(--accent)" id="p4"><div class="name hl">out.mp4</div><div class="what">frame-exact, on a slow machine too</div></div>
+  <div class="abs card" style="left:140px;top:700px;width:1640px;padding:30px 50px" id="term">
+    <div class="cmd"><span class="typed" data-type><span class="p">$</span> node render.js video.html video.mp4</span></div>
+  </div>
+</div>
+
+<!-- 3. the music is generated too -->
+<div class="scene" id="s3">
+  <div class="abs serif" style="left:140px;top:90px;font-size:130px;line-height:1" data-lines="The music is code too." id="mHead"></div>
+  <div class="abs" style="left:140px;top:260px;font-size:48px;font-weight:700" id="mSub"><span class="mono hl">soundtrack.js</span> · no samples, zero dependencies</div>
+  <div class="abs" style="left:140px;top:380px;width:1640px" id="genres"></div>
+  <div class="abs card" style="left:140px;top:640px;width:900px;height:300px;padding:44px 50px" id="mCard">
+    <div style="font-size:44px;font-weight:700;color:var(--ink2)">This video: tech · 112 BPM · C major · the hook</div>
+    <div class="motif" style="margin-top:44px" id="motif"></div>
+  </div>
+</div>
+
+<!-- 4. what the renderer is for: real frames from the plugin's own templates -->
+<div class="scene" id="s4">
+  <div class="abs serif" style="left:140px;top:90px;font-size:130px;line-height:1" data-lines="29 vertical templates." id="vHead"></div>
+  <div class="phone" style="left:140px;top:280px"><img src="../explainer/assets/frames/tier-list.jpg" alt=""></div>
+  <div class="phone" style="left:480px;top:280px"><img src="../explainer/assets/frames/text-chat.jpg" alt=""></div>
+  <div class="phone" style="left:820px;top:280px"><img src="../explainer/assets/frames/pov.jpg" alt=""></div>
+  <div class="phone" style="left:1160px;top:280px"><img src="../explainer/assets/frames/countdown.jpg" alt=""></div>
+  <div class="phone" style="left:1500px;top:280px"><img src="../explainer/assets/frames/hot-take.jpg" alt=""></div>
+  <div class="abs" style="left:140px;top:880px;font-size:56px;font-weight:700" id="vCap">For Shorts, Reels, and TikTok. <span class="hl">Rendered on your machine.</span></div>
+</div>
+
+<!-- 5. the plugin it belongs to -->
+<div class="scene" id="s5">
+  <div class="abs" style="left:140px;top:100px;font-size:60px;font-weight:800" id="kHead">Part of 12 marketing skills for <span class="hl">Claude Code</span> and <span class="hl">Codex</span>.</div>
+  <div class="abs mono" style="left:140px;top:210px;font-size:46px;font-weight:700" id="treeHead">skills/</div>
+  <div class="abs tree" style="left:140px;top:280px" id="treeA"></div>
+  <div class="abs tree" style="left:1000px;top:280px" id="treeB"></div>
+  <div class="abs" style="left:140px;top:770px;font-size:56px;font-weight:700;line-height:1.3" id="treeCap">Each one is a plain <span class="mono hl" style="font-size:52px">SKILL.md</span>.<br>No backend. Drafts are Markdown too.</div>
+</div>
+
+<!-- 6. the approval gate -->
+<div class="scene" id="s6">
+  <div class="abs serif" style="left:140px;top:110px;font-size:130px;line-height:1" data-lines="Nothing posts without you." id="aHead"></div>
+  <div class="st" style="left:140px;width:280px" id="st0">Drafted</div>
+  <div class="st" style="left:500px;width:480px" id="st1">Ready for Approval</div>
+  <div class="st" style="left:1060px;width:320px" id="st2">Approved</div>
+  <div class="st" style="left:1460px;width:220px" id="st3">Sent</div>
+  <div class="bubble" style="left:900px;top:560px;width:880px;background:var(--accent);color:#fff" id="reply">Yes, send #2.</div>
+  <div class="abs" style="left:140px;top:580px;font-size:48px;font-weight:700;color:var(--ink2);line-height:1.3;width:700px" id="aNote">Only your reply moves a draft to Approved.</div>
+  <div class="abs pill" style="left:140px;top:840px;padding:22px 34px;font-size:46px;font-weight:700;color:var(--warn);background:#f6e7c8;border:2px solid #e2c27f" id="aIdle">A scheduled run with nobody there? Drafts wait.</div>
+</div>
+
+<!-- 7. outro -->
+<div class="scene" id="s7">
+  <div class="abs serif" style="left:140px;top:150px;font-size:190px;line-height:1.02" data-lines="MIT licensed." id="oHead"></div>
+  <div class="abs mono" style="left:140px;top:450px;font-size:64px;font-weight:700" id="oUrl">github.com/marcosmodly/<span class="hl">marketing-skill</span></div>
+  <div class="abs" style="left:140px;top:590px;font-size:52px;font-weight:700" id="oPr">Issues and PRs welcome.</div>
+  <div class="abs" style="left:140px;top:820px;font-size:44px;font-weight:600;color:var(--ink2)" id="oSrc">This video's source: <span class="mono" style="font-size:42px">media/opensource-post/video.html</span></div>
+</div>
+
+<div id="wipeB"></div>
+<div id="wipeA"></div>
+<div id="prog"></div>
+<div id="fade"></div>
+<div id="cues" hidden></div>
+
+<script>
+'use strict';
+window.__errors = [];
+window.addEventListener('error', (e) => window.__errors.push(`${e.message} (line ${e.lineno})`));
+
+// ---------------------------------------------------------------- timing
+// The generated music's grid: "tech" at 112 BPM, the beat dropping after one bar.
+const BEAT = 60 / 112;
+const BAR = 4 * BEAT;
+const DROP = BAR;
+// scene k starts at START[k - 1], in bars; START[7] is when the outro stops moving
+const START = [0, 3, 6, 9, 12, 15, 17.5, 20].map((b) => b * BAR);
+const END = START[7] + 0.55;             // the last frame's hold, before the fade
+const FADE = 0.6;
+document.body.dataset.duration = (END + FADE).toFixed(2);
+document.body.dataset.drop = DROP.toFixed(3);
+const S = (k) => START[k - 1];
+const beat = (k, n) => S(k) + n * BEAT;  // the nth beat of scene k
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const E = {
+  out: 'cubic-bezier(.16,1,.3,1)',
+  out3: 'cubic-bezier(.33,1,.68,1)',
+  inOut: 'cubic-bezier(.65,0,.35,1)',
+  back: 'cubic-bezier(.34,1.56,.64,1)',
+  lin: 'linear',
+};
+const node = (x) => (typeof x === 'string' ? $(x) : x);
+
+// One animation per element per group of properties, from absolute-time keyframes.
+function key(target, frames, ease = E.out) {
+  const n = node(target);
+  if (!n) throw new Error(`missing ${target}`);
+  const t0 = frames[0][0];
+  const t1 = frames[frames.length - 1][0];
+  const span = Math.max(t1 - t0, 0.001);
+  const kf = frames.map(([t, p]) => {
+    const { ease: e, ...css } = p;
+    return { ...css, offset: Math.min(1, Math.max(0, (t - t0) / span)), easing: e || ease };
+  });
+  return n.animate(kf, { delay: t0 * 1000, duration: span * 1000, fill: 'both' });
+}
+function life(target, tin, o = {}) {
+  const from = o.from || { opacity: 0, transform: 'translateY(40px)' };
+  const show = o.show || { opacity: 1, transform: 'none' };
+  return key(target, [[tin, { ...from, ease: o.ease || E.out }], [tin + (o.dur ?? 0.7), show]]);
+}
+const pop = (t, at0, s = 0.7) => life(t, at0, { from: { opacity: 0, transform: `scale(${s})` }, show: { opacity: 1, transform: 'scale(1)' }, ease: E.back, dur: 0.55 });
+function rise(target, t, stagger = 0.1, dur = 0.8) {
+  $$('.mask > span', node(target)).forEach((s, i) =>
+    key(s, [[t + i * stagger, { transform: 'translateY(110%)', ease: E.out }], [t + i * stagger + dur, { transform: 'translateY(0%)' }]]));
+}
+function type(target, t0, t1) {
+  const n = node(target);
+  const len = n.textContent.length;
+  key(n, [[t0, { width: '0ch', ease: `steps(${len}, end)` }], [t1, { width: `${len}ch` }]]);
+}
+const sfx = (name, t) => {
+  const i = document.createElement('i');
+  i.dataset.sfx = name;
+  i.style.setProperty('--in', `${t.toFixed(3)}s`);
+  $('#cues').appendChild(i);
+};
+// a scene is on screen from its start to the next scene's start; the wipe hides both cuts
+function scene(id, k) {
+  const last = k === 7;
+  key(id, [[Math.max(0, S(k) - 0.01), { opacity: k === 1 ? 1 : 0, ease: 'steps(1,end)' }], [S(k), { opacity: 1, ease: 'steps(1,end)' }],
+    [last ? END : S(k + 1) - 0.01, { opacity: 1, ease: 'steps(1,end)' }], [last ? END + 0.01 : S(k + 1), { opacity: last ? 1 : 0 }]]);
+}
+const h = (html) => { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstElementChild; };
+
+// =============================================================== build
+function build() {
+  for (const el of $$('[data-lines]')) {
+    el.innerHTML = el.dataset.lines.split('|').map((l) => `<span class="mask"><span>${l}</span></span>`).join('');
+  }
+  wipes();
+  s1(); s2(); s3(); s4(); s5(); s6(); s7();
+  key('#prog', [[0, { transform: 'scaleX(0)', ease: E.lin }], [END, { transform: 'scaleX(1)' }]]);
+  key('#fade', [[0, { opacity: 0, ease: E.inOut }], [END, { opacity: 0, ease: E.inOut }], [END + FADE, { opacity: 1 }]]);
+}
+
+// the cut between scenes: an ink panel then a coral one sweep across
+function wipes() {
+  const a = [];
+  const b = [];
+  for (let k = 2; k <= 7; k++) {
+    const t = S(k);
+    for (const [arr, d] of [[b, -0.05], [a, 0]]) {
+      arr.push([t - 0.42 + d, { transform: 'translateX(-1920px)', ease: 'cubic-bezier(.7,0,.3,1)' }],
+        [t + d, { transform: 'translateX(0px)', ease: 'steps(1,end)' }],
+        [t + d + 0.001, { transform: 'translateX(0px)', ease: 'cubic-bezier(.7,0,.3,1)' }],
+        [t + 0.42 + d, { transform: 'translateX(1920px)', ease: 'steps(1,end)' }],
+        [t + 0.42 + d + 0.001, { transform: 'translateX(-1920px)', ease: 'steps(1,end)' }]);
+    }
+    sfx('whoosh', t - 0.3);
+  }
+  key('#wipeA', [[0, { transform: 'translateX(-1920px)', ease: 'steps(1,end)' }], ...a]);
+  key('#wipeB', [[0, { transform: 'translateX(-1920px)', ease: 'steps(1,end)' }], ...b]);
+}
+
+function s1() {
+  scene('#s1', 1);
+  // the headline is already there on frame 0 (it's the cover and the scroll-stopper); it only breathes
+  key('#h1', [[0, { transform: 'scale(1)', ease: E.lin }], [S(2), { transform: 'scale(1.03)' }]]);
+  $('#h1').style.transformOrigin = '0 50%';
+  rise('#h1b', DROP, 0.14);
+  sfx('pop', DROP);
+  life('#f1', beat(1, 7), { from: { opacity: 0, transform: 'translateX(-30px)' } });
+  life('#f2', beat(1, 8), { from: { opacity: 0, transform: 'translateX(-30px)' } });
+  pop('#f3', beat(1, 9));
+  sfx('shutter', beat(1, 9));
+}
+
+function s2() {
+  scene('#s2', 2);
+  rise('#rHead', S(2) + 0.15, 0.12);
+  ['#p1', '#a1', '#p2', '#a2', '#p3', '#a3', '#p4'].forEach((id, i) =>
+    life(id, beat(2, 2 + i * 0.5), { from: { opacity: 0, transform: 'translateY(50px)' }, dur: 0.6 }));
+  sfx('tick', beat(2, 2)); sfx('tick', beat(2, 3)); sfx('tick', beat(2, 4)); sfx('tick', beat(2, 5));
+  life('#term', beat(2, 6.5));
+  type($('#term [data-type]'), beat(2, 7), beat(2, 9.5));
+  sfx('typing', beat(2, 7));
+}
+
+function s3() {
+  scene('#s3', 3);
+  rise('#mHead', S(3) + 0.15, 0.12);
+  life('#mSub', beat(3, 1.5));
+  // the eleven genres soundtrack.js can write, with this video's one lit
+  const names = ['pop', 'house', 'hiphop', 'acoustic', 'cinematic', 'tech', 'lofi', 'calm', 'phonk', 'jersey', 'funk'];
+  names.forEach((n, i) => {
+    const chip = h(`<span class="genre${n === 'tech' ? ' on' : ''}">${n}</span>`);
+    $('#genres').appendChild(chip);
+    pop(chip, beat(3, 2.5) + i * 0.09, 0.8);
+  });
+  life('#mCard', beat(3, 3.5));
+  // the hook's scale degrees light up one per beat, the way they play
+  const motif = '1 5 3 5 | 6 5 3 2';
+  $('#motif').innerHTML = motif.split(' ').map((d) => `<span>${d}</span>`).join(' ');
+  let n = 0;
+  $$('#motif span').forEach((s) => {
+    if (s.textContent === '|') { key(s, [[beat(3, 4), { color: 'rgb(217,206,189)' }], [beat(3, 4.3), { color: 'rgb(92,85,75)' }]]); return; }
+    const t = beat(3, 4 + n++);
+    key(s, [[t, { color: 'rgb(217,206,189)', transform: 'translateY(0px)', ease: E.out3 }], [t + 0.12, { color: 'rgb(210,96,58)', transform: 'translateY(-14px)', ease: E.out }],
+      [t + 0.4, { color: 'rgb(22,19,15)', transform: 'translateY(0px)' }]]);
+  });
+}
+
+function s4() {
+  scene('#s4', 4);
+  rise('#vHead', S(4) + 0.15, 0.12);
+  $$('#s4 .phone').forEach((p, i) => {
+    const t = beat(4, 1.5 + i);
+    key(p, [[t, { opacity: 0, transform: 'translateY(160px) rotate(4deg)', ease: E.out }], [t + 0.9, { opacity: 1, transform: 'translateY(0px) rotate(0deg)' }],
+      // a slow drift so the row doesn't sit dead still
+      [S(5), { opacity: 1, transform: `translateY(${i % 2 ? -14 : 14}px) rotate(0deg)`, ease: E.lin }]]);
+    sfx('pop', t + 0.1);
+  });
+  life('#vCap', beat(4, 7));
+}
+
+function s5() {
+  scene('#s5', 5);
+  life('#kHead', S(5) + 0.15);
+  life('#treeHead', beat(5, 1), { from: { opacity: 0, transform: 'translateX(-30px)' } });
+  const names = ['competitor-research', 'content-calendar', 'content-repurposer', 'seo-brief', 'ad-copy-generator', 'email-sequence',
+    'email-outreach', 'community-post-generator', 'visual-brief-generator', 'short-form-video', 'full-pipeline', 'publish-pipeline'];
+  names.forEach((name, i) => {
+    const row = h(`<div><i>${i === 5 || i === 11 ? '└─' : '├─'}</i>${name}/</div>`);
+    $(i < 6 ? '#treeA' : '#treeB').appendChild(row);
+    // two folders per beat
+    life(row, beat(5, 1.5 + i * 0.5), { from: { opacity: 0, transform: 'translateX(-40px)' }, dur: 0.5 });
+  });
+  life('#treeCap', beat(5, 7.5));
+}
+
+function s6() {
+  scene('#s6', 6);
+  rise('#aHead', S(6) + 0.15, 0.12);
+  const pills = ['#st0', '#st1', '#st2', '#st3'];
+  pills.forEach((p, i) => pop(p, beat(6, 1) + i * 0.12, 0.8));
+  // the drafting skills stop at Ready for Approval; only the reply moves it on
+  const lit = (p, t, color) => key(p, [[t, { borderColor: 'rgb(217,206,189)', color: 'rgb(92,85,75)', ease: E.out3 }], [t + 0.2, { borderColor: `rgb(${color})`, color: `rgb(${color})` }]]);
+  lit('#st0', beat(6, 2), '210,96,58');
+  lit('#st1', beat(6, 2.5), '210,96,58');
+  life('#aNote', beat(6, 3));
+  life('#reply', beat(6, 4), { from: { opacity: 0, transform: 'translateY(40px) scale(.96)' }, ease: E.back });
+  sfx('click', beat(6, 4));
+  lit('#st2', beat(6, 5), '210,96,58');
+  lit('#st3', beat(6, 5.5), '44,138,86');
+  sfx('chime', beat(6, 5.5));
+  life('#aIdle', beat(6, 6.5));
+}
+
+function s7() {
+  scene('#s7', 7);
+  rise('#oHead', S(7) + 0.15, 0.12);
+  life('#oUrl', beat(7, 2));
+  life('#oPr', beat(7, 4));
+  life('#oSrc', beat(7, 6));
+}
+
+build();
+</script>
+</body>
+</html>
