@@ -37,7 +37,7 @@ const TYPES = [
   ['warning', 'Warning', /^(stop|don'?t|never|quit|avoid)\b|\bmistakes?\b|\b(doing|writing|using) (it|this|your \w+) wrong\b|\bwrong\b/i],
   ['contrarian', 'Contrarian', /\byou don'?t need\b|\bnobody needs\b|\bunpopular opinion\b|\bis (dead|overrated|a lie|a scam|a trap)\b|\b(forget|ignore) (about )?(everything|what)\b|\bactually (bad|wrong)\b/i],
   ['reaction', 'Reaction', /^(wait|no way|wow|omg|hold on|bro|okay but|ok but)\b|\bcan actually\b|\bactually (do|does|works?)\b/i],
-  ['demonstration', 'Demonstration', /^(watch|look|see) (this|how|me|what)\b|\bin (\d+|one|two|three|five|ten) (seconds|clicks|taps|steps)\b|\bhere'?s (it|this) (working|in action)\b/i],
+  ['demonstration', 'Demonstration', /^(watch|look at|see) \S+|\bin (\d+|one|two|three|five|ten) (seconds|clicks|taps|steps)\b|\bhere'?s (it|this) (working|in action)\b/i],
   ['callout', 'Callout', /^(attention|calling all|if you'?re an?|for (all )?(the )?\w+ who)\b|^[\w' -]{3,48}:\s*$/i],
   ['curiosity', 'Curiosity', /\bhere'?s (why|how|what)\b|\bthe (reason|real reason|secret|trick)\b|\bnobody (tells|told) you\b|\bi (found|discovered|figured out)\b|\bwhat happened\b|\bchanged (how|the way|everything)\b|\b(until|then) (i|this)\b/i],
   ['problem-solution', 'Problem-solution', /\b(still|tired of|sick of|struggling|hate|losing|wasting|spending (hours|days)|can'?t (get|stop|find)|too many)\b/i],
