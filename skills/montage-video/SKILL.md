@@ -80,7 +80,18 @@ command below. `VIDEO` below means `${CLAUDE_PLUGIN_ROOT}/scripts/video`.
      and save the user's pick as the profile's `## Sonic Identity`. You
      can't hear audio, so their ear decides.
    - **The user's own business** (not a client): leave `client:` out of
-     the script, and the look and sound come from `brand-voice.md`.
+     the script, and the look and sound come from `brand-voice.md`. Check
+     what the project is first (`python3 ${CLAUDE_PLUGIN_ROOT}/scripts/project.py`
+     in their folder, and the Project section of `brand-voice.md`).
+   - **What this video is about and for, confirmed before anything is
+     made.** Say what you understood in a line or two (the property,
+     product, or event; who it's for; where it'll be posted), then ask what
+     the video is for (a listing, a launch, a sale, followers) and the one
+     thing a viewer should remember or do, anything that must be shown or
+     said (the price, the address, a sale ending), and anything to avoid.
+     Wait for the answer before writing the script, unless the request
+     already says it or the user said to use defaults. Never invent a
+     price, a spec, or a feature.
    - Client profiles stay out of git (`.gitignore`), since they hold
      people's phone numbers.
 
@@ -257,7 +268,7 @@ command below. `VIDEO` below means `${CLAUDE_PLUGIN_ROOT}/scripts/video`.
    | "the AI changed the room" | reject that clip: regenerate it (quoted and approved), or use a local move on that photo |
    | "more 3D" / "less 3D" | `amount=1.5` or `amount=0.6` in that shot's move |
    | "it looks warped" | a lower `amount=`, a flat move (`pan-right`, `push-in`) on that shot, or `depth: off` for all |
-   | "smoother" / "punchier cuts" | `transition: fade`, or `cut`, `slide`, `zoom`, `wipe`, `flash` |
+   | "smoother" / "punchier cuts" | `transition: fade`, or `cut`, `punch`, `whip`, `slide`, `zoom`, `wipe`, `flash`, `glitch`, `spin`, `blur`, `mask`, `leak`, `burn` (`references/editing-techniques.md` says which edit each one is) |
    | "show the whole photo" | `[fit: contain]` |
    | "the product looks lost" | `[fit: card]` (best for a packshot on white) |
    | "show the renovation" | `[before: assets/<before-photo>]` on the after photo |

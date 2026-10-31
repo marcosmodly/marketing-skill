@@ -40,7 +40,7 @@ const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 const toHex = (c) => `#${c.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('')}`;
 const mix = (a, b, k) => toHex(rgb(a).map((v, i) => v + (rgb(b)[i] - v) * k));
 const accentCss = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
-PAL.accent = /^#[0-9a-f]{6}$/i.test(accentCss) ? accentCss : '#e07a55';
+PAL.accent = /^#[0-9a-f]{6}$/i.test(accentCss) ? accentCss : '#db7350';
 PAL.accentDark = mix(PAL.accent, '#000000', 0.38);
 PAL.accentLight = mix(PAL.accent, '#ffffff', 0.4);
 const clamp = (x) => Math.min(1, Math.max(0, x));

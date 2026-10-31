@@ -37,7 +37,8 @@ HEAD = """<!doctype html>
     --line: #2b2b35;
     --text: #f3f2ee;
     --muted: #9a99a4;
-    --accent: #e07a55;
+    --accent: #db7350;
+    --on-accent: #121212;   /* text on the accent: whichever of white or near-black reads better on it (brand.js and compose.js set it for the brand's) */
     --ok: #3fbf7f;
     --bad: #e0605a;
     --warn: #e8b04a;
@@ -92,6 +93,7 @@ HEAD = """<!doctype html>
   .bg.now {{ animation: fadeOut .45s ease-in var(--out, 999s) forwards; }}
   .bg:empty {{ display: none; }}
   .bg-media {{ position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;
+              object-position: var(--ox, 50%) var(--oy, 50%); transform-origin: var(--fx, 50%) var(--fy, 50%);
               filter: var(--grade, saturate(.9) contrast(1.05) brightness(.9));
               animation: var(--kb, kbIn) var(--dur, 8s) linear var(--in) both; }}
   .bg.blur .bg-media {{ filter: var(--grade, saturate(.9) contrast(1.05) brightness(.9)) blur(var(--blur, 10px)); }}
@@ -102,7 +104,7 @@ HEAD = """<!doctype html>
   .bg.tint::before {{ content: ''; position: absolute; inset: 0; z-index: 1; background: var(--accent); mix-blend-mode: soft-light; opacity: .5; }}
   /* the user's screenshot on a screen in their photo: placed by compose.js from the screen's four corners,
      moving with the photo's own zoom */
-  .bg-insert {{ position: absolute; inset: 0; z-index: 0; animation: var(--kb, kbIn) var(--dur, 8s) linear var(--in) both; }}
+  .bg-insert {{ position: absolute; inset: 0; z-index: 0; transform-origin: var(--fx, 50%) var(--fy, 50%); animation: var(--kb, kbIn) var(--dur, 8s) linear var(--in) both; }}
   .bg-insert img {{ position: absolute; left: 0; top: 0; transform-origin: 0 0; filter: var(--grade, saturate(.9) contrast(1.05) brightness(.9)); }}
   .bg::after {{ content: ''; position: absolute; inset: 0; z-index: 2;
                background: linear-gradient(to bottom, rgba(10,10,14,.72), rgba(10,10,14,.12) 30%, rgba(10,10,14,.22) 62%, rgba(10,10,14,.88)),
@@ -110,9 +112,11 @@ HEAD = """<!doctype html>
   body:has(.bg-media) {{ --muted: #d2d1d8; }}
   body:has(.bg-media) .scene, body:has(.bg-media) .stage {{ text-shadow: 0 2px 6px rgba(0,0,0,.35), 0 4px 30px rgba(0,0,0,.55); }}
 {kit}
+{edit}
+{looks}
 {css}
 </style>
-{head_extra}</head>
+{fx_script}{head_extra}</head>
 <body {body_attrs}>
   <div class="glow g1"></div>
   <div class="glow g2"></div>
@@ -156,7 +160,7 @@ KIT = """
   .cap > span { background: #fff; color: #121212; padding: .05em .32em; border-radius: .2em;
                 -webkit-box-decoration-break: clone; box-decoration-break: clone; }
   .cap.dark > span { background: rgba(0,0,0,.76); color: #fff; }
-  .cap.hl > span { background: var(--accent); color: #fff; }
+  .cap.hl > span { background: var(--accent); color: var(--on-accent); }
   .cap.out { font-size: 82px; font-weight: 900; line-height: 1.12; color: #fff; paint-order: stroke fill; -webkit-text-stroke: 14px #000; }
   .cap.out > span { background: none; color: inherit; padding: 0; }
   .cap.left { text-align: left; }
@@ -213,7 +217,7 @@ KIT = """
   .corner.series { right: 150px; }
 
   /* labels and reactions */
-  .sticker { width: fit-content; background: var(--accent); color: #fff; font-size: 44px; font-weight: 800; line-height: 1.2;
+  .sticker { width: fit-content; background: var(--accent); color: var(--on-accent); font-size: 44px; font-weight: 800; line-height: 1.2;
              padding: 10px 28px 12px; border-radius: 16px; rotate: -3deg; box-shadow: 0 12px 34px rgba(0,0,0,.35); }
   .sticker.yellow { background: #ffd23f; color: #121212; }
   .sticker.light { background: #fff; color: #121212; }
@@ -298,7 +302,7 @@ KIT = """
   .bub { max-width: 600px; padding: 20px 30px 22px; border-radius: 36px; font-size: 42px; font-weight: 600; line-height: 1.25;
          animation: bubIn .35s cubic-bezier(.2,.9,.3,1.3) var(--in) both; }
   .them .bub { background: #e4e2dc; border-bottom-left-radius: 10px; transform-origin: 0 100%; }
-  .me .bub { background: var(--accent); color: #fff; border-bottom-right-radius: 10px; transform-origin: 100% 100%; }
+  .me .bub { background: var(--accent); color: var(--on-accent); border-bottom-right-radius: 10px; transform-origin: 100% 100%; }
   @keyframes bubIn { from { opacity: 0; transform: scale(.5); } to { opacity: 1; transform: none; } }
   .typing { display: flex; gap: 10px; padding: 28px 30px; border-radius: 36px; background: #e4e2dc; width: fit-content;
             animation: fadeIn .2s ease-out var(--in) both, fadeOut .15s linear var(--out) forwards; }
@@ -348,7 +352,7 @@ KIT = """
   .popup p { font-size: 38px; font-weight: 600; color: #4a4a54; line-height: 1.3; margin-top: 12px; }
   .btns { display: flex; gap: 18px; margin-top: 30px; }
   .btns span { flex: 1; height: 96px; border-radius: 24px; display: grid; place-items: center; font-size: 36px; font-weight: 800; background: #e4e2dc; }
-  .btns span:last-child { background: var(--accent); color: #fff; }
+  .btns span:last-child { background: var(--accent); color: var(--on-accent); }
 
   /* before/after: the second .side wipes over the first at --at */
   .wipe { position: relative; flex: 1; border-radius: 40px; overflow: hidden; }
@@ -368,6 +372,177 @@ KIT = """
   .hit { display: flex; flex-direction: column; align-items: inherit; animation: hit .5s linear var(--hit) both; }
   @keyframes hit { 0% { transform: none; } 12% { transform: scale(1.12) translate(-10px, 6px); } 24% { transform: scale(1.1) translate(12px, -8px); }
                    36% { transform: scale(1.09) translate(-8px, -4px); } 48% { transform: scale(1.07) translate(6px, 6px); } 100% { transform: scale(1.05); } }
+"""
+
+# Editing, shared by every page: how one background hands over to the next, the camera layer
+# (punch-ins, shakes, the visual hook), overlays dropped on a cut, and finishing (grain, a
+# vignette). compose.js, cut.js, and montage.js write the classes (scripts/video/edit.js has the
+# timing for each); references/editing-techniques.md maps every editing term to them.
+EDIT = """
+  /* ---- editing: transitions, the camera, hits, and finishing ---- */
+
+  /* transitions: a class on the incoming .bg slot (a crossfade is the default). Under all but
+     the crossfade, the outgoing slot stays until the incoming one covers it: give it an --out of
+     at least the incoming --in plus the transition's length (edit.js slotTimes does). */
+  .bg.t-cut   { animation: fadeIn .01s linear var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
+  .bg.t-slide { animation: slideBg .5s cubic-bezier(.7,0,.25,1) var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
+  .bg.t-zoom  { animation: zoomBg .5s cubic-bezier(.2,.8,.2,1) var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
+  .bg.t-wipe  { animation: wipeBg .6s cubic-bezier(.7,0,.25,1) var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
+  /* a whip pan: the next picture flies in sideways, blurred with the speed */
+  .bg.t-whip  { animation: whipBg .32s cubic-bezier(.6,0,.2,1) var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
+  /* a punch-in cut: a hard cut that lands zoomed in and snaps back */
+  .bg.t-punch { animation: fadeIn .01s linear var(--in) both, punchBg .32s cubic-bezier(.2,.8,.2,1) var(--in) forwards, fadeOut .01s linear var(--out, 999s) forwards; }
+  /* a glitch: the next picture tears in, in slices, its colors split (the RGB split filter is added by the script in <head>) */
+  .bg.t-glitch { animation: fadeIn .01s linear var(--in) both, glitchBg .42s steps(1, end) var(--in) forwards, fadeOut .01s linear var(--out, 999s) forwards; }
+  .bg.t-spin  { animation: spinBg .5s cubic-bezier(.2,.8,.2,1) var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
+  .bg.t-blur  { animation: blurBg .5s ease-out var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
+  /* a mask: the next picture opens out of a circle at --mx/--my */
+  .bg.t-mask  { animation: maskBg .55s cubic-bezier(.6,0,.3,1) var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
+  .bg.t-leak  { animation: fadeIn .5s ease-out var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
+  @keyframes slideBg { from { transform: translateX(100%); } to { transform: none; } }
+  @keyframes zoomBg  { from { opacity: 0; transform: scale(1.3); } to { opacity: 1; transform: none; } }
+  @keyframes wipeBg  { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0); } }
+  @keyframes whipBg  { from { translate: 100% 0; filter: blur(30px); } 65% { filter: blur(12px); } to { translate: 0 0; filter: none; } }
+  @keyframes punchBg { from { scale: 1.24; } to { scale: 1; } }
+  @keyframes glitchBg {
+    0%   { filter: url(#fx-rgb); translate: -5% 0; clip-path: inset(8% 0 58% 0); }
+    14%  { filter: url(#fx-rgb2); translate: 4% 0; clip-path: inset(46% 0 18% 0); }
+    28%  { filter: url(#fx-rgb); translate: -2% 0; clip-path: inset(0); }
+    42%  { filter: url(#fx-rgb2); translate: 3% 0; clip-path: inset(64% 0 6% 0); }
+    56%  { filter: url(#fx-rgb); translate: -1% 0; clip-path: inset(0); }
+    76%  { filter: url(#fx-rgb2); translate: .5% 0; clip-path: inset(0); }
+    100% { filter: none; translate: 0 0; clip-path: inset(0); } }
+  @keyframes spinBg  { from { opacity: 0; rotate: -28deg; scale: 1.7; filter: blur(14px); } to { opacity: 1; rotate: 0deg; scale: 1; filter: none; } }
+  @keyframes blurBg  { from { opacity: 0; filter: blur(36px); scale: 1.06; } to { opacity: 1; filter: none; scale: 1; } }
+  @keyframes maskBg  { from { clip-path: circle(0% at var(--mx, 50%) var(--my, 45%)); } to { clip-path: circle(120% at var(--mx, 50%) var(--my, 45%)); } }
+
+  /* overlays dropped on a cut, over everything for a moment: .flash (above), a light leak, a film burn */
+  .leak, .burn { position: absolute; inset: -10%; z-index: 20; pointer-events: none; mix-blend-mode: screen; opacity: 0; }
+  .leak { background: radial-gradient(38% 30% at 22% 40%, rgba(255,166,77,.95), transparent 72%),
+                      radial-gradient(42% 36% at 76% 62%, rgba(255,72,120,.75), transparent 72%),
+                      radial-gradient(30% 24% at 50% 12%, rgba(255,226,150,.7), transparent 70%);
+          animation: leak 1s ease-out var(--in) both; }
+  @keyframes leak { 0% { opacity: 0; translate: -18% 0; } 30% { opacity: .95; } 100% { opacity: 0; translate: 16% 0; } }
+  .burn { background: radial-gradient(55% 45% at 50% 52%, #fff 0%, rgba(255,226,170,.98) 30%, rgba(255,120,40,.85) 55%, rgba(160,20,0,.4) 72%, transparent 82%);
+          animation: burn .75s ease-in-out var(--in) both; }
+  @keyframes burn { 0% { opacity: 0; scale: .4; } 38% { opacity: 1; scale: 1.5; } 100% { opacity: 0; scale: 2.2; } }
+
+  /* Ken Burns moves on a still, beside kbIn/kbOut/kbLeft/kbRight: kbDyn zooms with changing speed
+     (slow, fast, slow), kbDynOut the reverse, kbUp and kbDown tilt */
+  @keyframes kbDyn    { from { transform: scale(1.02); animation-timing-function: cubic-bezier(.7,0,.3,1); } to { transform: scale(1.2); } }
+  @keyframes kbDynOut { from { transform: scale(1.2); animation-timing-function: cubic-bezier(.7,0,.3,1); } to { transform: scale(1.02); } }
+  @keyframes kbUp     { from { transform: scale(1.14) translateY(3%); } to { transform: scale(1.14) translateY(-3%); } }
+  @keyframes kbDown   { from { transform: scale(1.14) translateY(-3%); } to { transform: scale(1.14) translateY(3%); } }
+
+  /* the camera: a layer around every background (<div class="cam">), so a punch-in or a shake
+     moves the picture and never the words. Its animations (edit.js cameraAnimation, and the
+     keyword punch-ins render.js adds once the words are timed) each start and end at rest. */
+  .cam { position: absolute; inset: 0; overflow: hidden; isolation: isolate; transform-origin: var(--cam-x, 50%) var(--cam-y, 42%); }
+  @keyframes camPunch { from { scale: var(--punch, 1.1); } to { scale: 1; } }
+  @keyframes camKw { 0% { scale: 1; } 14% { scale: var(--punch, 1.08); } 72% { scale: var(--punch, 1.08); } 100% { scale: 1; } }
+  /* a shake zooms in 4% while it moves, so the frame's edges never show; listed before a punch, so the punch's zoom wins */
+  @keyframes camShake { 0% { translate: 0 0; rotate: 0deg; scale: 1.04; } 10% { translate: -14px 8px; rotate: -.6deg; } 22% { translate: 12px -10px; rotate: .5deg; }
+                        34% { translate: -9px -6px; rotate: -.4deg; } 46% { translate: 7px 7px; rotate: .3deg; } 60% { translate: -4px 3px; rotate: -.15deg; scale: 1.03; }
+                        78% { translate: 2px -2px; rotate: 0deg; } 100% { translate: 0 0; rotate: 0deg; scale: 1; } }
+  @keyframes camGlitch { 0% { filter: url(#fx-rgb); translate: -2% 0; } 16% { filter: url(#fx-rgb2); translate: 2% 0; } 32% { filter: none; translate: 0 0; }
+                         48% { filter: url(#fx-rgb); translate: -1% 0; } 64% { filter: url(#fx-rgb2); translate: .6% 0; } 80%, 100% { filter: none; translate: 0 0; } }
+
+  /* the visual hook, in the first half second; frame 0 stays clean, since it's the cover:
+     hk-zoom (a fast zoom toward the subject) on the first slot; hk-glitch, hk-shake, and
+     hk-bounce (the hook's words swelling one after another) on the hook's text */
+  .bg.now.hk-zoom { animation: hkZoom .42s cubic-bezier(.2,.9,.3,1) .02s both, fadeOut .45s ease-in var(--out, 999s) forwards; }
+  @keyframes hkZoom { from { scale: 1; } to { scale: 1.16; } }
+  .hook.hk-glitch > span { animation: hkGlitch .5s steps(1, end) .08s both; }
+  @keyframes hkGlitch { 0% { text-shadow: none; translate: 0 0; } 1% { text-shadow: -6px 0 #ff2a6d, 6px 0 #05d9e8; translate: 4px 0; }
+                        20% { text-shadow: 5px 0 #ff2a6d, -5px 0 #05d9e8; translate: -5px 0; } 40% { text-shadow: none; translate: 0 0; }
+                        60% { text-shadow: -3px 0 #ff2a6d, 3px 0 #05d9e8; translate: 2px 0; } 80%, 100% { text-shadow: none; translate: 0 0; } }
+  .hook.hk-shake { animation: hkJolt .5s linear .04s both; }
+  @keyframes hkJolt { 0%, 100% { translate: 0 0; rotate: 0deg; } 12% { translate: -10px 4px; rotate: -1.5deg; } 26% { translate: 9px -5px; rotate: 1.2deg; }
+                      40% { translate: -6px 2px; rotate: -.8deg; } 56% { translate: 4px -2px; rotate: .4deg; } 74% { translate: -2px 1px; rotate: 0deg; } }
+  .hook.hk-bounce i { font-style: normal; display: inline-block; margin-inline: .05em; transform-origin: 50% 100%;
+                      animation: hkWave .44s cubic-bezier(.3,1.3,.5,1) calc(.1s + var(--k, 0) * .07s) both; }
+  @keyframes hkWave { 0% { scale: 1; translate: 0 0; } 45% { scale: 1.05; translate: 0 -16px; } 100% { scale: 1; translate: 0 0; } }
+
+  /* finishing: film grain over the whole frame, a vignette over the pictures, and a color grade (--grade on the body element) */
+  body.fx-grain::after { content: ''; position: absolute; inset: -60px; z-index: 30; pointer-events: none; opacity: .13; mix-blend-mode: overlay;
+                         background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+                         animation: grain .5s steps(5) 0s infinite; }
+  @keyframes grain { 0% { translate: 0 0; } 20% { translate: -30px 20px; } 40% { translate: 20px -40px; } 60% { translate: -40px -10px; } 80% { translate: 30px 30px; } 100% { translate: 0 0; } }
+  .fx-vignette .cam::after { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+                             background: radial-gradient(ellipse 78% 64% at 50% 46%, transparent 52%, rgba(0,0,0,.6) 100%); }
+"""
+
+LOOKS = """
+  /* ---- visual design: looks, text cards, sources, and color roles ---- */
+
+  /* the headline font (a look's, or the Visual Identity's Headline font) on the hook and text cards */
+  .has-head .hook > span, .has-head .bg-card b { font-family: var(--font-head); font-weight: var(--head-weight, 800); }
+
+  /* looks (look.js, body class look-<name>): how the hook is set; the captions, grade, and textures come with them */
+  :is(.look-documentary, .look-corporate) .hook > span { background: rgba(12,12,16,.8); color: #fff; }
+  :is(.look-cinematic, .look-luxury, .look-suspense, .look-editorial, .look-retro, .look-handmade) .hook > span {
+    background: none; color: #fff; padding: 0; text-shadow: 0 2px 6px rgba(0,0,0,.55), 0 6px 40px rgba(0,0,0,.6); }
+  .look-cinematic .hook { font-size: 78px; line-height: 1.14; }
+  .look-editorial .hook { font-size: 96px; line-height: 1.02; letter-spacing: -2px; text-align: left; }
+  .look-luxury .hook { font-size: 46px; line-height: 1.7; letter-spacing: .2em; text-transform: uppercase; }
+  .look-suspense .hook { font-size: 64px; line-height: 1.25; letter-spacing: .06em; text-transform: uppercase; }
+  .look-tech .hook > span { background: rgba(8,14,20,.78); color: #e8fbff; box-shadow: inset 0 0 0 3px var(--accent), 0 0 26px color-mix(in srgb, var(--accent) 40%, transparent); }
+  .look-retro .hook { font-size: 92px; line-height: 1.06; }
+  .look-retro .hook > span { text-shadow: 3px 0 #ff2a6d, -3px 0 #05d9e8, 0 4px 20px rgba(0,0,0,.6); }
+  .look-cozy .hook > span { background: #f6eedf; color: #3a2a1e; }
+  .look-handmade .hook { font-size: 96px; line-height: 1.08; }
+  .look-playful .hook > span { background: #ffd23f; color: #121212; }
+  /* one accent, used consistently: in these looks the word being said and the *keywords* take the look's accent, not a second color */
+  :is(.look-minimal, .look-editorial, .look-luxury, .look-tech, .look-retro, .look-cozy, .look-handmade) { --hi: var(--accent); --kw: var(--accent); }
+
+  /* textures over the frame: VHS scanlines with a rolling tracking band, a faint grid at the edges, paper */
+  body.tx-scanlines::before { content: ''; position: absolute; inset: 0; z-index: 29; pointer-events: none; mix-blend-mode: multiply;
+                               background: repeating-linear-gradient(to bottom, rgba(0,0,0,.24) 0 2px, transparent 2px 5px); }
+  .tx-scanlines .cam::before { content: ''; position: absolute; left: 0; right: 0; top: -12%; height: 9%; z-index: 4; pointer-events: none; mix-blend-mode: screen;
+                                background: linear-gradient(transparent, rgba(255,255,255,.1), transparent); animation: tracking 7s linear 0s infinite; }
+  @keyframes tracking { to { top: 110%; } }
+  .tx-grid .cam::before { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: .22;
+                           background-image: linear-gradient(color-mix(in srgb, var(--accent) 75%, transparent) 2px, transparent 2px),
+                                             linear-gradient(90deg, color-mix(in srgb, var(--accent) 75%, transparent) 2px, transparent 2px);
+                           background-size: 90px 90px;
+                           -webkit-mask-image: radial-gradient(ellipse 78% 66% at 50% 45%, transparent 40%, #000 100%);
+                           mask-image: radial-gradient(ellipse 78% 66% at 50% 45%, transparent 40%, #000 100%); }
+  .tx-paper .cam::before { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none; mix-blend-mode: multiply; opacity: .5;
+                            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><filter id='p'><feTurbulence type='fractalNoise' baseFrequency='.035' numOctaves='4' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .96 0 0 0 0 .92 0 0 0 0 .84 0 0 0 -.9 1.25'/></filter><rect width='100%' height='100%' filter='url(%23p)'/></svg>"); }
+
+  /* a text card ([card: ...] in compose.js): the line's key phrase, huge, on the brand's base color,
+     in place of a picture; kept above the captions' band */
+  .bg.card { background: var(--bg); }
+  .bg.card::after { display: none; }
+  .bg-card { position: absolute; left: 90px; right: 150px; top: 330px; bottom: 820px; display: flex; align-items: center; justify-content: center; text-align: center; }
+  .bg-card b { font-weight: var(--head-weight, 900); font-size: var(--card-size, 132px); line-height: 1.04; letter-spacing: -.02em; color: var(--text); text-wrap: balance;
+                animation: cardIn .55s cubic-bezier(.2,.9,.3,1.15) var(--in) both; }
+  .bg-card .kw { color: var(--accent); }
+  @keyframes cardIn { from { opacity: 0; translate: 0 40px; scale: .94; } to { opacity: 1; translate: 0 0; scale: 1; } }
+
+  /* a source or caveat for a line's claim ([source: ...]): small but readable, up for the whole line */
+  .source { align-self: flex-start; max-width: 100%; margin-bottom: auto; padding: 8px 20px 10px; border-radius: 12px; background: rgba(12,12,16,.74); color: #ecebf0;
+             font-family: "Inter", "Liberation Sans", sans-serif; font-size: 36px; font-weight: 600; line-height: 1.25; text-align: left; text-shadow: none; }
+  .narr > .hook:has(+ .source) { margin-bottom: 0; }
+  .narr > .hook + .source { margin-top: 20px; }
+
+  /* color roles: *keywords* (the key, the accent) and ~wrong~ (the wrong way, struck through in the caution color, so it doesn't rest on color alone) */
+  .no { color: var(--bad); text-decoration: line-through .08em var(--bad); }
+  .hook .no { text-decoration-thickness: .07em; }
+"""
+
+# The SVG filters behind the RGB split (the glitch transition, the glitch hook): a CSS filter can
+# only point at an SVG filter in the same page, so a little script adds them once the page loads.
+FX_SCRIPT = """<script>
+  addEventListener('DOMContentLoaded', () => {
+    const split = (id, d) => '<filter id="' + id + '" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">'
+      + '<feColorMatrix in="SourceGraphic" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r"/><feOffset in="r" dx="' + d + '" result="r2"/>'
+      + '<feColorMatrix in="SourceGraphic" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g"/>'
+      + '<feColorMatrix in="SourceGraphic" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b"/><feOffset in="b" dx="' + (-d) + '" result="b2"/>'
+      + '<feBlend in="r2" in2="g" mode="screen" result="rg"/><feBlend in="rg" in2="b2" mode="screen"/></filter>';
+    document.body.insertAdjacentHTML('beforeend', '<svg class="fx-defs" width="0" height="0" style="position:absolute" aria-hidden="true">' + split('fx-rgb', 14) + split('fx-rgb2', -22) + '</svg>');
+  });
+</script>
 """
 
 AVATAR_SVG = ('<svg viewBox="0 0 100 100"><circle cx="50" cy="38" r="18" fill="#ffffff55"/>'
@@ -412,8 +587,8 @@ TEMPLATES["how-to.html"] = dict(
   .ui-row b { flex: 1; height: 16px; border-radius: 8px; background: #e6e3dc; display: block; }
   .ui-chip { display: inline-block; padding: 16px 24px; border-radius: 20px; background: #fff; border: 3px solid #e6e3dc; font-size: 26px; font-weight: 700; color: #3a3a44; margin-right: 10px; }
   .ui-chip.on { border-color: var(--accent); color: var(--accent); }
-  .ui-btn { position: absolute; left: 28px; right: 28px; bottom: 48px; height: 96px; border-radius: 26px; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 32px; font-weight: 800; }
-  .ui-fab { position: absolute; right: 34px; bottom: 54px; width: 116px; height: 116px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 64px; font-weight: 500; }
+  .ui-btn { position: absolute; left: 28px; right: 28px; bottom: 48px; height: 96px; border-radius: 26px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; font-size: 32px; font-weight: 800; }
+  .ui-fab { position: absolute; right: 34px; bottom: 54px; width: 116px; height: 116px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; font-size: 64px; font-weight: 500; }
   .tap { position: absolute; width: 150px; height: 150px; margin: -75px 0 0 -75px; border-radius: 50%; border: 8px solid var(--accent);
          animation: tapRing .7s ease-out var(--tap) both; opacity: 0; }
   @keyframes tapRing { 0% { opacity: 0; transform: scale(.3); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(1.4); } }
@@ -648,7 +823,7 @@ TEMPLATES["announcement.html"] = dict(
              border-radius: 26px; padding: 30px 34px; margin-top: 22px; font-size: 50px; font-weight: 700; }
   .feature i { width: 64px; height: 64px; border-radius: 18px; background: var(--accent); flex: none; display: block; opacity: .9; }
   .cal { width: 380px; border-radius: 40px; overflow: hidden; background: #f4f3ef; color: #17171c; box-shadow: 0 30px 90px #0008; text-align: center; }
-  .cal .mon { background: var(--accent); color: #fff; font-size: 54px; font-weight: 800; letter-spacing: 6px; padding: 18px 0; }
+  .cal .mon { background: var(--accent); color: var(--on-accent); font-size: 54px; font-weight: 800; letter-spacing: 6px; padding: 18px 0; }
   .cal .day { font-size: 200px; font-weight: 800; letter-spacing: -8px; line-height: 1.15; padding-bottom: 20px; }
 """,
     body="""
@@ -756,9 +931,9 @@ TEMPLATES["team.html"] = dict(
 TEMPLATES["promo.html"] = dict(
     bgs=[(0, 3), (3, 12.5), (12.5, 17.5), (17.5, 20.7), (20.7, 24)],
     g1="#6b2f1c", g2="#1d2a52",
-    doc='  Template: promo, ad, brand profile, explainer, or educational list (see\n  references/video-types.md). This one is the 24-second marketing-skill\n  promo. Copy it as the starting point for a new video and rewrite the\n  scenes.\n\n  How every template page works (render.js reads all of this):\n  - The canvas is 1080x1920 (9:16). Keep text inside the .scene box: TikTok,\n    Reels, and Shorts cover the bottom ~25% and the right edge with their UI.\n  - Animate with CSS animations only. render.js pauses and seeks every\n    animation frame by frame, so time each one with animation-delay. Here the\n    delays come from per-element custom properties like style="--in:3.4s".\n    (3d.html and pixel.html draw their backgrounds with a script instead,\n    through window.renderFrame(t); their own comments explain how.)\n  - Backgrounds: every scene has an empty <div class="bg"> slot already timed\n    to it. Put one photo or clip inside and it fills the frame with a slow\n    zoom, a scrim that keeps text readable, and one shared color grade:\n      <img class="bg-media" src="assets/office-1.jpg" alt="">\n      <video class="bg-media" src="assets/city-1.mp4" data-offset="2"></video>\n    data-offset starts a clip that many seconds in; clips loop unless\n    data-loop="false". On the slot, --kb picks the motion (kbIn, kbOut,\n    kbLeft, kbRight, or none), --shade the darkness (default .35), class\n    "blur" softens a busy image, and class "tint" washes it in the accent\n    color. An empty slot shows the gradient glow instead. scripts/video/\n    media.js finds stock photos and clips and writes their credits.\n  - Music comes from <body data-*>: data-music is the genre (pop, house,\n    hiphop, acoustic, cinematic, tech, lofi, calm, phonk, jersey, funk,\n    chiptune) or none; data-bpm, data-key (C, F#, ...), data-mode (major or minor),\n    data-energy (1-5), and data-motif, the project\'s signature hook in\n    scale degrees, e.g. "1 3 5 6 | 5 3 2 -" (references/sound-guide.md).\n    data-drop is when the beat comes in; data-break="8.5-13.5" thins it\n    out under quieter scenes.\n    data-music-src="assets/track.mp3" (with data-music-start, in seconds)\n    uses a licensed track instead; data-music-at brings it in later than 0s.\n    data-duration sets the length.\n  - data-voice="assets/voice-1.m4a" on any element adds a voiceover line at\n    that element\'s --voice time (or --in); <body data-voice-src="..."\n    data-voice-start="..."> takes one continuous take instead. The music and\n    effects duck under the voice (references/sound-guide.md).\n  - data-sfx="sound:var" plays a sound effect at the time in that element\'s\n    --var (default --in). Several can be listed: data-sfx="swish:in tick:tick".\n    Sounds: pop (a note that climbs the chord when words land in quick\n    succession), swish, tick (climbs a scale across a run of ticks), whoosh,\n    click, chime, and the meme cues: boom, scratch (record scratch), horn\n    (air horn), rimshot, fail (sad trombone, 2s), drumroll (1.5s, so cue it\n    1.5s before the hit), ding (right answer), buzzer (wrong), ping (a\n    message), typing, shutter, cash (ka-ching), glitch, and bass (sub drop);\n    and 8-bit ones for pixel art: coin, jump, powerup, blip, and hurt.\n  - Everyday / FYP pieces (every page has them; the templates in\n    references/fyp-formats.md show each one in use). <body class="fyp">\n    switches to TikTok Sans, the platform\'s own caption font.\n      .cap: a caption in the platform\'s style, each wrapped line boxed:\n        <div class="cap pop" style="--in:1s"><span>pov: ...</span></div>\n        Variants: .dark, .hl (accent), .out (white, black outline), .left.\n      .say: word-by-word captions, one <i style="--in:2.1s"> per word.\n      .sticker: a tilted label (.yellow, .light, .dark). .stamp: a score\n        slammed on at --in (.ok, .bad). .emoji: a big emoji that bounces\n        in and sways.\n      .ring: a 3-2-1 countdown, <div class="ring"><b></b></div>. .timerbar\n        drains and .progress fills (to --pct), both over --for.\n      .poll with .opt bars growing to --pct (show real poll numbers only).\n      .stack piles its children in one spot; .swap pops one in at --in and\n        out at --out, so items replace each other in place.\n      .split with two .pane (expectation / reality); .grid of .cell\n        (starter pack); .tiers of .tier.s/.a/.b/.c/.d holding .item chips.\n      Generic, clearly fictional mockups: .chat (.msg.them / .msg.me, each\n        with a .bub; .typing dots show between --in and --out), a .lock\n        screen with .notif cards stacking in, a .post with a .heart that\n        fills at --like and .reply comments, and a .popup dialog.\n      .wipe: its second .side wipes over the first at --at (before/after).\n      .flash whites out the frame at --in; .hit zooms and shakes what it\n        wraps at --hit.\n    A photo or clip can go in a .pane, .side, or .cell too, as\n    <img class="bg-media" src="...">.\n  - The hook: give the first thing on screen class "now" instead of an\n    entrance (pop, rise, ...), so it shows on frame 0, which is the default\n    cover and the moment a viewer decides to stay. render.js --check warns\n    when the first frame has no text.\n  - Hook variants: data-variant="a" (or "b", "c") on the elements that\n    differ; render.js --variants a,b,c renders one video per variant.\n  - Captions synced to a voice line: <div class="say auto"\n    data-voice="assets/voice-2.wav" style="--voice:3.4s">The line.</div>\n    (render.js times them to the clip; see captions.js).\n  - Filmed clips with their own sound: <video class="bg-media" id="take"\n    src="assets/take.mp4" data-audio> plays the clip\'s sound in sync with\n    it, and <div class="say auto" data-clip="take">what\'s said</div>\n    captions it. scripts/video/cut.js cuts the pauses out of a take and\n    writes a page like this. A clip in a smaller box (a screen recording in\n    a phone frame) is cut to that box\'s shape.\n  - .endcard: the logo and handle at the end, added by brand.js from the\n    Visual Identity in references/brand-voice.md.\n  - Images (screenshots, photos, logos) go in an assets/ folder next to the\n    page and load with a relative src. People, products, and results must be\n    real ones the user supplied; stock and AI images are only for settings\n    and mood.',
+    doc='  Template: promo, ad, brand profile, explainer, or educational list (see\n  references/video-types.md). This one is the 24-second marketing-skill\n  promo. Copy it as the starting point for a new video and rewrite the\n  scenes.\n\n  How every template page works (render.js reads all of this):\n  - The canvas is 1080x1920 (9:16). Keep text inside the .scene box: TikTok,\n    Reels, and Shorts cover the bottom ~25% and the right edge with their UI.\n  - Animate with CSS animations only. render.js pauses and seeks every\n    animation frame by frame, so time each one with animation-delay. Here the\n    delays come from per-element custom properties like style="--in:3.4s".\n    (3d.html and pixel.html draw their backgrounds with a script instead,\n    through window.renderFrame(t); their own comments explain how.)\n  - Backgrounds: every scene has an empty <div class="bg"> slot already timed\n    to it. Put one photo or clip inside and it fills the frame with a slow\n    zoom, a scrim that keeps text readable, and one shared color grade:\n      <img class="bg-media" src="assets/office-1.jpg" alt="">\n      <video class="bg-media" src="assets/city-1.mp4" data-offset="2"></video>\n    data-offset starts a clip that many seconds in; clips loop unless\n    data-loop="false". On the slot, --kb picks the motion (kbIn, kbOut,\n    kbLeft, kbRight, or none), --shade the darkness (default .35), class\n    "blur" softens a busy image, and class "tint" washes it in the accent\n    color. An empty slot shows the gradient glow instead. scripts/video/\n    media.js finds stock photos and clips and writes their credits.\n  - Music comes from <body data-*>: data-music is the genre (pop, house,\n    hiphop, acoustic, cinematic, tech, lofi, calm, phonk, jersey, funk,\n    chiptune) or none; data-bpm, data-key (C, F#, ...), data-mode (major or minor),\n    data-energy (1-5), and data-motif, the project\'s signature hook in\n    scale degrees, e.g. "1 3 5 6 | 5 3 2 -" (references/sound-guide.md).\n    data-drop is when the beat comes in; data-break="8.5-13.5" thins it\n    out under quieter scenes.\n    data-music-src="assets/track.mp3" (with data-music-start, in seconds)\n    uses a licensed track instead; data-music-at brings it in later than 0s.\n    data-duration sets the length.\n  - data-voice="assets/voice-1.m4a" on any element adds a voiceover line at\n    that element\'s --voice time (or --in); <body data-voice-src="..."\n    data-voice-start="..."> takes one continuous take instead. The music and\n    effects duck under the voice (references/sound-guide.md).\n  - data-sfx="sound:var" plays a sound effect at the time in that element\'s\n    --var (default --in). Several can be listed: data-sfx="swish:in tick:tick".\n    Sounds: pop (a note that climbs the chord when words land in quick\n    succession), swish, tick (climbs a scale across a run of ticks), whoosh,\n    click, chime, and the meme cues: boom, scratch (record scratch), horn\n    (air horn), rimshot, fail (sad trombone, 2s), drumroll (1.5s, so cue it\n    1.5s before the hit), ding (right answer), buzzer (wrong), ping (a\n    message), typing, shutter, cash (ka-ching), glitch, and bass (sub drop);\n    the edit\'s: impact (a tight hit), and riser and reverse, which build\n    into the time they\'re cued on; and 8-bit ones for pixel art: coin,\n    jump, powerup, blip, and hurt.\n  - Everyday / FYP pieces (every page has them; the templates in\n    references/fyp-formats.md show each one in use). <body class="fyp">\n    switches to TikTok Sans, the platform\'s own caption font.\n      .cap: a caption in the platform\'s style, each wrapped line boxed:\n        <div class="cap pop" style="--in:1s"><span>pov: ...</span></div>\n        Variants: .dark, .hl (accent), .out (white, black outline), .left.\n      .say: word-by-word captions, one <i style="--in:2.1s"> per word.\n      .sticker: a tilted label (.yellow, .light, .dark). .stamp: a score\n        slammed on at --in (.ok, .bad). .emoji: a big emoji that bounces\n        in and sways.\n      .ring: a 3-2-1 countdown, <div class="ring"><b></b></div>. .timerbar\n        drains and .progress fills (to --pct), both over --for.\n      .poll with .opt bars growing to --pct (show real poll numbers only).\n      .stack piles its children in one spot; .swap pops one in at --in and\n        out at --out, so items replace each other in place.\n      .split with two .pane (expectation / reality); .grid of .cell\n        (starter pack); .tiers of .tier.s/.a/.b/.c/.d holding .item chips.\n      Generic, clearly fictional mockups: .chat (.msg.them / .msg.me, each\n        with a .bub; .typing dots show between --in and --out), a .lock\n        screen with .notif cards stacking in, a .post with a .heart that\n        fills at --like and .reply comments, and a .popup dialog.\n      .wipe: its second .side wipes over the first at --at (before/after).\n      .flash whites out the frame at --in; .hit zooms and shakes what it\n        wraps at --hit.\n  - Editing (scripts/video/edit.js writes these; references/\n    editing-techniques.md maps each to its name): a class on a .bg slot\n    sets how it comes in (t-cut, t-punch, t-whip, t-slide, t-zoom, t-wipe,\n    t-glitch, t-spin, t-blur, t-mask, t-leak); .flash, .leak, and .burn\n    are overlays dropped on a cut; --kb also takes kbDyn, kbDynOut, kbUp,\n    and kbDown. <div class="cam"> around the backgrounds is the camera:\n    data-punch="1.08" punches in on each *keyword* (render.js), and its\n    animations shake (camShake), punch (camPunch), or glitch (camGlitch).\n    hk-zoom on the first slot, and hk-glitch, hk-shake, or hk-bounce on\n    the hook, are the visual hook. <body class="fx-grain fx-vignette">\n    adds film grain and a vignette; cap-bounce, cap-kinetic, and cap-fade\n    animate the synced captions.\n    A photo or clip can go in a .pane, .side, or .cell too, as\n    <img class="bg-media" src="...">.\n  - The hook: give the first thing on screen class "now" instead of an\n    entrance (pop, rise, ...), so it shows on frame 0, which is the default\n    cover and the moment a viewer decides to stay. render.js --check warns\n    when the first frame has no text.\n  - Hook variants: data-variant="a" (or "b", "c") on the elements that\n    differ; render.js --variants a,b,c renders one video per variant.\n  - Captions synced to a voice line: <div class="say auto"\n    data-voice="assets/voice-2.wav" style="--voice:3.4s">The line.</div>\n    (render.js times them to the clip; see captions.js).\n  - Filmed clips with their own sound: <video class="bg-media" id="take"\n    src="assets/take.mp4" data-audio> plays the clip\'s sound in sync with\n    it, and <div class="say auto" data-clip="take">what\'s said</div>\n    captions it. scripts/video/cut.js cuts the pauses out of a take and\n    writes a page like this. A clip in a smaller box (a screen recording in\n    a phone frame) is cut to that box\'s shape.\n  - .endcard: the logo and handle at the end, added by brand.js from the\n    Visual Identity in references/brand-voice.md.\n  - Images (screenshots, photos, logos) go in an assets/ folder next to the\n    page and load with a relative src. People, products, and results must be\n    real ones the user supplied; stock and AI images are only for settings\n    and mood.',
     body_attrs='data-duration="24" data-drop="3" data-music="tech" data-bpm="120" data-key="C" data-mode="major" data-energy="3" data-motif="1 5 3 5 | 6 5 3 2"',
-    css='  /* scene 2/3: the to-do list */\n  .listhead { position: relative; height: 180px; margin-bottom: 28px; }\n  .listhead > div { position: absolute; left: 0; bottom: 0; }\n  .chips { display: flex; flex-direction: column; gap: 18px; }\n  .chip { display: flex; align-items: center; gap: 26px; align-self: flex-start;\n          background: var(--card); border: 2px solid var(--line); border-radius: 22px;\n          padding: 20px 34px 20px 24px; font-size: 46px; font-weight: 600;\n          animation: slideIn .4s cubic-bezier(.2,.8,.2,1) var(--in) both,\n                     dim .3s ease-out var(--tick) forwards; }\n  .chip:nth-child(even) { margin-left: 34px; }\n  @keyframes dim { to { color: var(--muted); border-color: #3a2a24; } }\n  .box { width: 52px; height: 52px; border-radius: 12px; border: 4px solid #5a5966; flex: none;\n         display: grid; place-items: center;\n         animation: tick .25s ease-out var(--tick) forwards; }\n  @keyframes tick { to { background: var(--accent); border-color: var(--accent); } }\n  .box svg { width: 34px; height: 34px; animation: checkIn .3s cubic-bezier(.2,.9,.3,1.4) var(--tick) both; }\n  @keyframes checkIn { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: none; } }\n  .tag { display: inline-block; font-size: 40px; font-weight: 600; color: var(--muted); margin-top: 10px; }\n\n  /* scene 4: approval card */\n  .card { background: var(--card); border: 2px solid var(--line); border-radius: 32px; padding: 40px; margin-top: 56px; position: relative; }\n  .cardtop { display: flex; justify-content: space-between; align-items: center; font-size: 36px; color: var(--muted); font-weight: 600; }\n  .pill { position: relative; height: 62px; width: 330px; }\n  .pill span { position: absolute; right: 0; top: 0; height: 62px; padding: 0 26px; border-radius: 31px;\n               display: flex; align-items: center; font-size: 32px; font-weight: 700; white-space: nowrap; }\n  .p1 { background: #3a2f17; color: var(--warn); animation: fadeOut .2s linear var(--flip) forwards; }\n  .p2 { background: #163626; color: var(--ok); animation: popIn .4s cubic-bezier(.2,.9,.3,1.3) var(--flip) both; }\n  .posttext { font-size: 44px; font-weight: 600; line-height: 1.3; margin: 34px 0 26px; }\n  .bar { height: 26px; border-radius: 13px; background: #2a2a33; margin-bottom: 18px; }\n  .btn { margin-top: 26px; height: 108px; border-radius: 24px; background: var(--accent); color: #fff;\n         display: grid; place-items: center; font-size: 46px; font-weight: 800;\n         animation: press .3s ease-in-out var(--press) both, done .3s ease-out var(--flip) forwards; }\n  @keyframes press { 0% { transform: none; } 40% { transform: scale(.94); } 100% { transform: none; } }\n  @keyframes done { to { background: #2a2a33; color: var(--muted); } }\n  .cursor { position: absolute; width: 90px; height: 90px; left: 520px; top: 440px;\n            animation: fadeIn .2s ease-out var(--cin) both, cursorMove .6s cubic-bezier(.3,.7,.2,1) var(--cin) both; }\n  @keyframes cursorMove { from { transform: translate(260px, 380px); } to { transform: none; } }\n\n  /* scene 6: terminal */\n  .term { margin-top: 56px; background: #08080b; border: 2px solid var(--line); border-radius: 28px; overflow: hidden; }\n  .termbar { height: 58px; background: #16161c; display: flex; align-items: center; gap: 14px; padding-left: 26px; }\n  .termbar i { width: 20px; height: 20px; border-radius: 50%; background: #3a3a44; display: block; }\n  .termbody { padding: 30px 34px 34px; font-family: "JetBrains Mono", "DejaVu Sans Mono", monospace; font-size: 36px; line-height: 1.5; color: #d9d8d2; }\n  .termbody .dollar { color: var(--accent); }\n  .caret { display: inline-block; width: 20px; height: 40px; background: #d9d8d2; vertical-align: -6px; animation: blink 1s steps(1) 0s infinite; }\n  @keyframes blink { 50% { opacity: 0; } }\n',
+    css='  /* scene 2/3: the to-do list */\n  .listhead { position: relative; height: 180px; margin-bottom: 28px; }\n  .listhead > div { position: absolute; left: 0; bottom: 0; }\n  .chips { display: flex; flex-direction: column; gap: 18px; }\n  .chip { display: flex; align-items: center; gap: 26px; align-self: flex-start;\n          background: var(--card); border: 2px solid var(--line); border-radius: 22px;\n          padding: 20px 34px 20px 24px; font-size: 46px; font-weight: 600;\n          animation: slideIn .4s cubic-bezier(.2,.8,.2,1) var(--in) both,\n                     dim .3s ease-out var(--tick) forwards; }\n  .chip:nth-child(even) { margin-left: 34px; }\n  @keyframes dim { to { color: var(--muted); border-color: #3a2a24; } }\n  .box { width: 52px; height: 52px; border-radius: 12px; border: 4px solid #5a5966; flex: none;\n         display: grid; place-items: center;\n         animation: tick .25s ease-out var(--tick) forwards; }\n  @keyframes tick { to { background: var(--accent); border-color: var(--accent); } }\n  .box svg { width: 34px; height: 34px; animation: checkIn .3s cubic-bezier(.2,.9,.3,1.4) var(--tick) both; }\n  @keyframes checkIn { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: none; } }\n  .tag { display: inline-block; font-size: 40px; font-weight: 600; color: var(--muted); margin-top: 10px; }\n\n  /* scene 4: approval card */\n  .card { background: var(--card); border: 2px solid var(--line); border-radius: 32px; padding: 40px; margin-top: 56px; position: relative; }\n  .cardtop { display: flex; justify-content: space-between; align-items: center; font-size: 36px; color: var(--muted); font-weight: 600; }\n  .pill { position: relative; height: 62px; width: 330px; }\n  .pill span { position: absolute; right: 0; top: 0; height: 62px; padding: 0 26px; border-radius: 31px;\n               display: flex; align-items: center; font-size: 32px; font-weight: 700; white-space: nowrap; }\n  .p1 { background: #3a2f17; color: var(--warn); animation: fadeOut .2s linear var(--flip) forwards; }\n  .p2 { background: #163626; color: var(--ok); animation: popIn .4s cubic-bezier(.2,.9,.3,1.3) var(--flip) both; }\n  .posttext { font-size: 44px; font-weight: 600; line-height: 1.3; margin: 34px 0 26px; }\n  .bar { height: 26px; border-radius: 13px; background: #2a2a33; margin-bottom: 18px; }\n  .btn { margin-top: 26px; height: 108px; border-radius: 24px; background: var(--accent); color: var(--on-accent);\n         display: grid; place-items: center; font-size: 46px; font-weight: 800;\n         animation: press .3s ease-in-out var(--press) both, done .3s ease-out var(--flip) forwards; }\n  @keyframes press { 0% { transform: none; } 40% { transform: scale(.94); } 100% { transform: none; } }\n  @keyframes done { to { background: #2a2a33; color: var(--muted); } }\n  .cursor { position: absolute; width: 90px; height: 90px; left: 520px; top: 440px;\n            animation: fadeIn .2s ease-out var(--cin) both, cursorMove .6s cubic-bezier(.3,.7,.2,1) var(--cin) both; }\n  @keyframes cursorMove { from { transform: translate(260px, 380px); } to { transform: none; } }\n\n  /* scene 6: terminal */\n  .term { margin-top: 56px; background: #08080b; border: 2px solid var(--line); border-radius: 28px; overflow: hidden; }\n  .termbar { height: 58px; background: #16161c; display: flex; align-items: center; gap: 14px; padding-left: 26px; }\n  .termbar i { width: 20px; height: 20px; border-radius: 50%; background: #3a3a44; display: block; }\n  .termbody { padding: 30px 34px 34px; font-family: "JetBrains Mono", "DejaVu Sans Mono", monospace; font-size: 36px; line-height: 1.5; color: #d9d8d2; }\n  .termbody .dollar { color: var(--accent); }\n  .caret { display: inline-block; width: 20px; height: 40px; background: #d9d8d2; vertical-align: -6px; animation: blink 1s steps(1) 0s infinite; }\n  @keyframes blink { 50% { opacity: 0; } }\n',
     body='  <!-- Scene 1 (0–3s): hook, readable sound-off -->\n  <div class="scene" style="--out:2.75s">\n    <div class="huge now" style="--in:.05s" data-sfx="pop">Stop writing</div>\n    <div class="huge pop" style="--in:.4s" data-sfx="pop">marketing</div>\n    <div class="huge pop" style="--in:.75s" data-sfx="pop">posts</div>\n    <div class="huge pop accent" style="--in:1.1s" data-sfx="pop">by hand.</div>\n  </div>\n\n  <!-- Scenes 2+3 (3–12.5s): the week\'s list, then it gets done -->\n  <div class="scene" style="--out:12.25s" data-sfx="whoosh:out">\n    <div class="listhead">\n      <div class="big gone" style="--in:3.05s; --out:7.0s" data-sfx="whoosh:out">Your week:</div>\n      <div style="bottom:0">\n        <div class="mid rise" style="--in:7.3s">One plugin. <span class="accent">12 skills.</span></div>\n        <div class="tag fade" style="--in:7.7s">marketing-skill for Claude Code</div>\n      </div>\n    </div>\n    <div class="chips">\n      <div class="chip" style="--in:3.4s;  --tick:8.3s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>Competitor research</div>\n      <div class="chip" style="--in:3.75s; --tick:8.65s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>LinkedIn post</div>\n      <div class="chip" style="--in:4.1s;  --tick:9.0s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>X thread</div>\n      <div class="chip" style="--in:4.45s; --tick:9.35s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>SEO brief</div>\n      <div class="chip" style="--in:4.8s;  --tick:9.7s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>Ad copy variants</div>\n      <div class="chip" style="--in:5.15s; --tick:10.05s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>Cold emails</div>\n      <div class="chip" style="--in:5.5s;  --tick:10.4s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>TikTok script</div>\n      <div class="chip" style="--in:5.85s; --tick:10.75s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>Reddit post</div>\n    </div>\n  </div>\n\n  <!-- Scene 4 (12.5–17.5s): nothing ships without approval -->\n  <div class="scene" style="--out:17.35s" data-sfx="whoosh:out">\n    <div class="big rise" style="--in:12.55s">Nothing posts</div>\n    <div class="big rise accent" style="--in:12.85s">until you say so.</div>\n    <div class="card rise" style="--in:13.3s">\n      <div class="cardtop">\n        <div>LinkedIn · Tue 9:00</div>\n        <div class="pill" style="--flip:15.1s" data-sfx="chime:flip"><span class="p1">Ready for approval</span><span class="p2">Approved ✓</span></div>\n      </div>\n      <div class="posttext">We cut onboarding from 14 days to 3. Here\'s what we stopped doing:</div>\n      <div class="bar" style="width:92%"></div>\n      <div class="bar" style="width:78%"></div>\n      <div class="btn" style="--press:14.85s; --flip:15.1s" data-sfx="click:press">Approve</div>\n      <svg class="cursor" style="--cin:14.1s" viewBox="0 0 24 24"><path d="M4 2.5l15 9.2-6.6 1.4 3.9 7.3-2.7 1.4-3.9-7.3L4.6 19z" fill="#fff" stroke="#0f0f13" stroke-width="1.3" stroke-linejoin="round"/></svg>\n    </div>\n  </div>\n\n  <!-- Scene 5 (17.5–20.7s): free, open, editable -->\n  <div class="scene" style="--out:20.55s" data-sfx="whoosh:out">\n    <div class="huge pop" style="--in:17.6s" data-sfx="pop">Free.</div>\n    <div class="huge pop" style="--in:17.95s" data-sfx="pop">Open source.</div>\n    <div class="huge pop accent" style="--in:18.3s" data-sfx="pop">Yours to edit.</div>\n    <div class="small fade" style="--in:18.9s; margin-top:40px">Every skill is a plain SKILL.md file.</div>\n  </div>\n\n  <!-- Scene 6 (20.7–24s): CTA -->\n  <div class="scene">\n    <div class="big rise" style="--in:20.75s">Get it on GitHub</div>\n    <div class="mid rise accent" style="--in:21.05s; margin-top:18px">marcosmodly/<br>marketing-skill</div>\n    <div class="term rise" style="--in:21.5s">\n      <div class="termbar"><i></i><i></i><i></i></div>\n      <div class="termbody"><span class="dollar">$</span> claude plugin install<br>&nbsp;&nbsp;marketing-skill@marketing-skill<span class="caret"></span></div>\n    </div>\n  </div>\n')
 
 
@@ -922,14 +1097,7 @@ TEMPLATES["montage.html"] = dict(
                        box-shadow: 0 0 30px rgba(0,0,0,.5); animation: seamBg .9s cubic-bezier(.7,0,.25,1) var(--at, 999s) both; }
   @keyframes seamBg { from { left: 100%; opacity: 1; } 96% { opacity: 1; } to { left: 0%; opacity: 0; } }
 
-  /* how a shot comes in (a fade is the default); under a cut, slide, or wipe the outgoing slot stays put */
-  .montage .bg.t-cut   { animation: fadeIn .01s linear var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
-  .montage .bg.t-slide { animation: slideBg .5s cubic-bezier(.7,0,.25,1) var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
-  .montage .bg.t-zoom  { animation: zoomBg .5s cubic-bezier(.2,.8,.2,1) var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
-  .montage .bg.t-wipe  { animation: wipeBg .6s cubic-bezier(.7,0,.25,1) var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
-  @keyframes slideBg { from { transform: translateX(100%); } to { transform: none; } }
-  @keyframes zoomBg  { from { opacity: 0; transform: scale(1.3); } to { opacity: 1; transform: none; } }
-  @keyframes wipeBg  { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0); } }
+  /* how a shot comes in: the shared transitions (t-cut, t-slide, t-zoom, t-wipe, t-whip, ...) in every page's editing block */
 
   /* a shot's text: the hook up top on the first shot, the label low in a lower-third box */
   .scene.shot { justify-content: flex-end; gap: 22px; }
@@ -943,7 +1111,7 @@ TEMPLATES["montage.html"] = dict(
             font-size: 32px; font-weight: 700; letter-spacing: .5px; }
   .facts { margin: auto 0; display: flex; flex-direction: column; align-items: center; gap: 30px; text-align: center; }
   .facts.low { margin: auto 0 0; }
-  .price { width: fit-content; padding: 6px 38px 14px; border-radius: 28px; background: var(--accent); color: #fff;
+  .price { width: fit-content; padding: 6px 38px 14px; border-radius: 28px; background: var(--accent); color: var(--on-accent);
            font-size: 112px; font-weight: 900; line-height: 1.1; letter-spacing: -3px; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
   .specs { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; }
   .specs span { padding: 12px 28px 14px; border-radius: 999px; background: #fff; color: #121212; font-size: 44px; font-weight: 800; white-space: nowrap; }
@@ -1214,6 +1382,9 @@ TEMPLATES.update(PIXEL_TEMPLATES)
 for name, t in TEMPLATES.items():
     t = dict(t)
     t["kit"] = KIT
+    t["edit"] = EDIT
+    t["looks"] = LOOKS
+    t["fx_script"] = FX_SCRIPT
     t.setdefault("head_extra", "")
     t["doc"] = t["doc"] + ("" if name == "promo.html" else POINTER)
     t["bg_slots"] = bg_slots(t.pop("bgs"))

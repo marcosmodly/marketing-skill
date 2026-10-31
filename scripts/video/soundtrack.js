@@ -32,6 +32,9 @@ const SOUNDS = [
   'pop', 'swish', 'tick', 'whoosh', 'click', 'chime',
   // meme sounds, all synthesized here (no samples)
   'boom', 'scratch', 'horn', 'rimshot', 'fail', 'drumroll', 'ding', 'buzzer', 'ping', 'typing', 'shutter', 'cash', 'glitch', 'bass',
+  // editing sounds: a riser and a reverse swell that build into their cue (so cue them on the
+  // reveal, not before it), and a tight impact for a punch-in or a hard cut
+  'riser', 'reverse', 'impact',
   // 8-bit game sounds, for pixel art
   'coin', 'jump', 'powerup', 'blip', 'hurt',
 ];
@@ -678,6 +681,53 @@ function subDrop() {
   return out;
 }
 
+// ---- editing sounds ----
+
+// Riser: noise and a tone sweeping up for 1.4s into the cue (it ends on its cue time), for
+// building anticipation before a reveal or the drop.
+const RISER = 1.4;
+function riser(rng) {
+  const n = len(RISER + 0.05);
+  const out = new Float64Array(n);
+  const f = new SVF();
+  let p = 0;
+  for (let i = 0; i < n; i++) {
+    const t = i / SR;
+    const k = Math.min(1, t / RISER);
+    f.step(rng.n(), 400 + 7000 * k * k, 2.2);
+    p += TAU * (180 * 2 ** (3 * k)) / SR;
+    const env = k ** 2.2 * (t < RISER ? 1 : Math.exp(-(t - RISER) / 0.015));
+    out[i] = (f.bp * 0.8 + Math.sin(p) * 0.18 + Math.sin(p * 1.5) * 0.08) * env;
+  }
+  return out;
+}
+
+// Reverse: a cymbal-like swell played backwards, 1s long, cut dead on its cue.
+const REVERSE = 1;
+function reverseSwell(rng) {
+  const n = len(REVERSE);
+  const hiss = filter(noise(rng, n), 'hp', 5000, 0.7);
+  const out = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    const back = (n - i) / SR; // the time left to the cue: a cymbal's decay, reversed
+    out[i] = hiss[i] * Math.exp(-back / 0.32) * 0.9;
+  }
+  return out;
+}
+
+// Impact: a short, tight hit (a punchy kick under a noise crack), for a punch-in or a hard cut;
+// shorter and drier than boom, so it can land often without washing the voice out.
+function impact(rng) {
+  const body = kick(rng, { pitch: 44, punch: 140, decay: 0.28, click: 0.6 });
+  const n = Math.max(body.length, len(0.35));
+  const out = new Float64Array(n);
+  const crack = filter(noise(rng, len(0.12)), 'bp', 1800, 0.8);
+  for (let i = 0; i < body.length; i++) out[i] += body[i] * 0.9;
+  for (let i = 0; i < crack.length; i++) out[i] += crack[i] * Math.exp(-i / SR / 0.025) * 0.7;
+  for (let i = 0; i < n; i++) out[i] = Math.tanh(out[i] * 1.6) * 0.8;
+  return out;
+}
+
 // ---------- 8-bit: the voices of an old game console (chiptune and pixel-art sounds) ----------
 
 // Band-limited pulse wave at a duty cycle (0.5 a hollow square; 0.25 and 0.125 the thinner,
@@ -847,6 +897,7 @@ const MEME = {
   fail: [fail, 0.55, 0], drumroll: [drumroll, 1.29, 0], ding: [ding, 0.6, 0], buzzer: [buzzer, 0.5, 0],
   ping: [ping, 0.85, 0], typing: [typing, 1.38, 0], shutter: [shutter, 1.44, 0], cash: [cash, 0.73, 0],
   glitch: [glitch, 0.67, 0], bass: [subDrop, 0.5, 0],
+  riser: [riser, 0.6, -RISER], reverse: [reverseSwell, 0.75, -REVERSE], impact: [impact, 0.72, 0],
   coin: [chipCoin, 0.69, 0], jump: [chipJump, 0.71, 0], hurt: [chipHurt, 0.93, 0],
 };
 

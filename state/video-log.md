@@ -21,8 +21,9 @@
 >
 > **Columns.** `Format` is the template or video type (`tier-list`,
 > `narrated`, `how-to`, `take`...). `Hook` is the on-screen hook and its
-> pattern from `references/hooks.md` (e.g. `pain: you're losing money on
-> late invoices`); `Variant` is which hook variant this was, if any.
+> type from `references/hooks.md` (e.g. `problem-solution: you're losing
+> money on late invoices`; `hook.js` names the type); `Variant` is which
+> hook variant this was, if any.
 > `Avg watch` is the share of the video watched on average (or the
 > average watch time in seconds, marked `s`); `3s hold` is the share of
 > viewers still there after three seconds, where the platform shows it.

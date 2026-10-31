@@ -94,7 +94,9 @@ was made with the same renderer.
 - **Cold email outreach:** a daily batch of researched, 1:1 personalized
   prospecting emails, deduplicated against a permanent contact log that
   syncs replies, bounces, and unsubscribes from Gmail.
-- **Short-form video:** hook-first scripts plus caption, hashtags, and
+- **Short-form video:** it starts by checking your project's own files
+  and asking you to confirm what the project is and what the video is
+  for, then writes hook-first scripts plus caption, hashtags, and
   best time to post for TikTok, Instagram Reels, and YouTube Shorts,
   shaped to the right type of marketing video (how-to, testimonial,
   launch, FAQ, and more) or to an everyday FYP format (POV, tier list,
@@ -103,7 +105,16 @@ was made with the same renderer.
   stock or AI backgrounds, a narrated 3D animation starring your brand's
   mascot (it moves, gestures, holds up your product, and lip-syncs), or
   pixel art, with a voiceover, music composed in your brand's own sound,
-  and meme sound effects. The bold look gives it a cover that stops the
+  and meme sound effects, cut in an editing style (UGC, kinetic
+  typography, fast-paced, cinematic, or meme): a visual hook in the first
+  half second, punch-ins on the words that sell it, whip pans, glitches,
+  light leaks, and b-roll every few seconds. Hooks are checked before
+  anything renders: their type, all three layers (on screen, spoken, and
+  visual), and whether three to test are really different. A look sets one
+  coherent visual style for the video's job (documentary, cinematic,
+  editorial, tech, retro, and more), stock is picked for calm room behind
+  the captions, and the check before rendering measures text contrast
+  against the real picture. The bold look gives it a cover that stops the
   scroll: huge boxed captions with the selling words in yellow over your
   face (your app on the laptop in your photo) or the mascot.
 - **Montages from your own videos:** hand over the phone clips you or a

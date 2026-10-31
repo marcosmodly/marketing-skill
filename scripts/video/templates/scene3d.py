@@ -54,7 +54,7 @@ const LIFT = Math.round(190 * H / 1920); // the subject sits this far above the 
 const css = getComputedStyle(document.documentElement);
 const cssColor = (name, fallback) => new THREE.Color(css.getPropertyValue(name).trim() || fallback);
 const SRGB = THREE.SRGBColorSpace;
-const accent = cssColor('--accent', '#e07a55');
+const accent = cssColor('--accent', '#db7350');
 const hsl = accent.getHSL({}, SRGB);
 const PAL = {
   accent,

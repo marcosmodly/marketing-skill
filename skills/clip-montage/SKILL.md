@@ -68,8 +68,15 @@ command below. `VIDEO` below means `${CLAUDE_PLUGIN_ROOT}/scripts/video`.
    (`${CLAUDE_PLUGIN_ROOT}/skills/montage-video/SKILL.md`): a saved client
    (read the profile and its `## Notes`), a new one (business name,
    contact lines, required fine print, logo, colors, the music they
-   like), or the user's own business (leave `client:` out). Profiles live
-   in `${CLAUDE_PLUGIN_ROOT}/state/clients/` and stay out of git.
+   like), or the user's own business (leave `client:` out, and check what
+   the project is with `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/project.py`
+   in their folder). Profiles live in `${CLAUDE_PLUGIN_ROOT}/state/clients/`
+   and stay out of git. Then confirm what this video is about and for, as
+   `montage-video` step 2 says: what you understood in a line or two, what
+   the video is for and the one thing a viewer should take away, what must
+   be shown or said, and what to avoid, and wait for the answer before
+   editing, unless the request already says it or the user said to use
+   defaults.
 
 3. **Ask for the footage, the music, and the voice.** One message:
    - **The clips (the default ask).** Short phone videos, 3 to 15 seconds
@@ -237,9 +244,9 @@ command below. `VIDEO` below means `${CLAUDE_PLUGIN_ROOT}/scripts/video`.
    | "different song" / "no music" | `music:` another file, a genre, or `none` |
    | "show the left side", "keep her in frame" | `[focus: 25%,50%]` |
    | "zoom in on it" | `[move: push-in]` (with `[focus:]` on the spot) |
-   | "smoother" / "punchier cuts" | `transition: fade`, or `cut`, `slide`, `zoom`, `wipe`, `flash` |
+   | "smoother" / "punchier cuts" | `transition: fade`, or `cut`, `punch`, `whip`, `slide`, `zoom`, `wipe`, `flash`, `glitch`, `spin`, `blur`, `mask`, `leak`, `burn` (`references/editing-techniques.md` says which edit each one is) |
    | "change the text" | the label, `hook:`, `cta:`, `price:`, `specs:` |
-   | "slow motion" | not supported: no speed changes. A clip filmed in the phone's slo-mo plays as filmed |
+   | "slow motion", "speed it up", "speed ramp", "freeze on that" | `[speed: 0.5]` (slow), `[speed: 2]` (fast), `[ramp: 1.2:0.3,2.4:1]` (slows at 1.2s, back to speed at 2.4s), `[ramp: 1.5:0,2.3:1]` (a freeze frame); not on a `[sound]` clip. Smooth slow motion needs footage filmed at 60fps or more |
    | "another color / logo / phone number" | the client's profile, not the script |
 
    Each round: edit the script, run `montage.js` again, then use `--draft`

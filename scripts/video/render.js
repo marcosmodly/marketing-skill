@@ -237,6 +237,35 @@ function ffmpeg(args) {
   if (run.status !== 0) fail(`ffmpeg failed: ${run.stderr}`);
 }
 
+// Speed changes for a clip (data-speed, data-ramp): how far into the clip `local` seconds on
+// screen land. data-speed is a steady rate (0.5 slow motion, 2 fast motion); data-ramp lists
+// "seconds:speed" points from the clip's start on screen, eased over 0.2s (a speed ramp), and a
+// speed of 0 freezes the frame until the next point (a freeze frame), with no easing in or out.
+// It runs in the page too (seek), so it uses nothing from outside itself.
+function clipTime(local, speed, ramp) {
+  const base = parseFloat(speed) > 0 ? parseFloat(speed) : 1;
+  const points = String(ramp || '').split(',').map((p) => p.split(':').map(Number))
+    .filter((p) => p.length === 2 && p.every(Number.isFinite) && p[1] >= 0).sort((a, b) => a[0] - b[0]);
+  if (base === 1 && !points.length) return local;
+  if (!points.length) return local * base;
+  const EASE = 0.2;
+  const rate = (t) => {
+    let prev = base;
+    let s = base;
+    for (const [at, v] of points) {
+      if (t < at) break;
+      const k = Math.min(1, (t - at) / EASE);
+      s = prev > 0 && v > 0 ? prev + (v - prev) * k * k * (3 - 2 * k) : v;
+      prev = v;
+    }
+    return s;
+  };
+  const dt = 1 / 240;
+  let acc = 0;
+  for (let t = 0; t < local; t += dt) acc += rate(t) * Math.min(dt, local - t);
+  return acc;
+}
+
 // Pause every animation on the page and jump it to `seconds`. Background
 // videos (swapped for frame sequences by prepareMedia) jump too: a clip
 // starts at its --in time, inherited from its .bg layer, from data-offset
@@ -255,8 +284,10 @@ async function seek(page, seconds) {
     const decodes = [];
     for (const img of document.querySelectorAll('img[data-frames]')) {
       const count = Number(img.dataset.count);
-      let local = Math.max(0, t - toSeconds(getComputedStyle(img).getPropertyValue('--in'))) + toSeconds(img.dataset.offset);
-      let frame = Math.floor(local * 30 + 1e-6);
+      const onScreen = Math.max(0, t - toSeconds(getComputedStyle(img).getPropertyValue('--in')));
+      const local = (window.clipTime && (img.dataset.speed || img.dataset.ramp) ? window.clipTime(onScreen, img.dataset.speed, img.dataset.ramp) : onScreen)
+        + toSeconds(img.dataset.offset);
+      let frame = Math.floor(local * (Number(img.dataset.fps) || 30) + 1e-6);
       frame = img.dataset.loop === 'false' ? Math.min(frame, count - 1) : frame % count;
       const src = `${img.dataset.frames}/${String(frame + 1).padStart(5, '0')}.jpg`;
       if (img.getAttribute('src') !== src) {
@@ -303,15 +334,27 @@ async function prepareMedia(page) {
     v.dataset.renderIndex = String(i);
     const full = !!v.closest('.bg') || !v.offsetWidth || !v.offsetHeight;
     return { src: v.currentSrc || v.src || v.querySelector('source')?.src || '', w: full ? 0 : v.offsetWidth, h: full ? 0 : v.offsetHeight,
-             offset: parseFloat(v.dataset.offset) || 0, length: parseFloat(v.dataset.length) || 0, focus: v.dataset.focus || '' };
+             offset: parseFloat(v.dataset.offset) || 0, length: parseFloat(v.dataset.length) || 0, focus: v.dataset.focus || '',
+             speed: v.dataset.speed || '', ramp: v.dataset.ramp || '', audio: v.hasAttribute('data-audio') };
   }));
+  if (videos.some((v) => v.speed || v.ramp)) await page.evaluate((src) => { window.clipTime = (0, eval)(`(${src})`); }, clipTime.toString());
   const cacheDir = path.join(os.tmpdir(), 'render-video-cache');
   if (videos.length && !hasFfmpeg()) {
     problems.push('ffmpeg is needed to render background videos; they will be blank');
     return problems;
   }
   for (let i = 0; i < videos.length; i++) {
-    const { src, w, h, offset, length, focus } = videos[i];
+    const { src, w, h, offset, focus, speed, ramp, audio } = videos[i];
+    let { length } = videos[i];
+    if ((speed || ramp) && audio) {
+      problems.push(`video ${path.basename(src)} has data-speed or data-ramp and its own sound (data-audio); the sound can't follow a speed change, so it plays at normal speed: drop one`);
+      await page.evaluate((index) => { const v = document.querySelector(`video[data-render-index="${index}"]`); delete v.dataset.speed; delete v.dataset.ramp; }, i);
+    } else if ((speed || ramp) && length > 0) length = Math.round(clipTime(length, speed, ramp) * 1000) / 1000 + 0.1; // the clip it takes to fill that much screen time
+    // slowed down, the clip's frames are pulled at a higher rate, so footage filmed at 60 or 120fps
+    // plays smoothly instead of repeating frames
+    const slowest = Math.min(parseFloat(speed) > 0 ? parseFloat(speed) : 1,
+      ...String(ramp || '').split(',').map((x) => parseFloat(x.split(':')[1])).filter((v) => v > 0));
+    const rate = !audio && slowest < 1 ? Math.min(120, Math.round(30 / slowest)) : 30;
     // twice the box's size for sharpness, within the frame, in even numbers for the encoder
     const scale = w ? Math.min(2, WIDTH / w, HEIGHT / h) : 1;
     const W = w ? 2 * Math.round((w * scale) / 2) : WIDTH;
@@ -331,22 +374,23 @@ async function prepareMedia(page) {
       ? `crop=${W}:${H}:(in_w-out_w)*${Math.min(1, Math.max(0, fx))}:(in_h-out_h)*${Math.min(1, Math.max(0, fy))}`
       : `crop=${W}:${H}`;
     const window = length > 0 ? ['-ss', String(offset), '-t', String(length)] : [];
-    const key = crypto.createHash('sha1').update(`${file}|${st.size}|${st.mtimeMs}|${W}x${H}|${crop}|${window.join(' ')}`).digest('hex').slice(0, 16);
+    const key = crypto.createHash('sha1').update(`${file}|${st.size}|${st.mtimeMs}|${W}x${H}|${crop}|${window.join(' ')}${rate !== 30 ? `|${rate}` : ''}`).digest('hex').slice(0, 16);
     const dir = path.join(cacheDir, key);
     if (!fs.existsSync(path.join(dir, 'done'))) {
       fs.rmSync(dir, { recursive: true, force: true });
       fs.mkdirSync(dir, { recursive: true });
-      ffmpeg([...window, '-i', file, '-vf', `scale=${W}:${H}:force_original_aspect_ratio=increase,${crop},fps=30`,
+      ffmpeg([...window, '-i', file, '-vf', `scale=${W}:${H}:force_original_aspect_ratio=increase,${crop},fps=${rate}`,
         '-q:v', '3', path.join(dir, '%05d.jpg')]);
       fs.writeFileSync(path.join(dir, 'done'), '');
     }
     const count = fs.readdirSync(dir).filter((f) => f.endsWith('.jpg')).length;
-    await page.evaluate(([index, framesUrl, n]) => {
+    await page.evaluate(([index, framesUrl, n, fps]) => {
       const v = document.querySelector(`video[data-render-index="${index}"]`);
       const img = document.createElement('img');
       for (const { name, value } of v.attributes) if (!['src', 'autoplay', 'loop', 'muted', 'controls', 'playsinline', 'preload', 'data-render-index'].includes(name)) img.setAttribute(name, value);
       img.dataset.frames = framesUrl;
       img.dataset.count = String(n);
+      if (fps !== 30) img.dataset.fps = String(fps);
       // a sequence cut from data-offset already starts there (its sound still plays from it)
       if (v.dataset.length) {
         img.dataset.clipOffset = v.dataset.offset || '0';
@@ -356,7 +400,7 @@ async function prepareMedia(page) {
       img.src = `${framesUrl}/00001.jpg`;
       img.alt = '';
       v.replaceWith(img);
-    }, [i, pathToFileURL(dir).href, count]);
+    }, [i, pathToFileURL(dir).href, count, rate]);
   }
   // Darken each background just enough for white text: brighter media gets a heavier --shade,
   // unless the page set one on the slot itself.
@@ -606,9 +650,185 @@ async function lintTimeline(page, duration, step = 0.25) {
   return [...seen.values(), ...retentionProblems(samples, duration, step, breaks)];
 }
 
+// ---- visual QA (references/visual-design.md, "Accessibility"): what --check measures beyond layout
+// How big the frame looks on a phone, for telling large text from small (WCAG counts 24px, or
+// 18.66px bold, as large: 3:1 is enough there, 4.5:1 below it).
+const PHONE_WIDTH = { portrait: 390, landscape: 844 };
+
+// Text contrast against the pixels actually behind it, at each settled moment: the page is
+// shot once with the text's ink hidden (boxes and panels behind words stay), and each text's
+// color is compared with what's under it. A word with a heavy outline is judged against its
+// outline instead. Returns problems (labeled Contrast; under 2:1 fails, the rest is advice).
+async function contrastProblems(page, times) {
+  const problems = [];
+  const seen = new Set();
+  const phone = WIDTH > HEIGHT ? PHONE_WIDTH.landscape : PHONE_WIDTH.portrait;
+  for (const t of times) {
+    await seek(page, t);
+    const texts = await page.evaluate(([phoneW, frameW]) => {
+      const out = [];
+      const parse = (c) => (c.match(/[\d.]+/g) || []).map(Number);
+      const settled = (el) => {
+        for (let e = el; e; e = e.parentElement) {
+          for (const a of e.getAnimations()) {
+            const c = a.effect.getComputedTiming();
+            if (c.activeDuration === Infinity || c.localTime === null) continue;
+            if (c.localTime > c.delay && c.localTime < c.delay + c.activeDuration) return false;
+          }
+        }
+        return true;
+      };
+      for (const el of document.body.querySelectorAll('*')) {
+        if (el.closest('[data-lint="off"], script, style, svg')) continue;
+        const own = [...el.childNodes].filter((n) => n.nodeType === 3 && n.textContent.trim());
+        if (!own.length) continue;
+        const cs = getComputedStyle(el);
+        let o = 1;
+        for (let e = el; e && e !== document.documentElement; e = e.parentElement) {
+          const c = getComputedStyle(e);
+          if (c.display === 'none' || c.visibility === 'hidden') { o = 0; break; }
+          o *= parseFloat(c.opacity);
+        }
+        if (o < 0.9 || !settled(el)) continue;
+        // the element's own words only (not a child's icon or checkbox), the middle of each line
+        const rects = own.flatMap((n) => {
+          const range = document.createRange();
+          range.selectNodeContents(n);
+          return [...range.getClientRects()];
+        }).filter((r) => r.width > 4 && r.height > 4)
+          .map((r) => ({ x: Math.max(0, r.left + r.width * 0.04), y: Math.max(0, r.top + r.height * 0.2), w: r.width * 0.92, h: r.height * 0.6 }));
+        if (!rects.length) continue;
+        // a strike or underline painted as the text's own background is part of the text, not behind it
+        if (cs.backgroundImage !== 'none' && cs.display.startsWith('inline')) el.dataset.cxDeco = '';
+        // on a solid box of its own (a sticker, a chip, a boxed caption, a card): judged against that box's color
+        let solid = null;
+        for (let e = el; e && e !== document.body; e = e.parentElement) {
+          const b = getComputedStyle(e);
+          const bg = parse(b.backgroundColor);
+          if (b.backgroundImage !== 'none' && !e.hasAttribute('data-cx-deco')) break;
+          if (bg.length >= 3 && (bg.length < 4 || bg[3] >= 0.95)) { solid = bg.slice(0, 3); break; }
+          if (bg.length === 4 && bg[3] > 0.05) break; // a see-through panel: measured on the picture
+        }
+        const size = parseFloat(cs.fontSize) * phoneW / frameW;
+        const bold = parseInt(cs.fontWeight, 10) >= 700;
+        const color = parse(cs.color);
+        if (color.length > 3 && color[3] < 0.5) continue; // transparent ink: not text to read
+        out.push({
+          text: el.textContent.trim().replace(/\s+/g, ' ').slice(0, 48), color: color.slice(0, 3), rects, solid,
+          large: size >= 24 || (bold && size >= 18.66),
+          stroke: parseFloat(cs.webkitTextStrokeWidth) || 0, strokeColor: parse(cs.webkitTextStrokeColor).slice(0, 3),
+          shadow: cs.textShadow && cs.textShadow !== 'none',
+        });
+      }
+      return out;
+    }, [phone, WIDTH]);
+    if (!texts.length) continue;
+    // the frame with every text's ink hidden: what each word sits on
+    await page.addStyleTag({ content: '*, *::before, *::after { color: transparent !important; -webkit-text-stroke-color: transparent !important; text-shadow: none !important; text-decoration-color: transparent !important; } [data-cx-deco] { background-image: none !important; }' });
+    const shot = (await page.screenshot({ type: 'png' })).toString('base64');
+    await page.evaluate(() => {
+      document.head.lastElementChild.remove();
+      for (const el of document.querySelectorAll('[data-cx-deco]')) delete el.dataset.cxDeco;
+    });
+    const measured = await page.evaluate(async ([png, items]) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${png}`;
+      await img.decode();
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth;
+      c.height = img.naturalHeight;
+      const g = c.getContext('2d', { willReadFrequently: true });
+      g.drawImage(img, 0, 0);
+      const lin = (v) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
+      const lum = ([r, gg, b]) => 0.2126 * lin(r) + 0.7152 * lin(gg) + 0.0722 * lin(b);
+      const ratio = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      return items.map((it) => {
+        const lt = lum(it.color);
+        if (it.solid) return { ...it, contrast: ratio(lt, lum(it.solid)), outline: null };
+        const ratios = [];
+        for (const r of it.rects) {
+          const x0 = Math.floor(r.x);
+          const y0 = Math.floor(r.y);
+          const w = Math.min(c.width - x0, Math.ceil(r.w));
+          const h = Math.min(c.height - y0, Math.ceil(r.h));
+          if (w <= 0 || h <= 0) continue;
+          const d = g.getImageData(x0, y0, w, h).data;
+          for (let i = 0; i < d.length; i += 4 * 5) ratios.push(ratio(lt, lum([d[i], d[i + 1], d[i + 2]])));
+        }
+        ratios.sort((a, b) => a - b);
+        // what at least 90% of the area behind the words reaches
+        return { ...it, contrast: ratios.length ? ratios[Math.floor(ratios.length * 0.1)] : null, outline: it.stroke >= 3 && it.strokeColor.length === 3 ? ratio(lt, lum(it.strokeColor)) : null };
+      });
+    }, [shot, texts]);
+    for (const m of measured) {
+      if (m.contrast === null) continue;
+      const need = m.large ? 3 : 4.5;
+      // a heavy outline carries the word on any background; then the outline is what's judged
+      const got = m.outline !== null ? Math.max(m.outline, m.contrast) : m.contrast;
+      if (got >= need || seen.has(m.text)) continue;
+      seen.add(m.text);
+      const fix = m.shadow ? 'its shadow helps, but a panel behind it or a darker shade on the picture would be surer' : 'put it on a panel (captions-fx: panel, or a boxed caption), add an outline, or darken the picture behind it';
+      problems.push({
+        t, label: 'Contrast', advice: got >= 2, kind: `contrast ${got.toFixed(1)}:1, under ${need}:1 for ${m.large ? 'large' : 'small'} text`, text: m.text, detail: fix,
+      });
+    }
+  }
+  return problems;
+}
+
+// Flashing, shaking, and sameness, read from the page's own cues: more than three flashes in
+// any second fails (WCAG 2.3.1, a seizure risk); a shake every few seconds, a flash on most cuts,
+// every picture moving the same way, or a different transition on every cut is advice.
+async function motionProblems(page, duration) {
+  const r = await page.evaluate(() => {
+    const sec = (v) => { v = String(v || '').trim(); return v.endsWith('ms') ? parseFloat(v) / 1000 : parseFloat(v); };
+    const at = (el) => sec(getComputedStyle(el).getPropertyValue('--in'));
+    const flashes = [
+      ...[...document.querySelectorAll('.flash, .burn, .bg.t-glitch')].map(at),
+      ...document.getAnimations().filter((a) => /^(camGlitch|hkGlitch|glitchBg)$/.test(a.animationName) && !a.effect.target.matches('.bg.t-glitch'))
+        .map((a) => a.effect.getComputedTiming().delay / 1000),
+    ].filter(Number.isFinite).sort((a, b) => a - b);
+    const shakes = document.getAnimations().filter((a) => /^(camShake|hkJolt|hit)$/.test(a.animationName)).length;
+    const slots = [...document.querySelectorAll('.bg')].filter((b) => b.querySelector('.bg-media'))
+      .map((b) => ({ t: sec(b.style.getPropertyValue('--in')) || 0, move: (b.style.getPropertyValue('--kb') || 'kbIn').trim(), tr: [...b.classList].find((c) => c.startsWith('t-')) || '' }))
+      .sort((a, b) => a.t - b.t);
+    return { flashes, shakes, slots };
+  });
+  const problems = [];
+  for (let i = 0; i < r.flashes.length; i++) {
+    const inSecond = r.flashes.filter((x) => x >= r.flashes[i] && x < r.flashes[i] + 1).length;
+    if (inSecond > 3) {
+      problems.push({ t: r.flashes[i], label: 'Visual', kind: `${inSecond} flashes or glitches within one second`, text: '', detail: 'more than three a second can trigger seizures (WCAG 2.3.1); space them out or use motion: low' });
+      break;
+    }
+  }
+  const cuts = r.slots.length - 1;
+  if (r.flashes.length >= 3 && cuts > 0 && r.flashes.length > cuts / 2) {
+    problems.push({ t: r.flashes[0], label: 'Visual', advice: true, kind: `${r.flashes.length} flashes or glitches over ${cuts} cuts`, text: '', detail: 'save them for the turns that matter (the drop, the payoff); on most cuts they read as noise and tire the eye' });
+  }
+  if (r.shakes > Math.max(3, duration / 5)) {
+    problems.push({ t: 0, label: 'Visual', advice: true, kind: `the camera shakes ${r.shakes} times in ${Math.round(duration)}s`, text: '', detail: 'constant shake is tiring and hard on motion-sensitive viewers; keep it for a few hits, or use motion: medium' });
+  }
+  if (r.slots.length >= 4 && new Set(r.slots.map((x) => x.move)).size === 1 && r.slots[0].move !== 'none') {
+    problems.push({ t: r.slots[0].t, label: 'Visual', advice: true, kind: `every picture moves the same way (${r.slots[0].move})`, text: '', detail: 'vary the move (--kb), or let the edit style rotate them' });
+  }
+  const loud = new Set(r.slots.map((x) => x.tr).filter((c) => c && c !== 't-cut' && c !== 't-punch'));
+  if (loud.size >= 5) {
+    problems.push({ t: 0, label: 'Visual', advice: true, kind: `${loud.size} different transitions`, text: '', detail: 'a different transition on every cut reads as random; use one base cut and save one or two for the turns' });
+  }
+  return problems;
+}
+
+// Everything --check looks at beyond layout and pacing: contrast at each settled moment and the
+// cover, and flashing, shaking, and sameness.
+async function visualProblems(page, duration) {
+  const times = [0, ...(await slideTimes(page, duration))].filter((t, i, a) => a.indexOf(t) === i);
+  return [...await contrastProblems(page, times), ...await motionProblems(page, duration)];
+}
+
 const describeLint = (p) => `${p.t.toFixed(2)}s: ${p.text ? `"${p.text}" ` : ''}${p.kind}${p.detail ? ` (${p.detail})` : ''}`;
 // Advice (pacing notes) is shown but doesn't fail a check.
-const lintLabel = (p) => (p.advice ? 'Pacing' : 'Layout');
+const lintLabel = (p) => p.label || (p.advice ? 'Pacing' : 'Layout');
 
 // The settled moment of each scene, just before it leaves: one per .scene, .gone, or .swap exit,
 // plus the end. <body data-slides="2.6,6.8,..."> overrides. Used for --slides and check.js.
@@ -902,9 +1122,12 @@ async function prepareVoices(page, settings) {
       const el = document.querySelector(`[data-voice-index="${index}"]`);
       // a whole-line caption (the bold look) is one box around every chunk; its data-kw words stay lit
       el.innerHTML = el.classList.contains('line') ? `<span class="ln">${markup}</span>` : markup;
-      const kw = new Set((el.dataset.kw || '').split(',').map((w) => w.trim()).filter(Boolean));
-      for (const w of kw.size ? el.querySelectorAll('i') : []) {
-        if (kw.has(w.textContent.toLowerCase().replace(/[^\p{L}\p{N}]/gu, ''))) w.classList.add('kw');
+      // *keywords* (data-kw) stay lit; ~wrong~ words (data-no) are struck through in the caution color
+      for (const [attr, cls] of [['kw', 'kw'], ['no', 'no']]) {
+        const set = new Set((el.dataset[attr] || '').split(',').map((w) => w.trim()).filter(Boolean));
+        for (const w of set.size ? el.querySelectorAll('i') : []) {
+          if (set.has(w.textContent.toLowerCase().replace(/[^\p{L}\p{N}]/gu, ''))) w.classList.add(cls);
+        }
       }
     }, [clip.index, html]);
     chunks.forEach((c, i) => cues.push({
@@ -913,7 +1136,37 @@ async function prepareVoices(page, settings) {
       text: c.words.map((w) => w.text).join(' '),
     }));
   }
+  await addPunchIns(page);
   return { problems, cues: cues.sort((a, b) => a.start - b.start) };
+}
+
+// Punch-ins on the *keywords*: once the words are timed, the camera layer (<div class="cam"
+// data-punch="1.08">, written by compose.js and cut.js) zooms in on each keyword as it's said,
+// holds, and eases back, so the picture moves with the voice's emphasis while the words stay
+// put. data-punch-fx="shake" shakes it too (the meme cut). Keywords in the first 0.6s, near the
+// drop, or within 0.7s of the last punch are skipped, so the hits stay hits.
+async function addPunchIns(page) {
+  return page.evaluate(() => {
+    const cam = document.querySelector('.cam[data-punch]');
+    if (!cam || !(parseFloat(cam.dataset.punch) > 1)) return 0;
+    const toSeconds = (v) => (String(v || '').trim().endsWith('ms') ? parseFloat(v) / 1000 : parseFloat(v));
+    const drop = parseFloat(document.body.dataset.drop);
+    const times = [...document.querySelectorAll('.say.auto i.kw')].map((w) => toSeconds(w.style.getPropertyValue('--in')))
+      .filter(Number.isFinite).sort((a, b) => a - b);
+    const adds = [];
+    let last = -Infinity;
+    for (const t of times) {
+      if (t < 0.6 || t - last < 0.7 || (Number.isFinite(drop) && Math.abs(t - drop) < 0.5)) continue;
+      // a shake goes first, so the punch's zoom (later in the list) wins while both run
+      if (cam.dataset.punchFx === 'shake') adds.push(`camShake .4s linear ${t.toFixed(3)}s`);
+      adds.push(`camKw .62s cubic-bezier(.2,.8,.2,1) ${t.toFixed(3)}s`);
+      last = t;
+    }
+    if (!adds.length) return 0;
+    const now = cam.style.animation;
+    cam.style.animation = now && now !== 'none' ? `${now}, ${adds.join(', ')}` : adds.join(', ');
+    return adds.length;
+  });
 }
 
 // The voice clips' timing, for fitting scenes to them: when each line starts, how long it
@@ -1200,7 +1453,7 @@ async function runPage(browser, pagePath, outPath, args, variant, many) {
     if (!(duration > 0)) fail('Set the length with <body data-duration="24"> on the page, or pass --duration.');
     for (const p of checkMix(settings, duration)) console.warn(`Warning${label}: ${p}`);
     if (args.check) {
-      const lint = await lintTimeline(page, duration);
+      const lint = [...await lintTimeline(page, duration), ...await visualProblems(page, duration)];
       for (const p of lint) console.warn(`${lintLabel(p)}${label}: ${describeLint(p)}`);
       const failing = lint.filter((p) => !p.advice);
       console.log(failing.length ? `${failing.length} layout problem(s) in ${pagePath}${label}` : `No layout problems in ${pagePath}${label}`);
@@ -1356,7 +1609,7 @@ if (require.main === module) {
 
 module.exports = {
   WIDTH, HEIGHT, meanLuma, loadPlaywright, launchBrowser, openPage, prepareMedia, readPage, checkMusic, checkMix, mixVoice, seek,
-  lintLayout, lintTimeline, describeLint, lintLabel, slideTimes, textSnapshot, retentionProblems, writeSoundtrack, measureAudio, muxSoundtrack,
+  lintLayout, lintTimeline, visualProblems, contrastProblems, motionProblems, describeLint, lintLabel, slideTimes, textSnapshot, retentionProblems, writeSoundtrack, measureAudio, muxSoundtrack,
   prepareVoice, prepareVoices, describeVoices, probeDuration, variantsOf, applyVariant, coverProblems,
-  renderFrames, preparePage, defaultWorkers,
+  renderFrames, preparePage, defaultWorkers, clipTime,
 };

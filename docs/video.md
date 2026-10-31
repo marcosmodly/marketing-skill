@@ -14,8 +14,21 @@ pixel-art animation narrated the same way, your own filmed takes
 
 ## What Claude asks before a video
 
-The first time you ask for a video (or in `/marketing-skill:marketing-setup`),
-Claude asks a few questions in one message, so the video uses what you
+**Every time: what your project is, and what this video is for.** Before
+it writes a script or renders anything, Claude looks at your project's own
+files (`scripts/project.py` reads the README, package manifest, landing
+page, changelog, and latest commits, and finds your screenshots,
+recordings, and logos), tells you what it understood and where it read it,
+and asks you to confirm or correct it: what the project is, what this
+video is for and the one thing viewers should take away, who it's for,
+what real material and numbers you can share, and what to avoid. It waits
+for your answer, unless your request already said all of it or you told it
+to skip questions. It never makes up a feature, number, or customer, and it
+can save the answers to the Project section of `references/brand-voice.md`,
+so the next video just asks "still right?".
+
+**The first time** you ask for a video (or in `/marketing-skill:marketing-setup`),
+Claude also asks a few setup questions in the same message, so the video uses what you
 already have. Each has a default, so "defaults" is a full answer, and the
 answers are saved under Video Setup in `references/brand-voice.md` so
 you're only asked once ([the full list](../references/video-setup.md)):
@@ -165,6 +178,10 @@ node captions.js assets/voice-1.wav --text "the line"     # when each word of a 
 node brand.js page.html                                   # the Visual Identity: colors, font, a logo end card
 node render.js page.html out.mp4 --variants a,b --cover 0 # one video per hook variant, plus the cover frame
 node cut.js take.mp4 --text "what's said" --page page.html # a filmed talking-head take: pauses cut, captioned, ready to render
+node cut.js take.mp4 --text "what's said" --page page.html --broll "assets/app.mp4@invoice+2"  # ...cutting away to your screen recording at "invoice"
+node hook.js "hook one" "hook two" "hook three"            # each hook's type, what to fix, and whether they're different types
+node hook.js --script script.md                           # a script's hook in all three layers: on screen, spoken, and what moves
+node fit.js assets/a.jpg assets/b.jpg                     # how well each works behind words: sharpness, exposure, subject, calm room for captions
 ```
 
 Every page's hook is on screen from the first frame, which is also the
@@ -179,7 +196,9 @@ the sonic logo), the visual counterpart of the Sonic Identity.
 Every render lints its layout as it goes: text outside the area the
 platforms' buttons and captions leave clear, text spilling out of its box
 or clipped, and text running into other text or a card all get reported
-with the time they happen. That's what catches rewritten copy that runs
+with the time they happen. `--check` also measures each text's contrast
+against the actual picture behind it, and catches flashing (more than three
+a second) and constant shaking. That's what catches rewritten copy that runs
 long. `check.js` runs the same lint over every template (or the pages you
 name), checks every sound cue, the music settings, the fonts, and the
 loudness, and writes a report with a contact sheet per page to look over.
@@ -244,7 +263,9 @@ How a video's soundtrack is put together:
   scratch, an air horn, a rimshot, a sad trombone, a drumroll, a ding and
   a buzzer, message pings, typing, a camera shutter, a ka-ching, a glitch,
   and a sub drop. Pixel art gets 8-bit ones: a coin, a jump, a power-up,
-  a dialog-box blip, and a hit.
+  a dialog-box blip, and a hit. The edit's own sounds sell the cuts: a
+  whoosh on a whip, a tight impact on a punch-in, a riser and a reversed
+  swell that build into the moment they're cued on.
 - **No licensing:** it's all synthesized from scratch, so there's nothing
   to license, and it works when posting through an API, where in-app
   trending sounds can't be added.
@@ -284,6 +305,87 @@ How a video's soundtrack is put together:
   your takes, fetches a background per line, times every scene to its line
   with cuts on the beat, and writes the page with the hook on screen from
   the first frame.
+
+### The look: style, color, pictures, and type
+
+Before the edit comes the look: one coherent visual system for the whole
+video, chosen for its job rather than for what's trending. `goal:` picks one
+(`teach`, `trust`, `entertain`, `story`, `sell`, `suspense`, `inspire`,
+`review`, `comedy`, `music`), or `look:` names it:
+
+| `look:` | Feels like |
+|---|---|
+| `social` | Social-native short-form: big captions, punch-ins, one bold accent |
+| `minimal`, `corporate` | A neutral base and one accent; captions on a clean panel |
+| `explainer` | Educational: crisp, a step at a time, words building as they're said |
+| `documentary` | Credible: natural color, clean cuts, sources on screen |
+| `cinematic`, `luxury` | A brand film, or premium: serif titles, a deliberate grade, grain, a vignette |
+| `editorial` | Magazine: a big serif headline, slides and wipes on the turns |
+| `tech` | Futuristic: dark, a cyan accent, a faint grid, glitches only on the turns |
+| `retro` | VHS: faded color, scanlines, a terminal headline |
+| `suspense` | Dark, slow, held frames, no flashes |
+| `cozy`, `handmade` | Lo-fi and calm, or tactile with a paper texture and handwriting |
+| `playful` | Comedy: bright and punchy |
+
+Each sets the headline font, the captions, the color grade, a texture, and
+how much moves (`motion: low`, `medium`, or `high`; low is the calm option
+for serious videos and motion-sensitive viewers). Your Visual Identity always
+wins over it: add `Headline font:`, `Caution:`, and `Positive:` to it for a
+second font and color roles.
+
+The pictures get as much care:
+- `[card: 9 days late]` shows a line's key phrase as a text card instead of a
+  picture, and `[source: ...]` puts a source on screen under any number.
+- `*key*` words light up in your accent; `~wrong~` words are struck through in
+  your caution color, so meaning never rests on color alone.
+- Stock is picked for calm room behind the words: three candidates per
+  picture, the best kept (`fit.js`), and `compose.js` warns about any picture
+  that's soft, dark, subject-less, or busy where the captions go.
+  `[bg: assets/photo.jpg focus=30%,40%]` keeps your subject in frame however
+  it's cropped.
+- A long line changes picture where its idea turns (at a comma, an "and" or
+  "but"), not on a timer.
+- `--check` measures every caption's contrast against the real picture behind
+  it, fails more than three flashes a second, and notes constant shaking.
+
+[`references/visual-design.md`](../references/visual-design.md) is the full
+guide: the one-page visual recipe, color directions by mood, the picture
+hierarchy and a five-question test, shot types and how to get each, type,
+motion, pacing, and 30 common styles mapped to settings.
+
+### How it's cut: editing styles
+
+A narrated video isn't only scenes in a row: how it's cut is most of what
+makes it feel like a creator's video or an ad. One word in the script sets
+the edit:
+
+| `edit:` | Looks like | What it does |
+|---|---|---|
+| `ugc` | A creator's own edit | Hard cuts and punch-ins on the beat, a fast zoom on the hook, the camera punching in on each keyword, a new picture every few seconds, bouncing captions |
+| `kinetic` | Typography-led, for apps and SaaS | Slides, iris masks, and wipes; the hook's words swelling in turn; captions building word by word as they're said |
+| `fast` | High energy | Micro-cuts, whip pans, glitches, spins, and flashes on the beat, a burst of quick cuts in the hook, a riser into the drop |
+| `cinematic` | A brand film | Blur dissolves, light leaks, a film burn, grain, a vignette, a warm grade, the voice leading each cut (J-cuts) |
+| `meme` | Comedic timing | Hard cuts and exaggerated punch-ins that shake on the keywords |
+| `clean` | Plain | Crossfades and slow zooms |
+
+Without one, it picks from your sound (a phonk or house identity gets
+`fast`, a calm or cinematic one gets `cinematic`, the rest `ugc`) and says
+which. Mark the words that sell each line with asterisks (`lose *money* on
+every late invoice`): they stay lit, pop bigger, and the camera punches in
+on them. `hook-fx:` sets the visual hook, what moves in the first half
+second (`zoom`, `shake`, `glitch`, `flash`, `bounce`, or `montage`), and
+`[cut: glitch]` on a line sets how that one comes in. Your filmed takes get
+the same treatment from `cut.js`: every jump cut changes the framing, the
+keywords punch in, and `--broll` cuts away to your screen recording while
+you keep talking.
+
+[`references/editing-techniques.md`](../references/editing-techniques.md)
+lists every editing technique you might ask for by name (a whip pan, a
+J-cut, a speed ramp, a light leak, kinetic typography) with the setting
+that makes it, and says plainly which ones the renderer can't do.
+[`references/hooks.md`](../references/hooks.md) covers the hook: fifteen
+types, its three layers (on screen, spoken, and visual), and `hook.js`,
+which checks hooks before anything renders.
 
 ### Templates by video type
 
@@ -560,6 +662,14 @@ node montage.js state/videos/2026-10-23-taco-night.md
   cover it.
 - **Long clips** render fast: only the stretch a shot plays is turned
   into frames, not the whole file.
+- **Speed:** `[speed: 0.5]` plays a clip in slow motion, `[speed: 2]`
+  fast, and `[ramp: 1.2:0.3,2.4:1]` ramps it (slow on the moment, then
+  back to full speed); `[ramp: 1.5:0,2.3:1]` freezes a frame. Footage
+  filmed at 60fps or more stays smooth in slow motion. A clip keeping its
+  own sound plays at normal speed.
+- **Transitions:** `transition:` (or `[transition: whip]` on one shot) is
+  `fade`, `cut`, `punch`, `whip`, `slide`, `zoom`, `wipe`, `flash`,
+  `glitch`, `spin`, `blur`, `mask`, `leak`, or `burn`.
 
 ### A montage from your photos (property and product)
 

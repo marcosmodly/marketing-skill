@@ -5,6 +5,120 @@ Skills that read "our changelog" for source material read this file too.
 
 ## 0.8.0 (unreleased)
 
+- **Every video starts with the project.** Before a format, a script, or a
+  render, `short-form-video` (and `clip-montage` and `montage-video` for the
+  user's own business) checks the project's own files with the new
+  `scripts/project.py` (the README, package manifest, landing page,
+  changelog, latest commits, and the screenshots, recordings, and logos in
+  the folder; it notices when it's been run in the plugin's own folder),
+  tells the user what it understood and where it read it, and asks them to
+  confirm it, what this video is for and the one thing a viewer should take
+  away, who it's for, what real material and numbers they can share, and
+  what to avoid, in one message with any open setup questions. It waits for
+  the answer unless the request already said it all or the user asked to
+  skip questions, and never fills a gap with an invented feature or number.
+  Confirmed answers can be saved to a new **Project** section of
+  `brand-voice.md`, which `/marketing-skill:marketing-setup` now fills too.
+  A new eval (`evals/video-asks-project`) checks it.
+- **Looks: one coherent visual style per video.** `look:` sets the hook's
+  type and treatment, a headline font, the captions, a color grade, a
+  texture, an accent, the editing style, and how much moves, together:
+  `social`, `minimal`, `explainer`, `documentary`, `corporate`, `cinematic`,
+  `editorial`, `luxury`, `tech`, `retro` (scanlines and a tracking band),
+  `suspense`, `cozy`, `handmade` (paper texture), or `playful`. `goal:`
+  picks one for the video's job (`teach`, `trust`, `story`, `sell`...). The
+  brand's Visual Identity wins over a look's colors and font.
+- **Motion intensity.** `motion: low`, `medium`, or `high` (`--motion` on
+  `cut.js`). Low drops shakes, flashes, glitches, spins, and whips, softens
+  punch-ins and captions, and holds pictures longer: the calm option for
+  serious and premium videos and for motion-sensitive viewers.
+- **Transitions with intention.** Each editing style now keeps one clean base
+  cut and saves its conspicuous transitions for the drop, the payoff, and a
+  turn every few cuts, instead of a different transition on every cut.
+- **Visual QA in `--check` and `check.js`**: every text's contrast measured
+  against the pixels actually behind it (4.5:1 small, 3:1 large, at phone
+  size); more than three flashes in a second fails; constant shaking, every
+  picture moving the same way, and a different transition on every cut are
+  noted.
+- **Text cards, sources, and color roles.** `[card: 9 days late]` shows a
+  line's key phrase on the brand's base color instead of a picture;
+  `[source: ...]` puts a source under a claim for the whole line (and
+  `hook.js --script` asks for one on every number); `~wrong~` words are struck
+  through in the caution color, beside `*key*` words in the accent. Panel
+  captions (`captions-fx: panel`) set each phrase on a solid dark panel; soft
+  captions get a dark halo. Text on the accent (stickers, chips, buttons,
+  highlighted captions) is whichever of white or near-black reads better on
+  it: near-black on the default coral, which is now a shade deeper.
+- **Pictures picked and checked.** `fit.js` measures how well a picture works
+  behind words (sharpness at the frame's size, exposure, a clear subject,
+  calm room where the captions and hook sit); `media.js --pick-from` keeps the
+  best of several stock results, `compose.js` fetches three per picture and
+  warns about the user's own photos, and `focus=` on a background keeps its
+  subject in frame in any crop. A long line now changes picture where its
+  idea turns (a clause), on the beat when one is close, instead of on a timer.
+- The Visual Identity takes `Headline font:` (a second family for the hook and
+  text cards), `Caution:`, and `Positive:`.
+- **`references/visual-design.md`**: the one-page visual recipe, styles matched
+  to the video's job, palette roles and color directions by mood, the picture
+  hierarchy and five-question test, shot types and how to get each, type,
+  motion intensity, pacing, a visual map per line with its decision steps,
+  and 30 common styles mapped to settings (or "not built").
+- **Editing styles: how a video is cut, in one word.** `edit:` in a
+  narrated script picks `ugc` (hard cuts and punch-ins on the beat, a fast
+  zoom on the hook, bouncing captions), `kinetic` (slides, iris masks, and
+  wipes, captions building word by word), `fast` (micro-cuts, whips,
+  glitches, spins, and flashes, a rapid-montage hook, a riser into the
+  drop), `cinematic` (blur dissolves, light leaks, a film burn, grain, a
+  vignette, a warm grade, J-cuts), `meme` (exaggerated punch-ins that shake
+  on the keywords), or `clean` (the old crossfades). Without one it picks
+  by the sound. Each part can be set on its own (`hook-fx:`, `transitions:`,
+  `drop:`, `punch:`, `captions-fx:`, `grain:`, `vignette:`, `max-hold:`,
+  `j-cut:`), and `[cut: glitch]` sets how one line comes in.
+- **Punch-ins on the keywords.** Every picture now sits in one camera
+  layer, so the camera punches in on each `*keyword*` as it's said (in
+  every caption style, not just the bold look), shakes on a hit, and moves
+  on the hook and the drop, while the words stay put. `*Keywords*` stay lit
+  and pop bigger in every caption style.
+- **Visual hooks.** `hook-fx:` sets what moves in the first half second: a
+  fast zoom, a glitch with split colors, a camera shake, a flash, the
+  hook's words swelling one after another, or a burst of quick cuts (a
+  rapid montage). Frame 0 stays clean, since it's the cover.
+- **Fourteen transitions, shared by every page**: `fade`, `cut`, `flash`,
+  `slide`, `whip` (motion-blurred), `zoom`, `punch`, `wipe`, `glitch` (an
+  RGB-split tear), `spin`, `blur`, `mask` (an iris), `leak` (a light leak),
+  and `burn` (a film burn), in narrated videos (`[cut: ...]`) and montages
+  (`[transition: ...]`), each with the sound that sells it.
+- **B-roll on long lines.** A line held longer than the style's `max-hold`
+  gets more than one picture, cut on the beat: a search fetches as many as
+  it needs, `[bg: a | b | c]` lists them, and one file is reframed so the
+  cut still reads.
+- **Talking-head edits** (`cut.js`): every jump cut changes the framing
+  (wide, punched in, wide, closer) toward the face (`--focus`), keywords
+  punch in, the hook gets a visual hook, and `--broll "file@word+2"` cuts
+  away to the user's screen recording or photo at a word while they keep
+  talking.
+- **Speed ramps, slow motion, and freeze frames** for clips: `[speed: 0.5]`,
+  `[speed: 2]`, `[ramp: 1.2:0.3,2.4:1]`, and `[ramp: 1.5:0,2.3:1]` (a freeze)
+  in a montage, or `data-speed` and `data-ramp` on any clip. Slowed clips
+  are pulled at up to 120 frames a second, so 60fps footage stays smooth.
+- Three sounds for the edit: `riser` and `reverse` (they build into the
+  moment they're cued on) and `impact` (a short, tight hit).
+- **Hooks, by type, in three layers.** `references/hooks.md` now has fifteen
+  hook types (pattern interrupt, problem-solution, curiosity, before and
+  after, POV, contrarian, warning, demonstration, storytelling, statistic,
+  social proof, question, listicle, reaction, offer, plus callout), the three
+  layers a hook works on (the words on screen, the first spoken line, what
+  moves), and the visual hooks. `scripts/video/hook.js` checks hooks before
+  anything renders: each one's type, what would lose the viewer (too long,
+  throat-clearing, generic, clickbait, a banned word), whether three to test
+  are three different types, every number or offer to confirm, and in a
+  script, all three layers, the payoff, one call to action, and a re-hook.
+- **`references/editing-techniques.md`**: every short-form editing technique
+  a user might name (82 of them, from jump cuts and J-cuts to light leaks,
+  speed ramps, and risers) with the setting that makes it, or a plain "not
+  built" and the closest thing, the editing styles, and a 15-second ad cut
+  by the book. `reference.js` now suggests the editing style closest to a
+  reference video.
 - **A 3D mascot that moves, for videos with no footage.** `style: 3d` now
   stars the brand's mascot, a robot in the Visual Identity's colors, built
   and rigged in `templates/mascot.py`. It blinks, breathes, gestures on

@@ -25,6 +25,21 @@ scripts for Reels/TikTok/Shorts, long-form video scripts, text/social
 posts, email, images, or a mix — as distinct from the *structure* set
 under "Default Output Format" below.)
 
+## Project
+Not yet configured. What the project is, confirmed by the user, so every
+video and post starts from it instead of a guess. `short-form-video` (and
+the other skills) check the project's own files with `scripts/project.py`,
+ask the user to confirm or correct what they found, and offer to save it
+here. Once set, it looks like:
+
+- Name: Invoicely
+- What it is: an app that sends an invoice the moment the work is done and chases late payments
+- For: freelancers and small agencies
+- Links: https://invoicely.example
+- What's new: automatic reminders for late invoices (1.4.0)
+- Material: public/screenshots/ (app screens), assets/logo.png
+- Avoid: naming competitors; promising when clients will pay
+
 ## Target Audience
 Not yet configured. Placeholder default: "general B2B software buyers."
 
@@ -86,6 +101,9 @@ set, it looks like:
 - Background: #0b1020
 - Text: #f5f7ff
 - Font: Space Grotesk
+- Headline font: DM Serif Display (optional: the hook and text cards; add a weight, "Inter 800", for a family with several)
+- Caution: #e0605a (optional: ~wrong~ words, struck through)
+- Positive: #3fbf7f (optional: checkmarks and good outcomes)
 - Logo: state/videos/assets/logo.png
 - Handle: @yourbrand
 - Character: state/videos/assets/mascot.glb (optional: the brand's own rigged 3D character, in place of the robot in 3D videos)

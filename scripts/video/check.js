@@ -68,7 +68,8 @@ async function checkPage(browser, pagePath, outDir, withAudio, variant) {
     result.music = settings.musicFile ? 'licensed track' : settings.music;
     result.cues = settings.cues.length;
 
-    const lint = await r.lintTimeline(page, duration);
+    // layout and pacing over the timeline, then contrast against the real pixels, flashing, and shake
+    const lint = [...await r.lintTimeline(page, duration), ...await r.visualProblems(page, duration)];
     result.lint = lint.filter((p) => !p.advice);
     result.pacing = lint.filter((p) => p.advice);
 
@@ -142,8 +143,8 @@ async function main() {
   ];
   for (const x of results) {
     if (!x.problems.length && !x.lint.length && !x.pacing.length) continue;
-    lines.push(`## ${x.name}`, '', ...x.problems.map((p) => `- ${p}`), ...x.lint.map((p) => `- Layout: ${r.describeLint(p)}`),
-      ...x.pacing.map((p) => `- Pacing (advice, not a failure): ${r.describeLint(p)}`), '');
+    lines.push(`## ${x.name}`, '', ...x.problems.map((p) => `- ${p}`), ...x.lint.map((p) => `- ${r.lintLabel(p)}: ${r.describeLint(p)}`),
+      ...x.pacing.map((p) => `- ${r.lintLabel(p)} (advice, not a failure): ${r.describeLint(p)}`), '');
   }
   lines.push('Contact sheets (each scene\'s settled frame) are next to this report as <page>.png; look them over for anything a lint can\'t judge: legibility, emoji, and whether it looks good.', '');
   fs.writeFileSync(path.join(args.out, 'report.md'), lines.join('\n'));
