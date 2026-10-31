@@ -80,7 +80,18 @@ command below. `VIDEO` below means `${CLAUDE_PLUGIN_ROOT}/scripts/video`.
      and save the user's pick as the profile's `## Sonic Identity`. You
      can't hear audio, so their ear decides.
    - **The user's own business** (not a client): leave `client:` out of
-     the script, and the look and sound come from `brand-voice.md`.
+     the script, and the look and sound come from `brand-voice.md`. Check
+     what the project is first (`python3 ${CLAUDE_PLUGIN_ROOT}/scripts/project.py`
+     in their folder, and the Project section of `brand-voice.md`).
+   - **What this video is about and for, confirmed before anything is
+     made.** Say what you understood in a line or two (the property,
+     product, or event; who it's for; where it'll be posted), then ask what
+     the video is for (a listing, a launch, a sale, followers) and the one
+     thing a viewer should remember or do, anything that must be shown or
+     said (the price, the address, a sale ending), and anything to avoid.
+     Wait for the answer before writing the script, unless the request
+     already says it or the user said to use defaults. Never invent a
+     price, a spec, or a feature.
    - Client profiles stay out of git (`.gitignore`), since they hold
      people's phone numbers.
 

@@ -32,7 +32,10 @@ ask the user.
    3. "Who's your target audience, and what tone should content use?"
    4. "What output format do you want by default?" (e.g. hook + bullets
       + CTA, a full long-form draft, a numbered thread)
-4. Optionally offer to customize the banned words or formatting
+4. Run `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/project.py` in the user's
+   project folder, say what it found (name, what it is, links, material),
+   and ask them to confirm or correct it; save that under Project.
+   Optionally offer to customize the banned words or formatting
    constraints; if declined, leave the placeholders.
    If their content types include video, also offer a **sonic identity**:
    read `${CLAUDE_PLUGIN_ROOT}/references/sound-guide.md` and propose two
@@ -52,8 +55,8 @@ ask the user.
    heading exactly as it is, replacing only the placeholder text under
    each, so every skill's reads keep working. Replace the first line with
    `<!-- MARKETING-SKILL:CONFIGURED (last updated: YYYY-MM-DD) -->`
-   using today's date. A file from before Video Setup existed gets that
-   section added at the end.
+   using today's date. A file missing Project or Video Setup gets that
+   section added.
 6. Confirm in one line: `Saved: priority=<...>, content_types=<...>,
    audience=<...>, tone=<...>, format=<...>` (plus `sound=<genre, key,
    hook>`, `look=<accent, font>`, and `video=<presenter, shape>` if

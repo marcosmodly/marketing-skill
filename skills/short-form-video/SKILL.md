@@ -65,6 +65,44 @@ command below.
    run, say so in one line, and leave the marker as it is.
 
 2. **Confirm scope.**
+   - **The project, first: check it, ask about it, and wait.** Before
+     choosing a format, writing a line of script, fetching a picture, or
+     rendering anything, find out what the video is about and for:
+     1. **Check** what's already known. Run `python3
+        ${CLAUDE_PLUGIN_ROOT}/scripts/project.py` in the folder the user is
+        working in (their project, not this plugin's folder; if it says
+        it's the plugin's own folder and the video isn't about the plugin,
+        ask which project it's for and where it lives). It reads the
+        README, the package manifest, a landing page, the changelog and
+        latest commits, and lists the screenshots, screen recordings, and
+        logos in the project; open the files it points to for anything the
+        summary leaves unclear. Add what `brand-voice.md` says (its
+        Project and Target Audience sections) and what the request itself
+        says.
+     2. **Ask**, in one message: first what you understood, in two or
+        three lines (what the project is, who it's for, what's new, and the
+        material you found, each with where you read it), then: is that
+        right; what this video is for (followers, sign-ups, a launch,
+        sales...) and the one thing a viewer should remember or do; who
+        it's for, if not the saved audience; what real material they can
+        give (screenshots, a screen recording, photos, clips, a logo) and
+        any numbers, results, or quotes they can share, with where each is
+        from; and anything to avoid or that must be said. Put the Video
+        Setup questions still unanswered (next bullet) in the same message,
+        so it's one reply.
+     3. **Wait** for the answer. Don't write the script, pick stock, or
+        render until the user has confirmed what the project is and what
+        this video is for. Skip the wait only when the request already says
+        all of it, or the user said to skip questions or use defaults: then
+        state your understanding in one line ("a launch video for
+        Invoicely, the one-tap invoicing app in your README, for
+        freelancers") and carry on, leaving out what's unknown rather than
+        guessing it.
+
+     Never invent a feature, number, customer, or result that the files and
+     the user didn't give. Once confirmed, offer to save the project's
+     description to the Project section of `brand-voice.md`, so the next
+     video starts from it and only asks "still right?".
    - **What they have to make it with.** A new user doesn't know what
      this plugin can do with their own material, so ask before writing:
      the questions in `${CLAUDE_PLUGIN_ROOT}/references/video-setup.md`
@@ -79,10 +117,10 @@ command below.
      save new answers to Video Setup. Before using an answer, check it as
      that file's "Before using an answer" says (the file exists, it's
      theirs to use, the tool is connected).
-   - Source topic, product, or content (paste, file, URL, or "our
-     product"/"our feature" — check `README*`, `CHANGELOG*`, and
-     `docs/**/*.md` at the project root first if so, same convention as
-     `content-repurposer`, before asking the user to describe it).
+   - Source topic, product, or content: what the project check found and
+     the user confirmed, plus anything they pasted, attached, or linked
+     (`docs/**/*.md` at the project root has more on a feature, same
+     convention as `content-repurposer`).
    - **What has worked for this account.** Run
      `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/results.py` (it reads the logs
      in `state/`, never the network) and work from its Videos section

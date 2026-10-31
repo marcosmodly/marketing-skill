@@ -10,7 +10,39 @@ types include video. `short-form-video` (and `clip-montage` for the
 questions that apply to a montage) asks whichever are still unanswered,
 or that this request changes, before writing a script: in one short
 message, numbered, with the default for each, so "defaults" is a whole
-answer. Never block on them; a skipped question takes its default.
+answer, and in the same message as the project questions (next section).
+Never block on these; a skipped one takes its default. The project
+questions are different: those are confirmed before anything is made.
+
+## First: the project, and what this video is for
+
+Before the questions below, and before any script, know what the video is
+about. These are the questions to wait for, every time (the ones below can
+take their defaults):
+
+- **Check first.** `python3 scripts/project.py` in the user's project folder
+  reads its README, package manifest, landing page, changelog, and latest
+  commits, and lists its screenshots, recordings, and logos. With the
+  Project section of `brand-voice.md` and the request itself, that's
+  usually most of the answer.
+- **Then ask, in one message, starting with what you understood** (each
+  part with where you read it), so the user corrects rather than explains:
+  1. Is that right: what the project is, in a sentence?
+  2. What is this video for (followers, sign-ups, a launch, sales), and
+     the one thing a viewer should remember or do?
+  3. Who it's for, if not the saved audience?
+  4. What real material can they give (screenshots, a screen recording,
+     photos, clips, a logo), and any numbers, results, or quotes they can
+     share, with where each is from?
+  5. Anything to avoid, or that must be said?
+- **Wait for the reply** before writing the script or rendering. Skip it
+  only when the request already answers all of it, or the user said to skip
+  questions or use defaults; then say what you understood in one line and
+  leave out what's unknown. Never fill a gap with an invented feature,
+  number, customer, or result.
+- **Save it.** Offer to write the confirmed answers to the Project section of
+  `brand-voice.md`; the next video then opens with "still right?" instead of
+  the whole list.
 
 ## The questions
 

@@ -94,7 +94,9 @@ was made with the same renderer.
 - **Cold email outreach:** a daily batch of researched, 1:1 personalized
   prospecting emails, deduplicated against a permanent contact log that
   syncs replies, bounces, and unsubscribes from Gmail.
-- **Short-form video:** hook-first scripts plus caption, hashtags, and
+- **Short-form video:** it starts by checking your project's own files
+  and asking you to confirm what the project is and what the video is
+  for, then writes hook-first scripts plus caption, hashtags, and
   best time to post for TikTok, Instagram Reels, and YouTube Shorts,
   shaped to the right type of marketing video (how-to, testimonial,
   launch, FAQ, and more) or to an everyday FYP format (POV, tier list,

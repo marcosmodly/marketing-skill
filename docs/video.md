@@ -14,8 +14,21 @@ pixel-art animation narrated the same way, your own filmed takes
 
 ## What Claude asks before a video
 
-The first time you ask for a video (or in `/marketing-skill:marketing-setup`),
-Claude asks a few questions in one message, so the video uses what you
+**Every time: what your project is, and what this video is for.** Before
+it writes a script or renders anything, Claude looks at your project's own
+files (`scripts/project.py` reads the README, package manifest, landing
+page, changelog, and latest commits, and finds your screenshots,
+recordings, and logos), tells you what it understood and where it read it,
+and asks you to confirm or correct it: what the project is, what this
+video is for and the one thing viewers should take away, who it's for,
+what real material and numbers you can share, and what to avoid. It waits
+for your answer, unless your request already said all of it or you told it
+to skip questions. It never makes up a feature, number, or customer, and it
+can save the answers to the Project section of `references/brand-voice.md`,
+so the next video just asks "still right?".
+
+**The first time** you ask for a video (or in `/marketing-skill:marketing-setup`),
+Claude also asks a few setup questions in the same message, so the video uses what you
 already have. Each has a default, so "defaults" is a full answer, and the
 answers are saved under Video Setup in `references/brand-voice.md` so
 you're only asked once ([the full list](../references/video-setup.md)):

@@ -5,6 +5,21 @@ Skills that read "our changelog" for source material read this file too.
 
 ## 0.8.0 (unreleased)
 
+- **Every video starts with the project.** Before a format, a script, or a
+  render, `short-form-video` (and `clip-montage` and `montage-video` for the
+  user's own business) checks the project's own files with the new
+  `scripts/project.py` (the README, package manifest, landing page,
+  changelog, latest commits, and the screenshots, recordings, and logos in
+  the folder; it notices when it's been run in the plugin's own folder),
+  tells the user what it understood and where it read it, and asks them to
+  confirm it, what this video is for and the one thing a viewer should take
+  away, who it's for, what real material and numbers they can share, and
+  what to avoid, in one message with any open setup questions. It waits for
+  the answer unless the request already said it all or the user asked to
+  skip questions, and never fills a gap with an invented feature or number.
+  Confirmed answers can be saved to a new **Project** section of
+  `brand-voice.md`, which `/marketing-skill:marketing-setup` now fills too.
+  A new eval (`evals/video-asks-project`) checks it.
 - **Looks: one coherent visual style per video.** `look:` sets the hook's
   type and treatment, a headline font, the captions, a color grade, a
   texture, an accent, the editing style, and how much moves, together:
