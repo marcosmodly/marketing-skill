@@ -70,6 +70,48 @@ share the voice files, so make the vertical one first, then compose again
 with `--format landscape --out <name>-landscape.html`. Pixel art is
 vertical only.
 
+## The edit: how it's cut
+
+Every narrated video is cut in an editing style, set with `edit:` in the
+script's frontmatter: `ugc` (hard cuts and punch-ins on the beat, a fast
+zoom on the hook, bouncing captions), `kinetic` (slides, masks, and wipes,
+the words building as they're said; for apps and SaaS), `fast` (micro-cuts,
+whips, glitches, and flashes, a burst of quick cuts in the hook, a riser
+into the drop), `cinematic` (blurs, light leaks, a film burn, grain, a
+vignette, a warm grade, J-cuts), `meme` (exaggerated punch-ins that shake on
+the keywords), or `clean` (crossfades and slow zooms, the look before edit
+styles). Without one, `compose.js` picks by the sound and says which; tell
+the user, and offer another when they describe a feel ("more energy",
+"calmer", "like a UGC ad").
+
+- **Mark one or two `*keywords*` per line.** They stay lit once said, pop
+  bigger, and the camera punches in on them, so the picture moves with the
+  voice's emphasis.
+- **A visual hook.** `hook-fx:` sets what moves in the first half second
+  (`zoom`, `shake`, `glitch`, `flash`, `bounce`, `montage`, or `none`); each
+  style has its own default. Frame 0 stays clean, since it's the cover.
+- **B-roll.** A line held longer than the style's `max-hold` gets more than
+  one picture: a search query fetches as many as it needs, `[bg: a | b |
+  c]` lists them, and a single file is reframed (tighter, then wider) so
+  the cut still reads.
+- **One line's own cut.** `[cut: glitch]` (or `whip`, `punch`, `flash`,
+  `zoom`, `mask`, `leak`, `burn`, ...) on a line sets how it comes in, for
+  the moment that means something: the reveal, the turn, the payoff.
+- **Sounds that sell the cuts.** Styles with sounds put a whoosh on whips
+  and zooms, an impact on punches, a glitch on glitches, and a riser into
+  the drop; they duck under the voice like everything else.
+- Every part can be changed on its own (`transitions:`, `drop:`, `punch:`,
+  `captions-fx:`, `grain:`, `vignette:`, `max-hold:`, `j-cut:`).
+  `editing-techniques.md` lists them, and every editing technique a user
+  might name (a whip pan, a J-cut, a speed ramp, a light leak) with the
+  setting that makes it, or a plain "not built" and the closest thing.
+
+Check the hook before rendering: `node
+${CLAUDE_PLUGIN_ROOT}/scripts/video/hook.js --script <the script>` names
+the hook's type and checks its three layers (the words on screen, the first
+spoken line, the visual hook), a number promise's payoff, a single call to
+action, and a re-hook in a longer video (`hooks.md`).
+
 ## A montage of the user's clips or photos: montage.js
 
 When the user's own clips of a place, a product, or an event are the
@@ -480,6 +522,16 @@ ship one.
   frame, the music one energy step lower, and the brand's end card. It runs
   `--check`; render as usual. Captions use the person's real words only,
   never a tidied version, and only post people who agreed to it.
+  - **The edit** (`--edit`, default `ugc`): every jump cut changes the
+    framing, wide then punched in, so the cuts read as deliberate (toward
+    `--focus`, where the face is, default `50%,32%`); the camera punches in
+    on each `*keyword*` in `--text`; the hook gets a visual hook
+    (`--hook-fx`). `--edit clean` keeps the take still.
+  - **B-roll cutaways:** `--broll "assets/app-demo.mp4@invoice+2.5,
+    assets/team.jpg@6.2"` cuts away to the user's own screen recording or
+    photo at the word "invoice" (or at 6.2s into the cut) for 2.5 seconds
+    while they keep talking, then back to them. Ask for the screen
+    recordings and product shots their words point at.
 - **A realistic avatar's clip** (a talking presenter made by a connected
   AI avatar tool such as HeyGen, Synthesia, D-ID, or Hedra) goes through
   `cut.js` the same way, with the script it was given as `--text`. Label
@@ -542,8 +594,8 @@ people), say so and offer the nearest thing it can.
   `data-variant="a"`, `"b"`, `"c"` on the elements that differ (usually
   just the hook caption; everything else stays shared). `render.js <page>
   out.mp4 --variants a,b,c` writes `out-a.mp4`, `out-b.mp4`, ... and
-  `--check` checks every variant. Write the three from different patterns
-  in `hooks.md`. Instagram's trial reels, or one variant per platform, are
+  `--check` checks every variant. Write the three as different types from
+  `hooks.md` (`hook.js "one" "two" "three"` checks they are). Instagram's trial reels, or one variant per platform, are
   ways to test them.
 - **The brand's look.** Run `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/brand.js
   <page>` after rewriting a template. It applies the Visual Identity from

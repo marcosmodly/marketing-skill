@@ -307,20 +307,32 @@ command below.
    allows, banned words never, and captions short enough to read in two
    seconds. Write two options for the key line (the punchline, the take,
    the last bubble) when it's a close call, and let the user pick.
-   - **The hook (first 1–3 seconds):** a question, a bold claim, an
-     on-screen text callout, or a visual surprise — written to work with
-     the sound off, since a large share of viewers decide whether to keep
-     watching before audio ever registers. State explicitly what's on
-     screen and what text overlay (if any) appears in this window. Offer
-     three hooks, each from a different pattern in
-     `${CLAUDE_PLUGIN_ROOT}/references/hooks.md`, and let the user pick
-     (or render them all as variants to test).
+   - **The hook (first 1–3 seconds):** written to work with the sound
+     off, since a large share of viewers decide whether to keep watching
+     before audio ever registers, in up to three layers that each do a
+     different job: the text on screen from frame 0, the first spoken line,
+     and the visual hook (what moves in the first half second: a fast zoom,
+     a glitch, a shake, a burst of quick cuts, the product working). State
+     each layer explicitly. Offer three hooks, each a different type from
+     `${CLAUDE_PLUGIN_ROOT}/references/hooks.md` (problem-solution,
+     curiosity, POV, warning, demonstration, listicle, and the rest), and
+     let the user pick (or render them all as variants to test). Check them
+     first with `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/hook.js "one"
+     "two" "three"`: it names each type, fails a hook that's too long,
+     throat-clears, or fits any video, and flags every number, result, or
+     offer to confirm with the user before it goes on screen.
    - **The body, beat by beat:** for each beat, what's shown, any on-screen
      text/caption cue, any spoken line or voiceover, and an approximate
      timestamp/duration — the same structure as `visual-brief-generator`'s
      shot list, but paced for sub-60-second vertical video specifically
      (fast cuts, no beat longer than a few seconds unless there's a
-     deliberate reason to hold a shot).
+     deliberate reason to hold a shot). Name the edit too: the editing
+     style (UGC, kinetic typography, fast-paced, cinematic, meme) and the
+     techniques at the moments that matter (a punch-in on the key word, a
+     glitch into the reveal, a speed ramp on the pour, a riser into the
+     drop), from `${CLAUDE_PLUGIN_ROOT}/references/editing-techniques.md`,
+     which also says how the renderer makes each one, or that it can't.
+     Past about 20 seconds, put a re-hook around the middle.
    - **The CTA**, matched to the actual goal (follow, comment a specific
      word, check the link in bio, watch the next one) — one CTA, not
      several competing asks.
@@ -372,7 +384,11 @@ command below.
    from top to bottom. In short: for a voiceover over backgrounds, write
    the script as numbered lines and let `scripts/video/compose.js` build
    a narrated page with captions synced to the voice (with `style: 3d` or
-   `style: pixel`, drawn as 3D or pixel-art animation, a shot per line);
+   `style: pixel`, drawn as 3D or pixel-art animation, a shot per line),
+   cut in an editing style (`edit: ugc`, `kinetic`, `fast`, `cinematic`,
+   `meme`, or `clean`, with the hook's visual layer as `hook-fx:` and one
+   or two `*keywords*` a line for the camera to punch in on), and run
+   `hook.js --script` on it;
    for anything else,
    copy the template the type or format names to
    `state/videos/<date>-<slug>.html` and rewrite its scenes to the step 4
@@ -540,7 +556,9 @@ an original soundtrack, not footage), where the file was saved, which
 backgrounds were used (stock, with provider, or AI, with tool; or the
 animation style and its shots, and which of the user's images went in them), the sound (genre and hook,
 or the licensed track), the voice (recorded or generated, which voice)
-and how captions were timed, which hook variants were rendered, and the
+and how captions were timed, the edit (the editing style, whether it was
+picked to fit the sound or chosen, and the visual hook), which hook
+variants were rendered, and the
 cover frame and its `--cover-ms` — or that none was
 connected/used and this script/package is the deliverable, plus which
 free tool was recommended if nothing was connected, and the exact setup

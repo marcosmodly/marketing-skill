@@ -237,6 +237,35 @@ function ffmpeg(args) {
   if (run.status !== 0) fail(`ffmpeg failed: ${run.stderr}`);
 }
 
+// Speed changes for a clip (data-speed, data-ramp): how far into the clip `local` seconds on
+// screen land. data-speed is a steady rate (0.5 slow motion, 2 fast motion); data-ramp lists
+// "seconds:speed" points from the clip's start on screen, eased over 0.2s (a speed ramp), and a
+// speed of 0 freezes the frame until the next point (a freeze frame), with no easing in or out.
+// It runs in the page too (seek), so it uses nothing from outside itself.
+function clipTime(local, speed, ramp) {
+  const base = parseFloat(speed) > 0 ? parseFloat(speed) : 1;
+  const points = String(ramp || '').split(',').map((p) => p.split(':').map(Number))
+    .filter((p) => p.length === 2 && p.every(Number.isFinite) && p[1] >= 0).sort((a, b) => a[0] - b[0]);
+  if (base === 1 && !points.length) return local;
+  if (!points.length) return local * base;
+  const EASE = 0.2;
+  const rate = (t) => {
+    let prev = base;
+    let s = base;
+    for (const [at, v] of points) {
+      if (t < at) break;
+      const k = Math.min(1, (t - at) / EASE);
+      s = prev > 0 && v > 0 ? prev + (v - prev) * k * k * (3 - 2 * k) : v;
+      prev = v;
+    }
+    return s;
+  };
+  const dt = 1 / 240;
+  let acc = 0;
+  for (let t = 0; t < local; t += dt) acc += rate(t) * Math.min(dt, local - t);
+  return acc;
+}
+
 // Pause every animation on the page and jump it to `seconds`. Background
 // videos (swapped for frame sequences by prepareMedia) jump too: a clip
 // starts at its --in time, inherited from its .bg layer, from data-offset
@@ -255,8 +284,10 @@ async function seek(page, seconds) {
     const decodes = [];
     for (const img of document.querySelectorAll('img[data-frames]')) {
       const count = Number(img.dataset.count);
-      let local = Math.max(0, t - toSeconds(getComputedStyle(img).getPropertyValue('--in'))) + toSeconds(img.dataset.offset);
-      let frame = Math.floor(local * 30 + 1e-6);
+      const onScreen = Math.max(0, t - toSeconds(getComputedStyle(img).getPropertyValue('--in')));
+      const local = (window.clipTime && (img.dataset.speed || img.dataset.ramp) ? window.clipTime(onScreen, img.dataset.speed, img.dataset.ramp) : onScreen)
+        + toSeconds(img.dataset.offset);
+      let frame = Math.floor(local * (Number(img.dataset.fps) || 30) + 1e-6);
       frame = img.dataset.loop === 'false' ? Math.min(frame, count - 1) : frame % count;
       const src = `${img.dataset.frames}/${String(frame + 1).padStart(5, '0')}.jpg`;
       if (img.getAttribute('src') !== src) {
@@ -303,15 +334,27 @@ async function prepareMedia(page) {
     v.dataset.renderIndex = String(i);
     const full = !!v.closest('.bg') || !v.offsetWidth || !v.offsetHeight;
     return { src: v.currentSrc || v.src || v.querySelector('source')?.src || '', w: full ? 0 : v.offsetWidth, h: full ? 0 : v.offsetHeight,
-             offset: parseFloat(v.dataset.offset) || 0, length: parseFloat(v.dataset.length) || 0, focus: v.dataset.focus || '' };
+             offset: parseFloat(v.dataset.offset) || 0, length: parseFloat(v.dataset.length) || 0, focus: v.dataset.focus || '',
+             speed: v.dataset.speed || '', ramp: v.dataset.ramp || '', audio: v.hasAttribute('data-audio') };
   }));
+  if (videos.some((v) => v.speed || v.ramp)) await page.evaluate((src) => { window.clipTime = (0, eval)(`(${src})`); }, clipTime.toString());
   const cacheDir = path.join(os.tmpdir(), 'render-video-cache');
   if (videos.length && !hasFfmpeg()) {
     problems.push('ffmpeg is needed to render background videos; they will be blank');
     return problems;
   }
   for (let i = 0; i < videos.length; i++) {
-    const { src, w, h, offset, length, focus } = videos[i];
+    const { src, w, h, offset, focus, speed, ramp, audio } = videos[i];
+    let { length } = videos[i];
+    if ((speed || ramp) && audio) {
+      problems.push(`video ${path.basename(src)} has data-speed or data-ramp and its own sound (data-audio); the sound can't follow a speed change, so it plays at normal speed: drop one`);
+      await page.evaluate((index) => { const v = document.querySelector(`video[data-render-index="${index}"]`); delete v.dataset.speed; delete v.dataset.ramp; }, i);
+    } else if ((speed || ramp) && length > 0) length = Math.round(clipTime(length, speed, ramp) * 1000) / 1000 + 0.1; // the clip it takes to fill that much screen time
+    // slowed down, the clip's frames are pulled at a higher rate, so footage filmed at 60 or 120fps
+    // plays smoothly instead of repeating frames
+    const slowest = Math.min(parseFloat(speed) > 0 ? parseFloat(speed) : 1,
+      ...String(ramp || '').split(',').map((x) => parseFloat(x.split(':')[1])).filter((v) => v > 0));
+    const rate = !audio && slowest < 1 ? Math.min(120, Math.round(30 / slowest)) : 30;
     // twice the box's size for sharpness, within the frame, in even numbers for the encoder
     const scale = w ? Math.min(2, WIDTH / w, HEIGHT / h) : 1;
     const W = w ? 2 * Math.round((w * scale) / 2) : WIDTH;
@@ -331,22 +374,23 @@ async function prepareMedia(page) {
       ? `crop=${W}:${H}:(in_w-out_w)*${Math.min(1, Math.max(0, fx))}:(in_h-out_h)*${Math.min(1, Math.max(0, fy))}`
       : `crop=${W}:${H}`;
     const window = length > 0 ? ['-ss', String(offset), '-t', String(length)] : [];
-    const key = crypto.createHash('sha1').update(`${file}|${st.size}|${st.mtimeMs}|${W}x${H}|${crop}|${window.join(' ')}`).digest('hex').slice(0, 16);
+    const key = crypto.createHash('sha1').update(`${file}|${st.size}|${st.mtimeMs}|${W}x${H}|${crop}|${window.join(' ')}${rate !== 30 ? `|${rate}` : ''}`).digest('hex').slice(0, 16);
     const dir = path.join(cacheDir, key);
     if (!fs.existsSync(path.join(dir, 'done'))) {
       fs.rmSync(dir, { recursive: true, force: true });
       fs.mkdirSync(dir, { recursive: true });
-      ffmpeg([...window, '-i', file, '-vf', `scale=${W}:${H}:force_original_aspect_ratio=increase,${crop},fps=30`,
+      ffmpeg([...window, '-i', file, '-vf', `scale=${W}:${H}:force_original_aspect_ratio=increase,${crop},fps=${rate}`,
         '-q:v', '3', path.join(dir, '%05d.jpg')]);
       fs.writeFileSync(path.join(dir, 'done'), '');
     }
     const count = fs.readdirSync(dir).filter((f) => f.endsWith('.jpg')).length;
-    await page.evaluate(([index, framesUrl, n]) => {
+    await page.evaluate(([index, framesUrl, n, fps]) => {
       const v = document.querySelector(`video[data-render-index="${index}"]`);
       const img = document.createElement('img');
       for (const { name, value } of v.attributes) if (!['src', 'autoplay', 'loop', 'muted', 'controls', 'playsinline', 'preload', 'data-render-index'].includes(name)) img.setAttribute(name, value);
       img.dataset.frames = framesUrl;
       img.dataset.count = String(n);
+      if (fps !== 30) img.dataset.fps = String(fps);
       // a sequence cut from data-offset already starts there (its sound still plays from it)
       if (v.dataset.length) {
         img.dataset.clipOffset = v.dataset.offset || '0';
@@ -356,7 +400,7 @@ async function prepareMedia(page) {
       img.src = `${framesUrl}/00001.jpg`;
       img.alt = '';
       v.replaceWith(img);
-    }, [i, pathToFileURL(dir).href, count]);
+    }, [i, pathToFileURL(dir).href, count, rate]);
   }
   // Darken each background just enough for white text: brighter media gets a heavier --shade,
   // unless the page set one on the slot itself.
@@ -913,7 +957,37 @@ async function prepareVoices(page, settings) {
       text: c.words.map((w) => w.text).join(' '),
     }));
   }
+  await addPunchIns(page);
   return { problems, cues: cues.sort((a, b) => a.start - b.start) };
+}
+
+// Punch-ins on the *keywords*: once the words are timed, the camera layer (<div class="cam"
+// data-punch="1.08">, written by compose.js and cut.js) zooms in on each keyword as it's said,
+// holds, and eases back, so the picture moves with the voice's emphasis while the words stay
+// put. data-punch-fx="shake" shakes it too (the meme cut). Keywords in the first 0.6s, near the
+// drop, or within 0.7s of the last punch are skipped, so the hits stay hits.
+async function addPunchIns(page) {
+  return page.evaluate(() => {
+    const cam = document.querySelector('.cam[data-punch]');
+    if (!cam || !(parseFloat(cam.dataset.punch) > 1)) return 0;
+    const toSeconds = (v) => (String(v || '').trim().endsWith('ms') ? parseFloat(v) / 1000 : parseFloat(v));
+    const drop = parseFloat(document.body.dataset.drop);
+    const times = [...document.querySelectorAll('.say.auto i.kw')].map((w) => toSeconds(w.style.getPropertyValue('--in')))
+      .filter(Number.isFinite).sort((a, b) => a - b);
+    const adds = [];
+    let last = -Infinity;
+    for (const t of times) {
+      if (t < 0.6 || t - last < 0.7 || (Number.isFinite(drop) && Math.abs(t - drop) < 0.5)) continue;
+      // a shake goes first, so the punch's zoom (later in the list) wins while both run
+      if (cam.dataset.punchFx === 'shake') adds.push(`camShake .4s linear ${t.toFixed(3)}s`);
+      adds.push(`camKw .62s cubic-bezier(.2,.8,.2,1) ${t.toFixed(3)}s`);
+      last = t;
+    }
+    if (!adds.length) return 0;
+    const now = cam.style.animation;
+    cam.style.animation = now && now !== 'none' ? `${now}, ${adds.join(', ')}` : adds.join(', ');
+    return adds.length;
+  });
 }
 
 // The voice clips' timing, for fitting scenes to them: when each line starts, how long it
@@ -1358,5 +1432,5 @@ module.exports = {
   WIDTH, HEIGHT, meanLuma, loadPlaywright, launchBrowser, openPage, prepareMedia, readPage, checkMusic, checkMix, mixVoice, seek,
   lintLayout, lintTimeline, describeLint, lintLabel, slideTimes, textSnapshot, retentionProblems, writeSoundtrack, measureAudio, muxSoundtrack,
   prepareVoice, prepareVoices, describeVoices, probeDuration, variantsOf, applyVariant, coverProblems,
-  renderFrames, preparePage, defaultWorkers,
+  renderFrames, preparePage, defaultWorkers, clipTime,
 };

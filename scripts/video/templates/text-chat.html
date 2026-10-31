@@ -340,7 +340,110 @@
                    36% { transform: scale(1.09) translate(-8px, -4px); } 48% { transform: scale(1.07) translate(6px, 6px); } 100% { transform: scale(1.05); } }
 
 
+  /* ---- editing: transitions, the camera, hits, and finishing ---- */
+
+  /* transitions: a class on the incoming .bg slot (a crossfade is the default). Under all but
+     the crossfade, the outgoing slot stays until the incoming one covers it: give it an --out of
+     at least the incoming --in plus the transition's length (edit.js slotTimes does). */
+  .bg.t-cut   { animation: fadeIn .01s linear var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
+  .bg.t-slide { animation: slideBg .5s cubic-bezier(.7,0,.25,1) var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
+  .bg.t-zoom  { animation: zoomBg .5s cubic-bezier(.2,.8,.2,1) var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
+  .bg.t-wipe  { animation: wipeBg .6s cubic-bezier(.7,0,.25,1) var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
+  /* a whip pan: the next picture flies in sideways, blurred with the speed */
+  .bg.t-whip  { animation: whipBg .32s cubic-bezier(.6,0,.2,1) var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
+  /* a punch-in cut: a hard cut that lands zoomed in and snaps back */
+  .bg.t-punch { animation: fadeIn .01s linear var(--in) both, punchBg .32s cubic-bezier(.2,.8,.2,1) var(--in) forwards, fadeOut .01s linear var(--out, 999s) forwards; }
+  /* a glitch: the next picture tears in, in slices, its colors split (the RGB split filter is added by the script in <head>) */
+  .bg.t-glitch { animation: fadeIn .01s linear var(--in) both, glitchBg .42s steps(1, end) var(--in) forwards, fadeOut .01s linear var(--out, 999s) forwards; }
+  .bg.t-spin  { animation: spinBg .5s cubic-bezier(.2,.8,.2,1) var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
+  .bg.t-blur  { animation: blurBg .5s ease-out var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
+  /* a mask: the next picture opens out of a circle at --mx/--my */
+  .bg.t-mask  { animation: maskBg .55s cubic-bezier(.6,0,.3,1) var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
+  .bg.t-leak  { animation: fadeIn .5s ease-out var(--in) both, fadeOut .01s linear var(--out, 999s) forwards; }
+  @keyframes slideBg { from { transform: translateX(100%); } to { transform: none; } }
+  @keyframes zoomBg  { from { opacity: 0; transform: scale(1.3); } to { opacity: 1; transform: none; } }
+  @keyframes wipeBg  { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0); } }
+  @keyframes whipBg  { from { translate: 100% 0; filter: blur(30px); } 65% { filter: blur(12px); } to { translate: 0 0; filter: none; } }
+  @keyframes punchBg { from { scale: 1.24; } to { scale: 1; } }
+  @keyframes glitchBg {
+    0%   { filter: url(#fx-rgb); translate: -5% 0; clip-path: inset(8% 0 58% 0); }
+    14%  { filter: url(#fx-rgb2); translate: 4% 0; clip-path: inset(46% 0 18% 0); }
+    28%  { filter: url(#fx-rgb); translate: -2% 0; clip-path: inset(0); }
+    42%  { filter: url(#fx-rgb2); translate: 3% 0; clip-path: inset(64% 0 6% 0); }
+    56%  { filter: url(#fx-rgb); translate: -1% 0; clip-path: inset(0); }
+    76%  { filter: url(#fx-rgb2); translate: .5% 0; clip-path: inset(0); }
+    100% { filter: none; translate: 0 0; clip-path: inset(0); } }
+  @keyframes spinBg  { from { opacity: 0; rotate: -28deg; scale: 1.7; filter: blur(14px); } to { opacity: 1; rotate: 0deg; scale: 1; filter: none; } }
+  @keyframes blurBg  { from { opacity: 0; filter: blur(36px); scale: 1.06; } to { opacity: 1; filter: none; scale: 1; } }
+  @keyframes maskBg  { from { clip-path: circle(0% at var(--mx, 50%) var(--my, 45%)); } to { clip-path: circle(120% at var(--mx, 50%) var(--my, 45%)); } }
+
+  /* overlays dropped on a cut, over everything for a moment: .flash (above), a light leak, a film burn */
+  .leak, .burn { position: absolute; inset: -10%; z-index: 20; pointer-events: none; mix-blend-mode: screen; opacity: 0; }
+  .leak { background: radial-gradient(38% 30% at 22% 40%, rgba(255,166,77,.95), transparent 72%),
+                      radial-gradient(42% 36% at 76% 62%, rgba(255,72,120,.75), transparent 72%),
+                      radial-gradient(30% 24% at 50% 12%, rgba(255,226,150,.7), transparent 70%);
+          animation: leak 1s ease-out var(--in) both; }
+  @keyframes leak { 0% { opacity: 0; translate: -18% 0; } 30% { opacity: .95; } 100% { opacity: 0; translate: 16% 0; } }
+  .burn { background: radial-gradient(55% 45% at 50% 52%, #fff 0%, rgba(255,226,170,.98) 30%, rgba(255,120,40,.85) 55%, rgba(160,20,0,.4) 72%, transparent 82%);
+          animation: burn .75s ease-in-out var(--in) both; }
+  @keyframes burn { 0% { opacity: 0; scale: .4; } 38% { opacity: 1; scale: 1.5; } 100% { opacity: 0; scale: 2.2; } }
+
+  /* Ken Burns moves on a still, beside kbIn/kbOut/kbLeft/kbRight: kbDyn zooms with changing speed
+     (slow, fast, slow), kbDynOut the reverse, kbUp and kbDown tilt */
+  @keyframes kbDyn    { from { transform: scale(1.02); animation-timing-function: cubic-bezier(.7,0,.3,1); } to { transform: scale(1.2); } }
+  @keyframes kbDynOut { from { transform: scale(1.2); animation-timing-function: cubic-bezier(.7,0,.3,1); } to { transform: scale(1.02); } }
+  @keyframes kbUp     { from { transform: scale(1.14) translateY(3%); } to { transform: scale(1.14) translateY(-3%); } }
+  @keyframes kbDown   { from { transform: scale(1.14) translateY(-3%); } to { transform: scale(1.14) translateY(3%); } }
+
+  /* the camera: a layer around every background (<div class="cam">), so a punch-in or a shake
+     moves the picture and never the words. Its animations (edit.js cameraAnimation, and the
+     keyword punch-ins render.js adds once the words are timed) each start and end at rest. */
+  .cam { position: absolute; inset: 0; overflow: hidden; isolation: isolate; transform-origin: var(--cam-x, 50%) var(--cam-y, 42%); }
+  @keyframes camPunch { from { scale: var(--punch, 1.1); } to { scale: 1; } }
+  @keyframes camKw { 0% { scale: 1; } 14% { scale: var(--punch, 1.08); } 72% { scale: var(--punch, 1.08); } 100% { scale: 1; } }
+  /* a shake zooms in 4% while it moves, so the frame's edges never show; listed before a punch, so the punch's zoom wins */
+  @keyframes camShake { 0% { translate: 0 0; rotate: 0deg; scale: 1.04; } 10% { translate: -14px 8px; rotate: -.6deg; } 22% { translate: 12px -10px; rotate: .5deg; }
+                        34% { translate: -9px -6px; rotate: -.4deg; } 46% { translate: 7px 7px; rotate: .3deg; } 60% { translate: -4px 3px; rotate: -.15deg; scale: 1.03; }
+                        78% { translate: 2px -2px; rotate: 0deg; } 100% { translate: 0 0; rotate: 0deg; scale: 1; } }
+  @keyframes camGlitch { 0% { filter: url(#fx-rgb); translate: -2% 0; } 16% { filter: url(#fx-rgb2); translate: 2% 0; } 32% { filter: none; translate: 0 0; }
+                         48% { filter: url(#fx-rgb); translate: -1% 0; } 64% { filter: url(#fx-rgb2); translate: .6% 0; } 80%, 100% { filter: none; translate: 0 0; } }
+
+  /* the visual hook, in the first half second; frame 0 stays clean, since it's the cover:
+     hk-zoom (a fast zoom toward the subject) on the first slot; hk-glitch, hk-shake, and
+     hk-bounce (the hook's words swelling one after another) on the hook's text */
+  .bg.now.hk-zoom { animation: hkZoom .42s cubic-bezier(.2,.9,.3,1) .02s both, fadeOut .45s ease-in var(--out, 999s) forwards; }
+  @keyframes hkZoom { from { scale: 1; } to { scale: 1.16; } }
+  .hook.hk-glitch > span { animation: hkGlitch .5s steps(1, end) .08s both; }
+  @keyframes hkGlitch { 0% { text-shadow: none; translate: 0 0; } 1% { text-shadow: -6px 0 #ff2a6d, 6px 0 #05d9e8; translate: 4px 0; }
+                        20% { text-shadow: 5px 0 #ff2a6d, -5px 0 #05d9e8; translate: -5px 0; } 40% { text-shadow: none; translate: 0 0; }
+                        60% { text-shadow: -3px 0 #ff2a6d, 3px 0 #05d9e8; translate: 2px 0; } 80%, 100% { text-shadow: none; translate: 0 0; } }
+  .hook.hk-shake { animation: hkJolt .5s linear .04s both; }
+  @keyframes hkJolt { 0%, 100% { translate: 0 0; rotate: 0deg; } 12% { translate: -10px 4px; rotate: -1.5deg; } 26% { translate: 9px -5px; rotate: 1.2deg; }
+                      40% { translate: -6px 2px; rotate: -.8deg; } 56% { translate: 4px -2px; rotate: .4deg; } 74% { translate: -2px 1px; rotate: 0deg; } }
+  .hook.hk-bounce i { font-style: normal; display: inline-block; margin-inline: .05em; transform-origin: 50% 100%;
+                      animation: hkWave .44s cubic-bezier(.3,1.3,.5,1) calc(.1s + var(--k, 0) * .07s) both; }
+  @keyframes hkWave { 0% { scale: 1; translate: 0 0; } 45% { scale: 1.05; translate: 0 -16px; } 100% { scale: 1; translate: 0 0; } }
+
+  /* finishing: film grain over the whole frame, a vignette over the pictures, and a color grade (--grade on the body element) */
+  body.fx-grain::after { content: ''; position: absolute; inset: -60px; z-index: 30; pointer-events: none; opacity: .13; mix-blend-mode: overlay;
+                         background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+                         animation: grain .5s steps(5) 0s infinite; }
+  @keyframes grain { 0% { translate: 0 0; } 20% { translate: -30px 20px; } 40% { translate: 20px -40px; } 60% { translate: -40px -10px; } 80% { translate: 30px 30px; } 100% { translate: 0 0; } }
+  .fx-vignette .cam::after { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+                             background: radial-gradient(ellipse 78% 64% at 50% 46%, transparent 52%, rgba(0,0,0,.6) 100%); }
+
+
 </style>
+<script>
+  addEventListener('DOMContentLoaded', () => {
+    const split = (id, d) => '<filter id="' + id + '" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">'
+      + '<feColorMatrix in="SourceGraphic" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r"/><feOffset in="r" dx="' + d + '" result="r2"/>'
+      + '<feColorMatrix in="SourceGraphic" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g"/>'
+      + '<feColorMatrix in="SourceGraphic" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b"/><feOffset in="b" dx="' + (-d) + '" result="b2"/>'
+      + '<feBlend in="r2" in2="g" mode="screen" result="rg"/><feBlend in="rg" in2="b2" mode="screen"/></filter>';
+    document.body.insertAdjacentHTML('beforeend', '<svg class="fx-defs" width="0" height="0" style="position:absolute" aria-hidden="true">' + split('fx-rgb', 14) + split('fx-rgb2', -22) + '</svg>');
+  });
+</script>
 </head>
 <body class="fyp" data-duration="15" data-drop="1.0" data-music="lofi" data-bpm="84" data-key="C" data-mode="minor" data-energy="2" data-motif="3 . 1 5, | 1 - . .">
   <div class="glow g1"></div>

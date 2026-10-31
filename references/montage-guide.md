@@ -213,8 +213,24 @@ A montage of 6 photos becomes 8–10 shots this way.
 - **slide / wipe:** walking from one room to the next.
 - **zoom:** stepping into a space or onto a product.
 - **flash:** a reveal or a "sold".
+- **punch** (a cut that lands zoomed in) and **whip** (a fast sideways
+  move, blurred): energetic product reels, cut on the beat.
+- **mask** (opening out of a circle), **blur**, **leak** (warm light across
+  the cut), and **burn** (a hot flare): a premium or cinematic feel.
+- **glitch** and **spin:** tech and loud, younger brands; sparingly.
 Use one transition for most of the video and a different one only where
-it means something (the reveal, the before/after).
+it means something (the reveal, the before/after). Every transition is
+listed with the edit it makes in `editing-techniques.md`.
+
+## Speed
+
+A clip without its own sound can change speed: `[speed: 0.5]` for slow
+motion (a pour, a door opening, a dress turning), `[speed: 2]` for fast
+motion (a process, a walk through a long hallway), and `[ramp: ...]` for a
+speed ramp, slowing on the moment that matters and back to full speed
+(`[ramp: 1.2:0.3,2.4:1]`), or freezing on it (`[ramp: 1.5:0,2.3:1]`).
+Smooth slow motion needs footage filmed at 60fps or more; ask for it when
+the client films. A `[sound]` clip plays at normal speed.
 
 ## Music by mood
 

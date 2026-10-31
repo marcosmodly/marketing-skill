@@ -257,7 +257,7 @@ command below. `VIDEO` below means `${CLAUDE_PLUGIN_ROOT}/scripts/video`.
    | "the AI changed the room" | reject that clip: regenerate it (quoted and approved), or use a local move on that photo |
    | "more 3D" / "less 3D" | `amount=1.5` or `amount=0.6` in that shot's move |
    | "it looks warped" | a lower `amount=`, a flat move (`pan-right`, `push-in`) on that shot, or `depth: off` for all |
-   | "smoother" / "punchier cuts" | `transition: fade`, or `cut`, `slide`, `zoom`, `wipe`, `flash` |
+   | "smoother" / "punchier cuts" | `transition: fade`, or `cut`, `punch`, `whip`, `slide`, `zoom`, `wipe`, `flash`, `glitch`, `spin`, `blur`, `mask`, `leak`, `burn` (`references/editing-techniques.md` says which edit each one is) |
    | "show the whole photo" | `[fit: contain]` |
    | "the product looks lost" | `[fit: card]` (best for a packshot on white) |
    | "show the renovation" | `[before: assets/<before-photo>]` on the after photo |

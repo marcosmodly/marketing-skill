@@ -103,7 +103,12 @@ was made with the same renderer.
   stock or AI backgrounds, a narrated 3D animation starring your brand's
   mascot (it moves, gestures, holds up your product, and lip-syncs), or
   pixel art, with a voiceover, music composed in your brand's own sound,
-  and meme sound effects. The bold look gives it a cover that stops the
+  and meme sound effects, cut in an editing style (UGC, kinetic
+  typography, fast-paced, cinematic, or meme): a visual hook in the first
+  half second, punch-ins on the words that sell it, whip pans, glitches,
+  light leaks, and b-roll every few seconds. Hooks are checked before
+  anything renders: their type, all three layers (on screen, spoken, and
+  visual), and whether three to test are really different. The bold look gives it a cover that stops the
   scroll: huge boxed captions with the selling words in yellow over your
   face (your app on the laptop in your photo) or the mascot.
 - **Montages from your own videos:** hand over the phone clips you or a

@@ -237,9 +237,9 @@ command below. `VIDEO` below means `${CLAUDE_PLUGIN_ROOT}/scripts/video`.
    | "different song" / "no music" | `music:` another file, a genre, or `none` |
    | "show the left side", "keep her in frame" | `[focus: 25%,50%]` |
    | "zoom in on it" | `[move: push-in]` (with `[focus:]` on the spot) |
-   | "smoother" / "punchier cuts" | `transition: fade`, or `cut`, `slide`, `zoom`, `wipe`, `flash` |
+   | "smoother" / "punchier cuts" | `transition: fade`, or `cut`, `punch`, `whip`, `slide`, `zoom`, `wipe`, `flash`, `glitch`, `spin`, `blur`, `mask`, `leak`, `burn` (`references/editing-techniques.md` says which edit each one is) |
    | "change the text" | the label, `hook:`, `cta:`, `price:`, `specs:` |
-   | "slow motion" | not supported: no speed changes. A clip filmed in the phone's slo-mo plays as filmed |
+   | "slow motion", "speed it up", "speed ramp", "freeze on that" | `[speed: 0.5]` (slow), `[speed: 2]` (fast), `[ramp: 1.2:0.3,2.4:1]` (slows at 1.2s, back to speed at 2.4s), `[ramp: 1.5:0,2.3:1]` (a freeze frame); not on a `[sound]` clip. Smooth slow motion needs footage filmed at 60fps or more |
    | "another color / logo / phone number" | the client's profile, not the script |
 
    Each round: edit the script, run `montage.js` again, then use `--draft`

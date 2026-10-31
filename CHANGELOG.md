@@ -5,6 +5,62 @@ Skills that read "our changelog" for source material read this file too.
 
 ## 0.8.0 (unreleased)
 
+- **Editing styles: how a video is cut, in one word.** `edit:` in a
+  narrated script picks `ugc` (hard cuts and punch-ins on the beat, a fast
+  zoom on the hook, bouncing captions), `kinetic` (slides, iris masks, and
+  wipes, captions building word by word), `fast` (micro-cuts, whips,
+  glitches, spins, and flashes, a rapid-montage hook, a riser into the
+  drop), `cinematic` (blur dissolves, light leaks, a film burn, grain, a
+  vignette, a warm grade, J-cuts), `meme` (exaggerated punch-ins that shake
+  on the keywords), or `clean` (the old crossfades). Without one it picks
+  by the sound. Each part can be set on its own (`hook-fx:`, `transitions:`,
+  `drop:`, `punch:`, `captions-fx:`, `grain:`, `vignette:`, `max-hold:`,
+  `j-cut:`), and `[cut: glitch]` sets how one line comes in.
+- **Punch-ins on the keywords.** Every picture now sits in one camera
+  layer, so the camera punches in on each `*keyword*` as it's said (in
+  every caption style, not just the bold look), shakes on a hit, and moves
+  on the hook and the drop, while the words stay put. `*Keywords*` stay lit
+  and pop bigger in every caption style.
+- **Visual hooks.** `hook-fx:` sets what moves in the first half second: a
+  fast zoom, a glitch with split colors, a camera shake, a flash, the
+  hook's words swelling one after another, or a burst of quick cuts (a
+  rapid montage). Frame 0 stays clean, since it's the cover.
+- **Fourteen transitions, shared by every page**: `fade`, `cut`, `flash`,
+  `slide`, `whip` (motion-blurred), `zoom`, `punch`, `wipe`, `glitch` (an
+  RGB-split tear), `spin`, `blur`, `mask` (an iris), `leak` (a light leak),
+  and `burn` (a film burn), in narrated videos (`[cut: ...]`) and montages
+  (`[transition: ...]`), each with the sound that sells it.
+- **B-roll on long lines.** A line held longer than the style's `max-hold`
+  gets more than one picture, cut on the beat: a search fetches as many as
+  it needs, `[bg: a | b | c]` lists them, and one file is reframed so the
+  cut still reads.
+- **Talking-head edits** (`cut.js`): every jump cut changes the framing
+  (wide, punched in, wide, closer) toward the face (`--focus`), keywords
+  punch in, the hook gets a visual hook, and `--broll "file@word+2"` cuts
+  away to the user's screen recording or photo at a word while they keep
+  talking.
+- **Speed ramps, slow motion, and freeze frames** for clips: `[speed: 0.5]`,
+  `[speed: 2]`, `[ramp: 1.2:0.3,2.4:1]`, and `[ramp: 1.5:0,2.3:1]` (a freeze)
+  in a montage, or `data-speed` and `data-ramp` on any clip. Slowed clips
+  are pulled at up to 120 frames a second, so 60fps footage stays smooth.
+- Three sounds for the edit: `riser` and `reverse` (they build into the
+  moment they're cued on) and `impact` (a short, tight hit).
+- **Hooks, by type, in three layers.** `references/hooks.md` now has fifteen
+  hook types (pattern interrupt, problem-solution, curiosity, before and
+  after, POV, contrarian, warning, demonstration, storytelling, statistic,
+  social proof, question, listicle, reaction, offer, plus callout), the three
+  layers a hook works on (the words on screen, the first spoken line, what
+  moves), and the visual hooks. `scripts/video/hook.js` checks hooks before
+  anything renders: each one's type, what would lose the viewer (too long,
+  throat-clearing, generic, clickbait, a banned word), whether three to test
+  are three different types, every number or offer to confirm, and in a
+  script, all three layers, the payoff, one call to action, and a re-hook.
+- **`references/editing-techniques.md`**: every short-form editing technique
+  a user might name (82 of them, from jump cuts and J-cuts to light leaks,
+  speed ramps, and risers) with the setting that makes it, or a plain "not
+  built" and the closest thing, the editing styles, and a 15-second ad cut
+  by the book. `reference.js` now suggests the editing style closest to a
+  reference video.
 - **A 3D mascot that moves, for videos with no footage.** `style: 3d` now
   stars the brand's mascot, a robot in the Visual Identity's colors, built
   and rigged in `templates/mascot.py`. It blinks, breathes, gestures on

@@ -321,7 +321,14 @@ function report(r) {
   else if (L.tone === 'light') out.push('- Light: `set=studio` for mascot shots, light photo backgrounds; keep one palette throughout.');
   if (L.colors.length) out.push(`- Its main color is ${L.colors[0].name} (${L.colors[0].hex}). Use the brand's own accent; borrow the color only if it suits the brand.`);
   if (s.bpm && s.confidence >= 0.5) out.push(`- Music: a track around ${Math.round(s.bpm)} BPM (\`music: assets/track.mp3\`, a licensed one, or the Sonic Identity's genre)${onBeat ? '; compose.js cuts on its beat' : ''}.`);
-  out.push(`- The hook: the first line on screen from frame 0, holding about ${p.hook}s.`);
+  // the editing style closest to it (edit.js), and how long a picture may hold
+  const softer = p.transitions > p.cuts;
+  const quick = p.typical < 1.6 || p.bursts.length > 0 || p.changesPerMinute > 40;
+  const edit = softer && p.typical >= 2.2 ? 'cinematic' : quick ? 'fast' : 'ugc';
+  const why = edit === 'cinematic' ? 'it moves on by dissolves and transitions more than hard cuts, and holds its scenes'
+    : edit === 'fast' ? `it cuts quickly (${p.changesPerMinute} changes a minute${p.bursts.length ? ', with bursts of quick cuts' : ''})` : 'it moves on by hard cuts at a talking pace';
+  out.push(`- \`edit: ${edit}\` with \`max-hold: ${Math.max(1, Math.min(6, Math.round(p.typical * 10) / 10))}\`: ${why} (editing-techniques.md lists the styles; the sheet shows which transitions it uses, for \`transitions:\`).`);
+  out.push(`- The hook: the first line on screen from frame 0, holding about ${p.hook}s${p.hook < 0.9 ? `; it changes in under a second, so give it a visual hook (\`hook-fx: ${p.bursts.length && p.bursts[0].from < 2 ? 'montage' : 'zoom'}\`)` : ''}.`);
   out.push('- Captions, from the sheet: small plain subtitles a phrase at a time → `captions: subtitle`; big boxed capitals → `captions: bold`; a word or a few at a time → the default captions; none → leave the words in the voice only.');
   out.push('', 'Copy how it\'s edited, never what\'s in it: none of its footage, music, characters, logos, or words.');
   return out.join('\n') + '\n';

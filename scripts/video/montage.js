@@ -44,7 +44,7 @@
  *   voiceover-at: 0.3                  #   when it starts, in seconds (0.3 by default)
  *   pace: 1 bar                       # each shot: N bars, N beats, or seconds (2.5s); or instead
  *   length: 30                         # a target length for the shots, in seconds (the end card adds ~3s)
- *   transition: fade                   # fade (default), cut, slide, zoom, wipe, or flash
+ *   transition: fade                   # fade (default), cut, flash, slide, whip, zoom, punch, wipe, glitch, spin, blur, mask, leak, or burn
  *   depth: auto                        # auto (default): 3D moves where a depth map can be had; off
  *   bpm: 100                           # the generated music's tempo (and energy: 1-5), to override
  *   ---
@@ -73,7 +73,8 @@
  *        color, where a white background melts away
  *   [say: ...]          a voiceover line for this shot, captioned word by word
  *   [hold: 2 bars]      this shot's length (bars, beats, or seconds), instead of the pace
- *   [transition: cut]   how this shot comes in
+ *   [transition: cut]   how this shot comes in (fade, cut, flash, slide, whip, zoom, punch, wipe, glitch,
+ *                       spin, blur, mask, leak, or burn; references/editing-techniques.md)
  *   [staged]            the "Virtually staged" badge a virtually staged photo needs
  *   [ai]                the "AI-animated" badge, for a clip a video model made from a photo
  *   [callout: 30%,60% solid oak]    a dot at that point of the photo, with a label; the shot holds still
@@ -85,6 +86,11 @@
  *                       the clip, captioned word by word, not a voiceover line
  *   [focus: 30%,50%]    the point to keep in frame: where a landscape clip is cut to 9:16, or the
  *                       focus of a photo's move (the same as focus= in [move: ...])
+ *   [speed: 0.5]        a clip in slow motion (0.5), or fast motion (2); a [to:] stretch then takes
+ *                       (to - from) / speed on screen. Not with [sound], which can't change speed.
+ *   [ramp: 1.2:0.3,2.4:1]   a speed ramp: "seconds into the shot:speed" points, eased between, so
+ *                       the clip slows at 1.2s and is back to full speed at 2.4s; a speed of 0 is a
+ *                       freeze frame until the next point ([ramp: 1.5:0,2.3:1]). Set [hold:] with it.
  *   [facts]             the price and specs go on this shot instead of the last
  *   [depth: assets/maple-02-depth.png]   a depth map from elsewhere (white near) for this photo
  *
@@ -131,14 +137,18 @@ const MIN_SHOT = 1.5;
 const MAX_SHOT = 5;
 const DEFAULT_SHOT = { property: 2.6, product: 2.0 }; // seconds, rounded to whole beats
 const READ_WPS = 4; // words a second, the reading pace render.js --check holds text to
-const TRANSITIONS = { fade: 0.45, cut: 0, flash: 0, slide: 0.5, zoom: 0.5, wipe: 0.6 };
+// how long each transition takes (edit.js has them all: fade, cut, flash, slide, whip, zoom,
+// punch, wipe, glitch, spin, blur, mask, leak, burn)
+const EDIT = require('./edit');
+const TRANSITIONS = Object.fromEntries(Object.entries(EDIT.TRANSITIONS).map(([k, v]) => [k, v.dur]));
+const leadOf = (name) => (EDIT.TRANSITIONS[name].lead === 0 ? 0 : Math.min(0.3, TRANSITIONS[name] / 2 + 0.05));
 // 3D moves draw the photo from its depth map, so the camera seems to move through the space
 const MOVES_3D = ['orbit', 'orbit-left', 'orbit-right', 'dolly', 'dolly-in', 'dolly-out', 'rise'];
 const MOVES = ['push-in', 'pull-out', 'pan-left', 'pan-right', 'pan-up', 'pan-down', 'drift', 'none', ...MOVES_3D];
 // each 3D move's flat stand-in, for a shot without a depth map
 const FLAT = { orbit: 'pan-right', 'orbit-left': 'pan-left', 'orbit-right': 'pan-right', dolly: 'push-in', 'dolly-in': 'push-in', 'dolly-out': 'pull-out', rise: 'pan-up' };
 const FITS = ['cover', 'contain', 'card'];
-const TAGS = ['move', 'fit', 'say', 'hold', 'transition', 'staged', 'ai', 'callout', 'before', 'from', 'to', 'sound', 'focus', 'facts', 'depth'];
+const TAGS = ['move', 'fit', 'say', 'hold', 'transition', 'staged', 'ai', 'callout', 'before', 'from', 'to', 'sound', 'focus', 'facts', 'depth', 'speed', 'ramp'];
 
 function fail(message) {
   console.error(message);
@@ -423,7 +433,7 @@ hook:                          # on screen from the first frame; under about 8 w
 cta:                           # on the last shot
 music: identity                # identity, none, a genre, or assets/track.mp3
 voice: none                    # none, or a voice.js voice for [say: ...] lines
-transition: fade               # fade, cut, slide, zoom, wipe, or flash
+transition: fade               # fade, cut, flash, slide, whip, zoom, punch, wipe, glitch, spin, blur, mask, leak, or burn
 ---
 ${items.map((it) => `${it.n}. ${rel(it.file)}`).join('\n')}
 
@@ -816,7 +826,7 @@ async function build(args) {
   // ---- each shot's length: its hold, the pace, a share of the target length, or the default
   const holds = shots.map((s) => {
     // a clip's [from:]–[to:] stretch, unless a [hold:] says otherwise
-    if (!s.tags.hold && s.to !== undefined) return s.to - s.from;
+    if (!s.tags.hold && s.to !== undefined) return (s.to - s.from) / (parseFloat(s.tags.speed) > 0 ? parseFloat(s.tags.speed) : 1);
     if (!s.tags.hold) return null;
     const len = parseLength(s.tags.hold);
     if (!len) fail(`shot ${s.n}: hold: ${s.tags.hold}? Write it as "2 bars", "6 beats", or "3s".`);
@@ -911,12 +921,12 @@ async function build(args) {
     const tr = TRANSITIONS[s.transition];
     const last = i === shots.length - 1;
     const next = shots[i + 1];
-    const into = i === 0 ? 0 : r2(s.start - (s.transition === 'cut' || s.transition === 'flash' ? 0 : Math.min(0.3, tr / 2 + 0.05)));
+    const into = i === 0 ? 0 : r2(s.start - leadOf(s.transition));
     // a fade crossfades; under a cut, slide, or wipe this slot stays until the next covers it
     let out = null;
     if (!last) {
-      const nextIn = r2(next.start - (next.transition === 'cut' || next.transition === 'flash' ? 0 : Math.min(0.3, TRANSITIONS[next.transition] / 2 + 0.05)));
-      out = next.transition === 'fade' ? r2(s.end - 0.2) : r2(nextIn + TRANSITIONS[next.transition] + 0.05);
+      const nextIn = r2(next.start - leadOf(next.transition));
+      out = !EDIT.TRANSITIONS[next.transition].covers ? r2(s.end - 0.2) : r2(nextIn + TRANSITIONS[next.transition] + 0.06);
     }
     const dur = r2((last ? s.end : (out ?? s.end) + 0.45) - into);
     const move = resolveMove(s, dur, defaults, i > 0 ? shots[i - 1].moveName : '');
@@ -925,7 +935,7 @@ async function build(args) {
     s.is3d = !!move.depth;
     s.place = move.place;
     const cls = ['bg', i === 0 ? 'now' : '', s.fit === 'cover' ? '' : s.fit === 'contain' ? 'fit' : 'card',
-      i > 0 && s.transition !== 'fade' ? `t-${s.transition === 'flash' ? 'cut' : s.transition}` : ''].filter(Boolean).join(' ');
+      i > 0 ? EDIT.transitionClass(s.transition) : ''].filter(Boolean).join(' ');
     const vars = { '--in': `${into}s`, ...(out !== null ? { '--out': `${out}s` } : {}), '--dur': `${dur}s`, '--shade': 0, ...move.vars };
     if (s.tags.before) vars['--at'] = `${r2(s.start + Math.max(0.8, 0.4 * (s.end - s.start)))}s`;
     const style = Object.entries(vars).map(([k, v]) => `${k}:${v}`).join('; ');
@@ -938,6 +948,9 @@ async function build(args) {
       ` data-length="${r2(Math.min(last ? dur : dur + 0.5, s.info.duration - s.from + 0.1))}"`,
       s.move.focus ? ` data-focus="${s.move.focus.map((v) => Math.round(v * 1000) / 1000).join(',')}"` : '',
       s.sound ? ` data-audio id="clip-${i + 1}"` : '',
+      // slow motion, fast motion, a speed ramp, or a freeze frame (render.js clipTime)
+      s.tags.speed ? ` data-speed="${esc(String(s.tags.speed))}"` : '',
+      s.tags.ramp ? ` data-ramp="${esc(String(s.tags.ramp))}"` : '',
     ].join('');
     const media = (extra = '') => (s.clip
       ? `<video class="bg-media${extra}" src="${src}" data-loop="false"${clipAttrs()}></video>`
@@ -953,8 +966,10 @@ async function build(args) {
     else if (s.fit === 'card') inner = media(' whole');
     else if (s.tags.before) inner = `<img class="bg-media" src="${esc(s.tags.before)}" alt="">${media(' after')}<div class="seam"></div>`;
     else inner = media();
-    const sfx = i > 0 && ['slide', 'wipe', 'zoom'].includes(s.transition) ? ' data-sfx="whoosh"' : '';
-    const flash = i > 0 && s.transition === 'flash' ? `\n  <div class="flash" style="--in:${s.start}s" data-sfx="shutter"></div>` : '';
+    const trSfx = i > 0 && s.transition !== 'flash' && EDIT.TRANSITIONS[s.transition].sfx;
+    const sfx = trSfx ? ` data-sfx="${trSfx}"` : '';
+    const flash = i > 0 && s.transition === 'flash' ? `\n  <div class="flash" style="--in:${s.start}s" data-sfx="shutter"></div>`
+      : i > 0 && EDIT.TRANSITIONS[s.transition].overlay ? `\n${EDIT.overlayAt(s.transition, s.start)}` : '';
     if (s.clip && s.info.duration - s.from < s.end - into) {
       notes.push(`shot ${s.n}'s clip runs ${(s.info.duration - s.from).toFixed(1)}s from ${s.from}s, less than the shot; it holds on its last frame`);
     }

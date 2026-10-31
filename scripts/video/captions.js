@@ -332,6 +332,31 @@ const CAPTION_CSS = `
   @keyframes ccOut { to { opacity: 0; } }
   @keyframes ccHi { to { color: var(--hi, #ffd23f); } }
   @keyframes ccDone { to { color: #fff; } }
+
+  /* *keywords* (data-kw) stay lit once said, and pop bigger, in every caption style (the bold
+     look and subtitles have their own) */
+  body:not(.bold):not(.sub) .say.auto .cc i.kw { animation: kwLit .04s linear var(--in) forwards, kwPop .32s cubic-bezier(.2,1.6,.4,1) var(--in) both; }
+  @keyframes kwLit { to { color: var(--kw, #ffd23f); } }
+  @keyframes kwPop { 0% { scale: 1; rotate: 0deg; } 50% { scale: 1.22; rotate: -3deg; } 100% { scale: 1.08; rotate: -2deg; } }
+
+  /* caption styles (compose.js captions-fx, body class cap-*): bounce springs each chunk in and
+     swells the word being said; kinetic builds the line word by word as it's spoken; fade is soft
+     and quiet, the word being said brightening, for a cinematic cut */
+  body.cap-bounce .say.auto > .cc { animation: ccBounce .26s cubic-bezier(.2,1.5,.4,1) var(--in) both, ccOut .01s linear var(--out, 999s) forwards; }
+  body.cap-bounce .say.auto .cc i:not(.kw) { animation: ccHi .04s linear var(--in) forwards, ccDone .04s linear var(--done) forwards,
+    wordSwell calc(var(--done) - var(--in) + .08s) ease-out var(--in) both; }
+  @keyframes ccBounce { from { opacity: 0; scale: .7; translate: 0 26px; } 60% { opacity: 1; } to { opacity: 1; scale: 1; translate: 0 0; } }
+  @keyframes wordSwell { 0% { scale: 1; } 20% { scale: 1.08; } 80% { scale: 1.07; } 100% { scale: 1; } }
+  /* a swelling or popped word needs a little more room, or it swallows the space beside it */
+  body.cap-bounce .say.auto .cc i, body:not(.bold):not(.sub) .say.auto .cc i.kw { margin-inline: .07em; }
+  body.cap-kinetic .say.auto .cc i { animation: kinUp .24s cubic-bezier(.2,1.4,.4,1) var(--in) both, ccHi .04s linear var(--in) forwards, ccDone .04s linear var(--done) forwards; }
+  body.cap-kinetic:not(.bold):not(.sub) .say.auto .cc i.kw { animation: kinUp .24s cubic-bezier(.2,1.4,.4,1) var(--in) both, kwLit .04s linear var(--in) forwards, kwPop .32s cubic-bezier(.2,1.6,.4,1) var(--in) both; }
+  @keyframes kinUp { from { opacity: 0; translate: 0 .5em; } to { opacity: 1; translate: 0 0; } }
+  body.cap-fade .say { font-size: 66px; font-weight: 700; -webkit-text-stroke: 0; text-shadow: 0 2px 4px rgba(0,0,0,.55), 0 4px 26px rgba(0,0,0,.6); }
+  body.cap-fade .say.auto > .cc { animation: ccFade .3s ease-out var(--in) both, ccOut .01s linear var(--out, 999s) forwards; }
+  body.cap-fade .say.auto .cc i:not(.kw) { color: rgba(255,255,255,.6); animation: ccBright .14s linear var(--in) forwards; }
+  @keyframes ccFade { from { opacity: 0; translate: 0 12px; } to { opacity: 1; translate: 0 0; } }
+  @keyframes ccBright { to { color: #fff; } }
 `;
 
 const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

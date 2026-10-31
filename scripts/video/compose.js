@@ -23,6 +23,7 @@
  *   bg: freelancer desk                                 # for lines without their own [bg: ...]
  *   bg-type: photo                                      # or video (needs a Pexels or Pixabay key)
  *   music: identity                                     # identity (default), none, a genre, or assets/track.mp3
+ *   edit: ugc                                           # how it's cut (below): ugc, kinetic, fast, cinematic, meme, clean
  *   ---
  *   1. Most freelancers lose money on invoices they send late. [bg: stressed laptop night]
  *   2. Clients pay fastest when the invoice lands the day the work ends.
@@ -57,6 +58,25 @@
  * Show real commands, real output, and the steps the skill really takes (references/
  * video-rendering.md has the recipe).
  *
+ * The edit ("edit:", default auto; edit.js and references/editing-techniques.md): how the video is
+ * cut, in one word. ugc (hard cuts and punch-ins on the beat, a fast zoom on the hook, bouncing
+ * captions), kinetic (slides, masks, and wipes, the words building as they're said), fast
+ * (micro-cuts, whips, glitches, and flashes, a rapid-montage hook, a riser into the drop),
+ * cinematic (blurs, light leaks, a film burn, grain, a vignette, a warm grade, J-cuts), meme
+ * (exaggerated punch-ins that shake on the keywords), or clean (crossfades and slow zooms). auto
+ * picks by the sound's genre and energy. Each part can be set on its own:
+ *   edit: ugc
+ *   hook-fx: glitch          # what moves in the first half second: zoom, shake, glitch, flash, bounce, montage, none
+ *   transitions: whip, punch # the cuts between lines, in turn (fade, cut, flash, slide, whip, zoom, punch,
+ *                            # wipe, glitch, spin, blur, mask, leak, burn); drop: the one out of the hook
+ *   punch: 10%               # the camera punching in on each *keyword* as it's said (no to turn it off)
+ *   captions-fx: kinetic     # pop, bounce, kinetic, or fade
+ *   grain: yes               # film grain; vignette: yes darkens the edges
+ *   max-hold: 3              # the longest one picture holds before a new one or a reframe (0: never split)
+ *   j-cut: 0.2               # how far each line's voice leads its picture
+ * And per line: [cut: glitch] for how that line comes in, [bg: a | b | c] for several pictures
+ * cut between as it's said (b-roll; one query alone fetches as many as the line needs).
+ *
  * Your own character: "character: assets/hero.glb" puts the user's rigged 3D character (a .glb
  * from Blender, Ready Player Me, or VRoid, a .vrm, or Mixamo's .fbx) in the robot mascot's place in every shot it
  * appears in; [shot: mascot do=wave character=assets/other.glb] in just one. Its own clips play when
@@ -86,6 +106,7 @@ const { parseScript } = require('./voice');
 const { prepareVoice } = require('./render');
 const { visualIdentity, applyIdentity } = require('./brand');
 const { analyseTrack, alignTrack } = require('./beats');
+const EDIT = require('./edit');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const LEAD = 0.15; // the first line starts almost at once; the hook is already on screen
@@ -213,7 +234,8 @@ function sonicIdentity(file = path.join(ROOT, 'references', 'brand-voice.md')) {
 
 // The template's own body settings, as the fallback for anything the identity doesn't set.
 function templateDefaults(html) {
-  const body = /<body([^>]*)>/.exec(html)[1];
+  // the real <body> tag, after </head> (a template's doc comment can mention <body> too)
+  const body = /<body([^>]*)>/.exec(html.slice(html.indexOf('</head>')))[1];
   const out = {};
   for (const m of body.matchAll(/data-([\w-]+)="([^"]*)"/g)) out[m[1]] = m[2];
   return out;
@@ -224,17 +246,18 @@ function run(cmd, args, opts = {}) {
 }
 
 // One stock photo or clip for a query, via media.js. Returns a path relative to the page, or null.
-function fetchBackground(query, assets, type) {
-  const res = run('media.js', ['search', query, '--out', assets, '--count', '1', ...(type === 'video' ? ['--type', 'video'] : [])]);
+function fetchBackground(query, assets, type, count = 1) {
+  const res = run('media.js', ['search', query, '--out', assets, '--count', String(count), ...(type === 'video' ? ['--type', 'video'] : [])]);
   if (res.status !== 0) {
     console.warn(`Note: no background for "${query}": ${(res.stderr || '').trim().split('\n').slice(-3).join(' ')}`);
-    return null;
+    return count > 1 ? [] : null;
   }
   try {
     const data = JSON.parse(res.stdout.slice(res.stdout.indexOf('{')));
-    return `assets/${data.files[0].file}`;
+    const files = data.files.map((f) => `assets/${f.file}`);
+    return count > 1 ? files : files[0] || null;
   } catch {
-    return null;
+    return count > 1 ? [] : null;
   }
 }
 
@@ -275,15 +298,34 @@ window.renderReady = Promise.all([...document.querySelectorAll('.bg-insert')].ma
 </script>
 `;
 
-function bgSlot(i, a, b, last, media, insert) {
-  const start = i === 0 ? 0 : r2(a - 0.25);
-  const end = last ? null : r2(b - 0.2);
-  const dur = r2((last ? b : b + 0.45) - start);
-  const style = `--in:${start}s; ${end !== null ? `--out:${end}s; ` : ''}--dur:${dur}s`;
+// One background slot: its picture, when it comes in and goes (edit.js slotTimes), how it comes
+// in (a transition class), and its camera move.
+function bgSlot(i, shot, slot, extraClass = '') {
+  const cls = ['bg', i === 0 ? 'now' : EDIT.transitionClass(shot.transition), extraClass].filter(Boolean).join(' ');
+  const style = `--in:${slot.into}s; ${slot.out !== null ? `--out:${slot.out}s; ` : ''}--dur:${slot.dur}s${shot.move ? `; --kb:${shot.move}` : ''}`;
+  const media = shot.media;
+  const insert = shot.insert;
   const inner = !media ? ''
-    : VIDEO_EXT.test(media) ? `<video class="bg-media" src="${esc(media)}"></video>`
+    : VIDEO_EXT.test(media) ? `<video class="bg-media" src="${esc(media)}"${shot.offset ? ` data-offset="${shot.offset}"` : ''}></video>`
       : `<img class="bg-media" src="${esc(media)}" alt="">${insert ? `<div class="bg-insert" data-at="${esc(insert.at)}"><img src="${esc(insert.screen)}" alt=""></div>` : ''}`;
-  return `  <!-- background, ${r2(a)}–${r2(b)}s -->\n  <div class="${i === 0 ? 'bg now' : 'bg'}" style="${style}">${inner}</div>`;
+  return `  <!-- background, ${r2(shot.start)}–${r2(shot.end)}s${i > 0 ? `, ${shot.transition}` : ''} -->\n  <div class="${cls}" style="${style}">${inner}</div>`;
+}
+
+// Where a line's pictures change, so a long line gets a new picture (or a reframe) every
+// maxHold seconds, cut on the beat: the split points between start and end. With the montage
+// hook, the first line opens on a burst of quick cuts instead.
+function splitPoints(start, end, k, { snapTo, micro } = {}) {
+  const points = [];
+  if (micro) {
+    for (let j = 1; j < k && start + j * micro < end - 0.9; j++) points.push(r2(start + j * micro));
+    return points;
+  }
+  for (let j = 1; j < k; j++) {
+    let p = start + (j * (end - start)) / k;
+    if (snapTo) p = snapTo(p);
+    if (p - (points[points.length - 1] ?? start) >= 0.9 && end - p >= 0.9) points.push(r2(p));
+  }
+  return points;
 }
 
 async function main() {
@@ -299,14 +341,21 @@ async function main() {
   const style = STYLES[styleName];
   if (!style) fail(`Unknown style "${styleName}" (use ${Object.keys(STYLES).join(', ')}).`);
   const lines = parseScript(body).map(({ n, text }) => {
-    const bg = parseBg(((/\[bg:\s*([^\]]+)\]/i.exec(text) || [])[1] || meta.bg || '').trim());
+    // [bg: a | b] gives a line several backgrounds, cut between as it's said (b-roll)
+    const bgs = ((/\[bg:\s*([^\]]+)\]/i.exec(text) || [])[1] || meta.bg || '').split('|').map((b) => parseBg(b.trim())).filter((b) => b.query);
+    const bg = bgs[0] || parseBg('');
     const shot = /\[shot:\s*([^\]]+)\]/i.exec(text);
-    const said = text.replace(/\s*\[(bg|shot):[^\]]*\]/gi, '').trim();
+    const cut = /\[cut:\s*([^\]]+)\]/i.exec(text);
+    const said = text.replace(/\s*\[(bg|shot|cut):[^\]]*\]/gi, '').trim();
     return {
       n, text: plainText(said), kw: keywords(said),
-      bg: bg.query, screen: bg.screen, at: bg.at, shot: shot ? parseShot(shot[1]) : null,
+      bg: bg.query, more: bgs.slice(1).map((b) => b.query), screen: bg.screen, at: bg.at, shot: shot ? parseShot(shot[1]) : null,
+      cut: cut ? cut[1].trim().toLowerCase() : null,
     };
   }).filter((l) => l.text);
+  const badCut = lines.find((l) => l.cut && !EDIT.TRANSITIONS[l.cut]);
+  if (badCut) fail(`Line ${badCut.n}: [cut: ${badCut.cut}]? The transitions are ${Object.keys(EDIT.TRANSITIONS).join(', ')}.`);
+  if (lines[0] && lines[0].cut) console.warn(`Note: [cut: ...] on line ${lines[0].n} is ignored; it says how a line comes in, and the first is on screen from frame 0.`);
   const bold = String(meta.captions || '').toLowerCase() === 'bold';
   const subtitle = String(meta.captions || '').toLowerCase() === 'subtitle';
   const format = String(args.format || meta.format || 'portrait').toLowerCase();
@@ -405,42 +454,100 @@ async function main() {
   }
   const trackNotes = [];
 
+  // ---- the edit: cuts, camera, captions, and finishing, from the script's edit style
+  let edit;
+  try {
+    edit = EDIT.resolveStyle(meta, sound);
+  } catch (e) {
+    fail(e.message);
+  }
+  if (style.shots && edit.hook === 'montage') edit.hook = 'zoom'; // a drawn style has one picture per line
+  if (bold && edit.captions !== 'pop' && !meta['captions-fx']) edit.captions = 'pop'; // the bold look animates its own words
+
   const scenes = [];
   let t = LEAD;
   let drop = 0;
+  let voiceEnd = 0;
   lines.forEach((l, i) => {
     const { length } = prepareVoice(path.join(dir, clips[i]));
     const start = t;
-    let end = start + length + GAP;
+    // a J-cut: the next line's voice leads its picture a little (never out of the hook, so the drop lands clean)
+    const voiceAt = i >= 2 && edit.jcut ? Math.max(voiceEnd + 0.12, start - edit.jcut) : start;
+    voiceEnd = voiceAt + length;
+    let end = voiceAt + length + GAP;
     if (i === 0) {
       drop = r2(end);
       if (track) trackNotes.push(...alignTrack(track, { align: drop })); // the length is checked below, once it's known
     } else if (snap) end = drop + Math.ceil((end - drop) / beat - 1e-6) * beat;
     else if (track) end = track.video.beats.find((b) => b >= end - 1e-6 && b - end < 0.7) ?? end;
-    scenes.push({ ...l, clip: clips[i], start: r2(start), length, end: r2(end) });
+    scenes.push({ ...l, clip: clips[i], start: r2(start), voiceAt: r2(voiceAt), length, end: r2(end) });
     t = end;
   });
-  const duration = r2(scenes[scenes.length - 1].start + scenes[scenes.length - 1].length + TAIL);
+  const duration = r2(scenes[scenes.length - 1].voiceAt + scenes[scenes.length - 1].length + TAIL);
   if (track) sound.bpm = track.bpm; // the page's tempo is the track's, so anything on the beat (the mascot's dance) follows it
   scenes[scenes.length - 1].end = duration;
 
-  // ---- backgrounds (a drawn style draws its own)
-  for (const s of scenes) {
-    if (!s.bg || style.shots) continue;
-    if (MEDIA_EXT.test(s.bg)) {
-      if (!fs.existsSync(path.join(dir, s.bg))) console.warn(`Note: background ${s.bg} not found next to the page`);
-      s.media = s.bg;
-    } else if (!args.noMedia) {
-      s.media = fetchBackground(s.bg, assets, meta['bg-type']);
-    }
+  // ---- backgrounds (a drawn style draws its own): each line's pictures, cut between as it's
+  // said when the line runs longer than the edit style's longest hold, or when it lists several
+  const snapTo = snap ? (p) => drop + Math.round((p - drop) / beat) * beat
+    : track ? (p) => { const b = track.video.beats.find((x) => Math.abs(x - p) < 0.3); return b ?? p; } : null;
+  const micro = Math.min(0.6, Math.max(0.3, beat <= 0.6 ? beat : beat / 2));
+  const shots = []; // one per background slot: { start, end, media, transition, move, scene }
+  let cutN = 0;
+  let moveN = 0;
+  const nextMove = () => edit.moves[moveN++ % edit.moves.length];
+  if (!style.shots) {
+    scenes.forEach((s, i) => {
+      const start = i === 0 ? 0 : s.start;
+      const end = s.end;
+      const montageHook = i === 0 && edit.hook === 'montage';
+      const items = [s.bg, ...s.more].filter(Boolean);
+      let k = items.length;
+      if (k === 1 && edit.maxHold && end - start > edit.maxHold * 1.25) k = Math.min(3, Math.ceil((end - start) / edit.maxHold));
+      if (montageHook && items.length <= 1) k = Math.max(k, 4);
+      // the pictures: several listed, several stock results for one query, or one file reframed
+      let media = [];
+      if (items.length > 1) {
+        media = items.map((q) => (MEDIA_EXT.test(q) ? q : args.noMedia ? null : fetchBackground(q, assets, meta['bg-type'])));
+      } else if (items.length === 1 && MEDIA_EXT.test(items[0])) {
+        media = Array(k).fill(items[0]);
+      } else if (items.length === 1 && !args.noMedia) {
+        const found = fetchBackground(items[0], assets, meta['bg-type'], k);
+        media = k > 1 ? found : [found];
+        if (!media.length) media = [null];
+      } else media = [null];
+      for (const m of media) if (m && MEDIA_EXT.test(m) && !fs.existsSync(path.join(dir, m))) console.warn(`Note: background ${m} not found next to the page`);
+      k = Math.max(1, media.length);
+      const points = splitPoints(start, end, k, montageHook ? { micro } : { snapTo });
+      const bounds = [start, ...points, end];
+      const reframe = media.length > 1 && media.every((m) => m === media[0]);
+      const inner = reframe && edit.cuts.includes('punch') ? 'punch' : edit.cuts.includes('cut') ? 'cut' : edit.cuts[0];
+      for (let j = 0; j < bounds.length - 1; j++) {
+        // a clip used twice in one line picks up where it left off
+        const offset = j > 0 && media[j] === media[j - 1] && VIDEO_EXT.test(media[j] || '') ? r2(bounds[j] - start) : 0;
+        shots.push({
+          start: bounds[j], end: bounds[j + 1], media: media[Math.min(j, media.length - 1)], offset, scene: i, first: j === 0,
+          transition: i === 0 && j === 0 ? 'fade' : j > 0 ? (montageHook ? 'cut' : inner) : s.cut || (i === 1 ? edit.drop : edit.cuts[cutN++ % edit.cuts.length]),
+          // a reframe of one picture changes its framing at each cut, so the cut reads (a jump cut on a still)
+          move: reframe ? ['kbIn', 'kbDynOut', 'kbLeft', 'kbRight'][j % 4] : montageHook && j < bounds.length - 2 ? 'kbDyn' : nextMove(),
+          insert: s.screen && media[j] && !VIDEO_EXT.test(media[j]) && media[j] === s.bg ? { screen: s.screen, at: s.at } : null,
+        });
+      }
+    });
   }
 
   // ---- the page
   let head = html.slice(html.indexOf('<html>'), html.indexOf('</head>') + '</head>'.length);
   if (landscape) head = head.replace('</head>', `${LANDSCAPE_CSS}</head>`);
   const bodyClass = (/<body[^>]*\bclass="([^"]*)"/.exec(html.slice(html.indexOf('</head>'))) || [])[1] || 'fyp';
+  // the edit's finishing: caption style, grain, vignette, and a color grade (the bold look keeps its own)
+  const fxClasses = [
+    !bold && !subtitle && edit.captions !== 'pop' ? `cap-${edit.captions}` : '',
+    edit.grain ? 'fx-grain' : '', edit.vignette ? 'fx-vignette' : '',
+  ].filter(Boolean).join(' ');
   const attrs = [
-    `class="${bodyClass}${bold ? ' bold' : ''}${subtitle ? ' sub' : ''}"`, ...(landscape ? ['data-size="1920x1080"'] : []), `data-duration="${duration}"`, `data-drop="${drop}"`,
+    `class="${bodyClass}${bold ? ' bold' : ''}${subtitle ? ' sub' : ''}${fxClasses ? ` ${fxClasses}` : ''}"`, ...(landscape ? ['data-size="1920x1080"'] : []), `data-duration="${duration}"`, `data-drop="${drop}"`,
+    `data-edit="${edit.name}"`, ...(edit.grade && !bold ? [`style="--grade: ${edit.grade}"`] : []),
     ...(character ? [`data-character="${esc(character)}"`] : []),
     ...(musicSrc ? [`data-music-src="${esc(musicSrc)}"`, 'data-music="none"', ...(track ? [`data-music-start="${track.musicStart}"`] : [])] : [`data-music="${sound.music}"`]),
     ...['bpm', 'key', 'mode', 'energy', 'motif'].filter((k) => sound[k] !== undefined).map((k) => `data-${k}="${esc(String(sound[k]))}"`),
@@ -448,34 +555,66 @@ async function main() {
   // the bold look shows the first line from frame 0; a hook that is that line isn't shown twice
   const hookIsLine = bold && meta.hook && wordKey(plainText(meta.hook)) === wordKey(scenes[0].text);
   const lit = (text) => esc(text).replace(/\*([^*]+)\*/g, '<b class="kw">$1</b>');
+  // the hook's text, with its share of the visual hook: a glitch, a jolt, or its words swelling in turn
+  const hookFx = { glitch: 'hk-glitch', shake: 'hk-shake', bounce: 'hk-bounce' }[edit.hook] || '';
+  const hookHtml = () => {
+    if (edit.hook !== 'bounce') return lit(meta.hook);
+    const lits = new Set(keywords(meta.hook));
+    return plainText(meta.hook).split(/\s+/).map((w, k) => `<i style="--k:${k}">${lits.has(wordKey(w)) ? `<b class="kw">${esc(w)}</b>` : esc(w)}</i>`).join(' ');
+  };
   const sceneHtml = scenes.map((s, i) => {
     const last = i === scenes.length - 1;
     const parts = [];
-    if (i === 0 && meta.hook && !hookIsLine) parts.push(`    <div class="cap hook"><span>${lit(meta.hook)}</span></div>`);
+    if (i === 0 && meta.hook && !hookIsLine) parts.push(`    <div class="cap hook${hookFx ? ` ${hookFx}` : ''}"><span>${hookHtml()}</span></div>`);
     if (last && meta.cta) parts.push(`    <div class="end"><div class="cap hl pop" style="--in:${s.start}s" data-sfx="chime"><span>${esc(plainText(meta.cta))}</span></div></div>`);
     // bold: a short line shows whole; a long one a few words at a time, so it doesn't bury the picture.
     // The first line is always whole: it's the cover.
     const whole = i === 0 || s.text.split(/\s+/).length <= BOLD_WHOLE;
     const cls = bold ? `say auto${whole ? ' line' : ''}${i === 0 ? ' now' : ''}` : `say auto${subtitle && i === 0 ? ' now' : ''}`;
     const kw = s.kw.length ? ` data-kw="${esc([...new Set(s.kw)].join(','))}"` : '';
-    parts.push(`    <div class="${cls}" data-voice="${esc(s.clip)}" style="--voice:${s.start}s"${kw}>${esc(s.text)}</div>`);
-    return `  <!-- line ${s.n}, ${s.start}–${s.end}s -->\n  <div class="scene narr center"${last ? '' : ` style="--out:${r2(s.end - 0.15)}s"`}>\n${parts.join('\n')}\n  </div>`;
+    parts.push(`    <div class="${cls}" data-voice="${esc(s.clip)}" style="--voice:${s.voiceAt}s"${kw}>${esc(s.text)}</div>`);
+    return `  <!-- line ${s.n}, ${s.start}–${s.end}s${s.voiceAt < s.start ? ` (its voice leads the cut from ${s.voiceAt}s)` : ''} -->\n  <div class="scene narr center"${last ? '' : ` style="--out:${r2(s.end - 0.15)}s"`}>\n${parts.join('\n')}\n  </div>`;
   }).join('\n\n');
+
+  // ---- sounds and hits that belong to the edit, not to a line: the visual hook's, a riser into
+  // the drop and an impact on it, and the sound each cut makes (whoosh, impact, glitch...)
+  const cues = [];
+  const cue = (t, sfx, note) => cues.push(`  <i class="cue" hidden style="--in:${r2(t)}s" data-sfx="${sfx}"></i>${note ? ` <!-- ${note} -->` : ''}`);
+  const hookSfx = { shake: 'impact', glitch: 'glitch', flash: 'impact', zoom: edit.impact ? 'whoosh' : '' }[edit.hook];
+  if (hookSfx) cue(edit.hook === 'zoom' ? 0.1 : edit.hook === 'shake' ? 0.04 : 0.08, hookSfx, `the ${edit.hook} hook`);
+  const dropShot = style.shots ? null : shots.find((x) => x.scene === 1 && x.first);
+  const dropTr = dropShot ? dropShot.transition : style.shots ? 'cut' : null;
+  const dropSounds = [edit.riser && drop >= 1.2 ? 'riser' : '', edit.impact && EDIT.TRANSITIONS[dropTr || 'cut'].sfx !== 'impact' ? 'impact' : ''].filter(Boolean);
+  if (scenes.length > 1 && dropSounds.length) cue(drop, dropSounds.join(' '), 'the drop');
+  if (edit.cutSfx) {
+    for (const x of shots) {
+      const sfx = x.first && x.scene > 0 && EDIT.TRANSITIONS[x.transition].sfx;
+      if (sfx) cue(x.start, sfx, `the ${x.transition} into line ${scenes[x.scene].n}`);
+    }
+  }
+  // overlays dropped on a cut (a flash, a light leak, a film burn), and the flash hook
+  const overlays = shots.filter((x, i) => i > 0).map((x) => EDIT.overlayAt(x.transition, x.start)).filter(Boolean);
+  if (edit.hook === 'flash') overlays.unshift('  <div class="flash" style="--in:.08s" data-lint="off"></div>');
+
+  // ---- the camera: every picture sits in one layer that punches in, shakes, or glitches on the
+  // hook and the drop (and on each *keyword*, added by render.js once the words are timed)
+  const camAnim = EDIT.cameraAnimation({ hook: edit.hook, dropFx: dropTr === 'punch' && edit.dropFx === 'punch' ? 'none' : edit.dropFx, drop: scenes.length > 1 ? drop : 0, drawn: !!style.shots });
+  const camOpen = `  <div class="cam" data-lint="off"${edit.punch ? ` data-punch="${edit.punch}"${edit.punchFx ? ` data-punch-fx="${edit.punchFx}"` : ''}` : ''} style="${edit.punch ? `--punch:${edit.punch}; ` : ''}${camAnim ? `animation: ${camAnim}` : ''}">`;
   // what's behind the text: a drawn style's canvas and one shot per line, or a photo slot per line
+  const slots = EDIT.slotTimes(shots);
   const layers = style.shots
-    ? [`  ${landscape ? style.canvas.replace('width="1080" height="1920"', 'width="1920" height="1080"') : style.canvas}`, '  <div class="art-scrim" data-lint="off"></div>', '',
+    ? [camOpen, `  ${landscape ? style.canvas.replace('width="1080" height="1920"', 'width="1920" height="1080"') : style.canvas}`, '  <div class="art-scrim" data-lint="off"></div>', '  </div>', '',
       ...scenes.map((s, i) => {
         const settings = Object.entries(s.shot.attrs).map(([k, v]) => ` data-${k}="${esc(v)}"`).join('');
-        const cue = style.sfx[`${s.shot.name}:${s.shot.attrs.do || ''}`] || style.sfx[s.shot.name];
-        const sfx = cue ? ` data-sfx="${cue}"` : '';
+        const sfxCue = style.sfx[`${s.shot.name}:${s.shot.attrs.do || ''}`] || style.sfx[s.shot.name];
+        const sfx = sfxCue ? ` data-sfx="${sfxCue}"` : '';
         return `  <div class="shot" data-shot="${s.shot.name}" style="--in:${i === 0 ? 0 : s.start}s"${settings}${sfx}></div>`;
       })].join('\n')
-    : ['  <div class="glow g1"></div>', '  <div class="glow g2"></div>',
-      ...scenes.map((s, i) => bgSlot(i, i === 0 ? 0 : scenes[i - 1].end, s.end, i === scenes.length - 1, s.media,
-        s.screen && s.media && !VIDEO_EXT.test(s.media) ? { screen: s.screen, at: s.at } : null))].join('\n');
+    : [camOpen, '  <div class="glow g1"></div>', '  <div class="glow g2"></div>',
+      ...shots.map((x, i) => bgSlot(i, x, slots[i], i === 0 && ['zoom', 'flash'].includes(edit.hook) ? 'hk-zoom' : '')), '  </div>'].join('\n');
   const corners = [['brand', meta.brand], ['series', meta.series]].filter(([, v]) => v)
     .map(([k, v]) => `  <div class="corner ${k}" style="--out:${duration}s">${esc(v)}</div>`).join('\n');
-  const inserts = !style.shots && scenes.some((s) => s.screen && s.media) ? INSERT_JS : '';
+  const inserts = !style.shots && shots.some((x) => x.insert) ? INSERT_JS : '';
   const doc = `<!doctype html>
 <!--
   Narrated video, written by scripts/video/compose.js from ${path.relative(dir, path.resolve(scriptFile))}.
@@ -486,7 +625,7 @@ async function main() {
 ${head}
 <body ${attrs}>
 ${layers}
-${corners}
+${overlays.length ? `${overlays.join('\n')}\n` : ''}${cues.length ? `${cues.join('\n')}\n` : ''}${corners}
 
 ${sceneHtml}
 ${inserts}</body>
@@ -498,12 +637,18 @@ ${inserts}</body>
   fs.writeFileSync(page, branded.html);
 
   console.log(`Wrote ${page}: ${scenes.length} lines, ${duration}s`);
-  for (const s of scenes) console.log(`  ${String(s.n).padStart(2)}. ${s.start.toFixed(2)}–${s.end.toFixed(2)}s  ${s.clip}${s.media ? `  bg ${s.media}` : ''}${s.shot && style.shots ? `  shot ${s.shot.name}` : ''}  ${s.text.slice(0, 48)}${s.text.length > 48 ? '...' : ''}`);
+  for (const [i, s] of scenes.entries()) {
+    const mine = shots.filter((x) => x.scene === i);
+    const pics = mine.length ? `  ${mine[0].media ? `bg ${mine[0].media}` : 'no bg'}${mine.length > 1 ? ` +${mine.length - 1} more` : ''}${i > 0 ? ` (${mine[0].transition})` : ''}` : '';
+    console.log(`  ${String(s.n).padStart(2)}. ${s.start.toFixed(2)}–${s.end.toFixed(2)}s  ${s.clip}${pics}${s.shot && style.shots ? `  shot ${s.shot.name}` : ''}  ${s.text.slice(0, 48)}${s.text.length > 48 ? '...' : ''}`);
+  }
+  console.log(`  edit: ${edit.name}${edit.picked ? ' (picked to fit the sound; set edit: to choose)' : ''}: ${edit.about}. Hook: ${edit.hook}; keyword punch-ins: ${edit.punch ? `${Math.round((edit.punch - 1) * 100)}%` : 'off'}${edit.jcut ? `; J-cuts ${edit.jcut}s` : ''}.`);
   if (style.shots) console.log(`  style: ${styleName} (templates/${style.template})`);
   console.log(`  sound: ${musicSrc ? `licensed track ${musicSrc}${track ? `, ${track.bpm} BPM, started at ${track.musicStart}s so its lift lands as the hook ends, cuts on its beat` : ''}` : `${sound.music}${sound.music !== 'none' ? `, ${sound.bpm} BPM, ${sound.key} ${sound.mode || ''}, energy ${sound.energy}, cuts on the beat` : ''}`}${musicSrc ? '' : identity ? ' (the Sonic Identity)' : ' (the template default; no Sonic Identity saved yet)'}`);
   console.log(`  look: ${branded.changes.length ? branded.changes.join('; ') : 'the template default; no Visual Identity saved yet'}`);
   for (const p of branded.problems) console.warn(`Note: ${p}`);
   if (!meta.hook && !bold && !subtitle) console.warn('Note: no hook in the frontmatter, so the first frame has no text. Add "hook: ..." to stop the scroll.');
+  if (meta.hook) for (const p of require('./hook').checkHook(meta.hook).problems) console.warn(`Note: hook: ${p} (node hook.js --script ${path.basename(scriptFile)} checks all three layers)`);
   for (const n of trackNotes) console.warn(`Note: ${musicSrc}: ${n}`);
   if (track && track.musicStart + duration > track.duration) console.warn(`Note: ${musicSrc} runs out ${r2(track.musicStart + duration - track.duration)}s before the video ends; shorten the script or pick a longer track.`);
   if (musicSrc && !track) console.warn(`Note: set data-music-start from beats.js (node beats.js ${musicSrc} --align ${drop} --duration ${duration}).`);

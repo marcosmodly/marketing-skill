@@ -165,6 +165,9 @@ node captions.js assets/voice-1.wav --text "the line"     # when each word of a 
 node brand.js page.html                                   # the Visual Identity: colors, font, a logo end card
 node render.js page.html out.mp4 --variants a,b --cover 0 # one video per hook variant, plus the cover frame
 node cut.js take.mp4 --text "what's said" --page page.html # a filmed talking-head take: pauses cut, captioned, ready to render
+node cut.js take.mp4 --text "what's said" --page page.html --broll "assets/app.mp4@invoice+2"  # ...cutting away to your screen recording at "invoice"
+node hook.js "hook one" "hook two" "hook three"            # each hook's type, what to fix, and whether they're different types
+node hook.js --script script.md                           # a script's hook in all three layers: on screen, spoken, and what moves
 ```
 
 Every page's hook is on screen from the first frame, which is also the
@@ -244,7 +247,9 @@ How a video's soundtrack is put together:
   scratch, an air horn, a rimshot, a sad trombone, a drumroll, a ding and
   a buzzer, message pings, typing, a camera shutter, a ka-ching, a glitch,
   and a sub drop. Pixel art gets 8-bit ones: a coin, a jump, a power-up,
-  a dialog-box blip, and a hit.
+  a dialog-box blip, and a hit. The edit's own sounds sell the cuts: a
+  whoosh on a whip, a tight impact on a punch-in, a riser and a reversed
+  swell that build into the moment they're cued on.
 - **No licensing:** it's all synthesized from scratch, so there's nothing
   to license, and it works when posting through an API, where in-app
   trending sounds can't be added.
@@ -284,6 +289,40 @@ How a video's soundtrack is put together:
   your takes, fetches a background per line, times every scene to its line
   with cuts on the beat, and writes the page with the hook on screen from
   the first frame.
+
+### How it's cut: editing styles
+
+A narrated video isn't only scenes in a row: how it's cut is most of what
+makes it feel like a creator's video or an ad. One word in the script sets
+the edit:
+
+| `edit:` | Looks like | What it does |
+|---|---|---|
+| `ugc` | A creator's own edit | Hard cuts and punch-ins on the beat, a fast zoom on the hook, the camera punching in on each keyword, a new picture every few seconds, bouncing captions |
+| `kinetic` | Typography-led, for apps and SaaS | Slides, iris masks, and wipes; the hook's words swelling in turn; captions building word by word as they're said |
+| `fast` | High energy | Micro-cuts, whip pans, glitches, spins, and flashes on the beat, a burst of quick cuts in the hook, a riser into the drop |
+| `cinematic` | A brand film | Blur dissolves, light leaks, a film burn, grain, a vignette, a warm grade, the voice leading each cut (J-cuts) |
+| `meme` | Comedic timing | Hard cuts and exaggerated punch-ins that shake on the keywords |
+| `clean` | Plain | Crossfades and slow zooms |
+
+Without one, it picks from your sound (a phonk or house identity gets
+`fast`, a calm or cinematic one gets `cinematic`, the rest `ugc`) and says
+which. Mark the words that sell each line with asterisks (`lose *money* on
+every late invoice`): they stay lit, pop bigger, and the camera punches in
+on them. `hook-fx:` sets the visual hook, what moves in the first half
+second (`zoom`, `shake`, `glitch`, `flash`, `bounce`, or `montage`), and
+`[cut: glitch]` on a line sets how that one comes in. Your filmed takes get
+the same treatment from `cut.js`: every jump cut changes the framing, the
+keywords punch in, and `--broll` cuts away to your screen recording while
+you keep talking.
+
+[`references/editing-techniques.md`](../references/editing-techniques.md)
+lists every editing technique you might ask for by name (a whip pan, a
+J-cut, a speed ramp, a light leak, kinetic typography) with the setting
+that makes it, and says plainly which ones the renderer can't do.
+[`references/hooks.md`](../references/hooks.md) covers the hook: fifteen
+types, its three layers (on screen, spoken, and visual), and `hook.js`,
+which checks hooks before anything renders.
 
 ### Templates by video type
 
@@ -560,6 +599,14 @@ node montage.js state/videos/2026-10-23-taco-night.md
   cover it.
 - **Long clips** render fast: only the stretch a shot plays is turned
   into frames, not the whole file.
+- **Speed:** `[speed: 0.5]` plays a clip in slow motion, `[speed: 2]`
+  fast, and `[ramp: 1.2:0.3,2.4:1]` ramps it (slow on the moment, then
+  back to full speed); `[ramp: 1.5:0,2.3:1]` freezes a frame. Footage
+  filmed at 60fps or more stays smooth in slow motion. A clip keeping its
+  own sound plays at normal speed.
+- **Transitions:** `transition:` (or `[transition: whip]` on one shot) is
+  `fade`, `cut`, `punch`, `whip`, `slide`, `zoom`, `wipe`, `flash`,
+  `glitch`, `spin`, `blur`, `mask`, `leak`, or `burn`.
 
 ### A montage from your photos (property and product)
 
