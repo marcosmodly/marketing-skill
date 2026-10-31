@@ -37,7 +37,8 @@ HEAD = """<!doctype html>
     --line: #2b2b35;
     --text: #f3f2ee;
     --muted: #9a99a4;
-    --accent: #e07a55;
+    --accent: #db7350;
+    --on-accent: #121212;   /* text on the accent: whichever of white or near-black reads better on it (brand.js and compose.js set it for the brand's) */
     --ok: #3fbf7f;
     --bad: #e0605a;
     --warn: #e8b04a;
@@ -92,6 +93,7 @@ HEAD = """<!doctype html>
   .bg.now {{ animation: fadeOut .45s ease-in var(--out, 999s) forwards; }}
   .bg:empty {{ display: none; }}
   .bg-media {{ position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;
+              object-position: var(--ox, 50%) var(--oy, 50%); transform-origin: var(--fx, 50%) var(--fy, 50%);
               filter: var(--grade, saturate(.9) contrast(1.05) brightness(.9));
               animation: var(--kb, kbIn) var(--dur, 8s) linear var(--in) both; }}
   .bg.blur .bg-media {{ filter: var(--grade, saturate(.9) contrast(1.05) brightness(.9)) blur(var(--blur, 10px)); }}
@@ -102,7 +104,7 @@ HEAD = """<!doctype html>
   .bg.tint::before {{ content: ''; position: absolute; inset: 0; z-index: 1; background: var(--accent); mix-blend-mode: soft-light; opacity: .5; }}
   /* the user's screenshot on a screen in their photo: placed by compose.js from the screen's four corners,
      moving with the photo's own zoom */
-  .bg-insert {{ position: absolute; inset: 0; z-index: 0; animation: var(--kb, kbIn) var(--dur, 8s) linear var(--in) both; }}
+  .bg-insert {{ position: absolute; inset: 0; z-index: 0; transform-origin: var(--fx, 50%) var(--fy, 50%); animation: var(--kb, kbIn) var(--dur, 8s) linear var(--in) both; }}
   .bg-insert img {{ position: absolute; left: 0; top: 0; transform-origin: 0 0; filter: var(--grade, saturate(.9) contrast(1.05) brightness(.9)); }}
   .bg::after {{ content: ''; position: absolute; inset: 0; z-index: 2;
                background: linear-gradient(to bottom, rgba(10,10,14,.72), rgba(10,10,14,.12) 30%, rgba(10,10,14,.22) 62%, rgba(10,10,14,.88)),
@@ -111,6 +113,7 @@ HEAD = """<!doctype html>
   body:has(.bg-media) .scene, body:has(.bg-media) .stage {{ text-shadow: 0 2px 6px rgba(0,0,0,.35), 0 4px 30px rgba(0,0,0,.55); }}
 {kit}
 {edit}
+{looks}
 {css}
 </style>
 {fx_script}{head_extra}</head>
@@ -157,7 +160,7 @@ KIT = """
   .cap > span { background: #fff; color: #121212; padding: .05em .32em; border-radius: .2em;
                 -webkit-box-decoration-break: clone; box-decoration-break: clone; }
   .cap.dark > span { background: rgba(0,0,0,.76); color: #fff; }
-  .cap.hl > span { background: var(--accent); color: #fff; }
+  .cap.hl > span { background: var(--accent); color: var(--on-accent); }
   .cap.out { font-size: 82px; font-weight: 900; line-height: 1.12; color: #fff; paint-order: stroke fill; -webkit-text-stroke: 14px #000; }
   .cap.out > span { background: none; color: inherit; padding: 0; }
   .cap.left { text-align: left; }
@@ -214,7 +217,7 @@ KIT = """
   .corner.series { right: 150px; }
 
   /* labels and reactions */
-  .sticker { width: fit-content; background: var(--accent); color: #fff; font-size: 44px; font-weight: 800; line-height: 1.2;
+  .sticker { width: fit-content; background: var(--accent); color: var(--on-accent); font-size: 44px; font-weight: 800; line-height: 1.2;
              padding: 10px 28px 12px; border-radius: 16px; rotate: -3deg; box-shadow: 0 12px 34px rgba(0,0,0,.35); }
   .sticker.yellow { background: #ffd23f; color: #121212; }
   .sticker.light { background: #fff; color: #121212; }
@@ -299,7 +302,7 @@ KIT = """
   .bub { max-width: 600px; padding: 20px 30px 22px; border-radius: 36px; font-size: 42px; font-weight: 600; line-height: 1.25;
          animation: bubIn .35s cubic-bezier(.2,.9,.3,1.3) var(--in) both; }
   .them .bub { background: #e4e2dc; border-bottom-left-radius: 10px; transform-origin: 0 100%; }
-  .me .bub { background: var(--accent); color: #fff; border-bottom-right-radius: 10px; transform-origin: 100% 100%; }
+  .me .bub { background: var(--accent); color: var(--on-accent); border-bottom-right-radius: 10px; transform-origin: 100% 100%; }
   @keyframes bubIn { from { opacity: 0; transform: scale(.5); } to { opacity: 1; transform: none; } }
   .typing { display: flex; gap: 10px; padding: 28px 30px; border-radius: 36px; background: #e4e2dc; width: fit-content;
             animation: fadeIn .2s ease-out var(--in) both, fadeOut .15s linear var(--out) forwards; }
@@ -349,7 +352,7 @@ KIT = """
   .popup p { font-size: 38px; font-weight: 600; color: #4a4a54; line-height: 1.3; margin-top: 12px; }
   .btns { display: flex; gap: 18px; margin-top: 30px; }
   .btns span { flex: 1; height: 96px; border-radius: 24px; display: grid; place-items: center; font-size: 36px; font-weight: 800; background: #e4e2dc; }
-  .btns span:last-child { background: var(--accent); color: #fff; }
+  .btns span:last-child { background: var(--accent); color: var(--on-accent); }
 
   /* before/after: the second .side wipes over the first at --at */
   .wipe { position: relative; flex: 1; border-radius: 40px; overflow: hidden; }
@@ -469,6 +472,65 @@ EDIT = """
                              background: radial-gradient(ellipse 78% 64% at 50% 46%, transparent 52%, rgba(0,0,0,.6) 100%); }
 """
 
+LOOKS = """
+  /* ---- visual design: looks, text cards, sources, and color roles ---- */
+
+  /* the headline font (a look's, or the Visual Identity's Headline font) on the hook and text cards */
+  .has-head .hook > span, .has-head .bg-card b { font-family: var(--font-head); font-weight: var(--head-weight, 800); }
+
+  /* looks (look.js, body class look-<name>): how the hook is set; the captions, grade, and textures come with them */
+  :is(.look-documentary, .look-corporate) .hook > span { background: rgba(12,12,16,.8); color: #fff; }
+  :is(.look-cinematic, .look-luxury, .look-suspense, .look-editorial, .look-retro, .look-handmade) .hook > span {
+    background: none; color: #fff; padding: 0; text-shadow: 0 2px 6px rgba(0,0,0,.55), 0 6px 40px rgba(0,0,0,.6); }
+  .look-cinematic .hook { font-size: 78px; line-height: 1.14; }
+  .look-editorial .hook { font-size: 96px; line-height: 1.02; letter-spacing: -2px; text-align: left; }
+  .look-luxury .hook { font-size: 46px; line-height: 1.7; letter-spacing: .2em; text-transform: uppercase; }
+  .look-suspense .hook { font-size: 64px; line-height: 1.25; letter-spacing: .06em; text-transform: uppercase; }
+  .look-tech .hook > span { background: rgba(8,14,20,.78); color: #e8fbff; box-shadow: inset 0 0 0 3px var(--accent), 0 0 26px color-mix(in srgb, var(--accent) 40%, transparent); }
+  .look-retro .hook { font-size: 92px; line-height: 1.06; }
+  .look-retro .hook > span { text-shadow: 3px 0 #ff2a6d, -3px 0 #05d9e8, 0 4px 20px rgba(0,0,0,.6); }
+  .look-cozy .hook > span { background: #f6eedf; color: #3a2a1e; }
+  .look-handmade .hook { font-size: 96px; line-height: 1.08; }
+  .look-playful .hook > span { background: #ffd23f; color: #121212; }
+  /* one accent, used consistently: in these looks the word being said and the *keywords* take the look's accent, not a second color */
+  :is(.look-minimal, .look-editorial, .look-luxury, .look-tech, .look-retro, .look-cozy, .look-handmade) { --hi: var(--accent); --kw: var(--accent); }
+
+  /* textures over the frame: VHS scanlines with a rolling tracking band, a faint grid at the edges, paper */
+  body.tx-scanlines::before { content: ''; position: absolute; inset: 0; z-index: 29; pointer-events: none; mix-blend-mode: multiply;
+                               background: repeating-linear-gradient(to bottom, rgba(0,0,0,.24) 0 2px, transparent 2px 5px); }
+  .tx-scanlines .cam::before { content: ''; position: absolute; left: 0; right: 0; top: -12%; height: 9%; z-index: 4; pointer-events: none; mix-blend-mode: screen;
+                                background: linear-gradient(transparent, rgba(255,255,255,.1), transparent); animation: tracking 7s linear 0s infinite; }
+  @keyframes tracking { to { top: 110%; } }
+  .tx-grid .cam::before { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: .22;
+                           background-image: linear-gradient(color-mix(in srgb, var(--accent) 75%, transparent) 2px, transparent 2px),
+                                             linear-gradient(90deg, color-mix(in srgb, var(--accent) 75%, transparent) 2px, transparent 2px);
+                           background-size: 90px 90px;
+                           -webkit-mask-image: radial-gradient(ellipse 78% 66% at 50% 45%, transparent 40%, #000 100%);
+                           mask-image: radial-gradient(ellipse 78% 66% at 50% 45%, transparent 40%, #000 100%); }
+  .tx-paper .cam::before { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none; mix-blend-mode: multiply; opacity: .5;
+                            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><filter id='p'><feTurbulence type='fractalNoise' baseFrequency='.035' numOctaves='4' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .96 0 0 0 0 .92 0 0 0 0 .84 0 0 0 -.9 1.25'/></filter><rect width='100%' height='100%' filter='url(%23p)'/></svg>"); }
+
+  /* a text card ([card: ...] in compose.js): the line's key phrase, huge, on the brand's base color,
+     in place of a picture; kept above the captions' band */
+  .bg.card { background: var(--bg); }
+  .bg.card::after { display: none; }
+  .bg-card { position: absolute; left: 90px; right: 150px; top: 330px; bottom: 820px; display: flex; align-items: center; justify-content: center; text-align: center; }
+  .bg-card b { font-weight: var(--head-weight, 900); font-size: var(--card-size, 132px); line-height: 1.04; letter-spacing: -.02em; color: var(--text); text-wrap: balance;
+                animation: cardIn .55s cubic-bezier(.2,.9,.3,1.15) var(--in) both; }
+  .bg-card .kw { color: var(--accent); }
+  @keyframes cardIn { from { opacity: 0; translate: 0 40px; scale: .94; } to { opacity: 1; translate: 0 0; scale: 1; } }
+
+  /* a source or caveat for a line's claim ([source: ...]): small but readable, up for the whole line */
+  .source { align-self: flex-start; max-width: 100%; margin-bottom: auto; padding: 8px 20px 10px; border-radius: 12px; background: rgba(12,12,16,.74); color: #ecebf0;
+             font-family: "Inter", "Liberation Sans", sans-serif; font-size: 36px; font-weight: 600; line-height: 1.25; text-align: left; text-shadow: none; }
+  .narr > .hook:has(+ .source) { margin-bottom: 0; }
+  .narr > .hook + .source { margin-top: 20px; }
+
+  /* color roles: *keywords* (the key, the accent) and ~wrong~ (the wrong way, struck through in the caution color, so it doesn't rest on color alone) */
+  .no { color: var(--bad); text-decoration: line-through .08em var(--bad); }
+  .hook .no { text-decoration-thickness: .07em; }
+"""
+
 # The SVG filters behind the RGB split (the glitch transition, the glitch hook): a CSS filter can
 # only point at an SVG filter in the same page, so a little script adds them once the page loads.
 FX_SCRIPT = """<script>
@@ -525,8 +587,8 @@ TEMPLATES["how-to.html"] = dict(
   .ui-row b { flex: 1; height: 16px; border-radius: 8px; background: #e6e3dc; display: block; }
   .ui-chip { display: inline-block; padding: 16px 24px; border-radius: 20px; background: #fff; border: 3px solid #e6e3dc; font-size: 26px; font-weight: 700; color: #3a3a44; margin-right: 10px; }
   .ui-chip.on { border-color: var(--accent); color: var(--accent); }
-  .ui-btn { position: absolute; left: 28px; right: 28px; bottom: 48px; height: 96px; border-radius: 26px; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 32px; font-weight: 800; }
-  .ui-fab { position: absolute; right: 34px; bottom: 54px; width: 116px; height: 116px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 64px; font-weight: 500; }
+  .ui-btn { position: absolute; left: 28px; right: 28px; bottom: 48px; height: 96px; border-radius: 26px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; font-size: 32px; font-weight: 800; }
+  .ui-fab { position: absolute; right: 34px; bottom: 54px; width: 116px; height: 116px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; font-size: 64px; font-weight: 500; }
   .tap { position: absolute; width: 150px; height: 150px; margin: -75px 0 0 -75px; border-radius: 50%; border: 8px solid var(--accent);
          animation: tapRing .7s ease-out var(--tap) both; opacity: 0; }
   @keyframes tapRing { 0% { opacity: 0; transform: scale(.3); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(1.4); } }
@@ -761,7 +823,7 @@ TEMPLATES["announcement.html"] = dict(
              border-radius: 26px; padding: 30px 34px; margin-top: 22px; font-size: 50px; font-weight: 700; }
   .feature i { width: 64px; height: 64px; border-radius: 18px; background: var(--accent); flex: none; display: block; opacity: .9; }
   .cal { width: 380px; border-radius: 40px; overflow: hidden; background: #f4f3ef; color: #17171c; box-shadow: 0 30px 90px #0008; text-align: center; }
-  .cal .mon { background: var(--accent); color: #fff; font-size: 54px; font-weight: 800; letter-spacing: 6px; padding: 18px 0; }
+  .cal .mon { background: var(--accent); color: var(--on-accent); font-size: 54px; font-weight: 800; letter-spacing: 6px; padding: 18px 0; }
   .cal .day { font-size: 200px; font-weight: 800; letter-spacing: -8px; line-height: 1.15; padding-bottom: 20px; }
 """,
     body="""
@@ -871,7 +933,7 @@ TEMPLATES["promo.html"] = dict(
     g1="#6b2f1c", g2="#1d2a52",
     doc='  Template: promo, ad, brand profile, explainer, or educational list (see\n  references/video-types.md). This one is the 24-second marketing-skill\n  promo. Copy it as the starting point for a new video and rewrite the\n  scenes.\n\n  How every template page works (render.js reads all of this):\n  - The canvas is 1080x1920 (9:16). Keep text inside the .scene box: TikTok,\n    Reels, and Shorts cover the bottom ~25% and the right edge with their UI.\n  - Animate with CSS animations only. render.js pauses and seeks every\n    animation frame by frame, so time each one with animation-delay. Here the\n    delays come from per-element custom properties like style="--in:3.4s".\n    (3d.html and pixel.html draw their backgrounds with a script instead,\n    through window.renderFrame(t); their own comments explain how.)\n  - Backgrounds: every scene has an empty <div class="bg"> slot already timed\n    to it. Put one photo or clip inside and it fills the frame with a slow\n    zoom, a scrim that keeps text readable, and one shared color grade:\n      <img class="bg-media" src="assets/office-1.jpg" alt="">\n      <video class="bg-media" src="assets/city-1.mp4" data-offset="2"></video>\n    data-offset starts a clip that many seconds in; clips loop unless\n    data-loop="false". On the slot, --kb picks the motion (kbIn, kbOut,\n    kbLeft, kbRight, or none), --shade the darkness (default .35), class\n    "blur" softens a busy image, and class "tint" washes it in the accent\n    color. An empty slot shows the gradient glow instead. scripts/video/\n    media.js finds stock photos and clips and writes their credits.\n  - Music comes from <body data-*>: data-music is the genre (pop, house,\n    hiphop, acoustic, cinematic, tech, lofi, calm, phonk, jersey, funk,\n    chiptune) or none; data-bpm, data-key (C, F#, ...), data-mode (major or minor),\n    data-energy (1-5), and data-motif, the project\'s signature hook in\n    scale degrees, e.g. "1 3 5 6 | 5 3 2 -" (references/sound-guide.md).\n    data-drop is when the beat comes in; data-break="8.5-13.5" thins it\n    out under quieter scenes.\n    data-music-src="assets/track.mp3" (with data-music-start, in seconds)\n    uses a licensed track instead; data-music-at brings it in later than 0s.\n    data-duration sets the length.\n  - data-voice="assets/voice-1.m4a" on any element adds a voiceover line at\n    that element\'s --voice time (or --in); <body data-voice-src="..."\n    data-voice-start="..."> takes one continuous take instead. The music and\n    effects duck under the voice (references/sound-guide.md).\n  - data-sfx="sound:var" plays a sound effect at the time in that element\'s\n    --var (default --in). Several can be listed: data-sfx="swish:in tick:tick".\n    Sounds: pop (a note that climbs the chord when words land in quick\n    succession), swish, tick (climbs a scale across a run of ticks), whoosh,\n    click, chime, and the meme cues: boom, scratch (record scratch), horn\n    (air horn), rimshot, fail (sad trombone, 2s), drumroll (1.5s, so cue it\n    1.5s before the hit), ding (right answer), buzzer (wrong), ping (a\n    message), typing, shutter, cash (ka-ching), glitch, and bass (sub drop);\n    the edit\'s: impact (a tight hit), and riser and reverse, which build\n    into the time they\'re cued on; and 8-bit ones for pixel art: coin,\n    jump, powerup, blip, and hurt.\n  - Everyday / FYP pieces (every page has them; the templates in\n    references/fyp-formats.md show each one in use). <body class="fyp">\n    switches to TikTok Sans, the platform\'s own caption font.\n      .cap: a caption in the platform\'s style, each wrapped line boxed:\n        <div class="cap pop" style="--in:1s"><span>pov: ...</span></div>\n        Variants: .dark, .hl (accent), .out (white, black outline), .left.\n      .say: word-by-word captions, one <i style="--in:2.1s"> per word.\n      .sticker: a tilted label (.yellow, .light, .dark). .stamp: a score\n        slammed on at --in (.ok, .bad). .emoji: a big emoji that bounces\n        in and sways.\n      .ring: a 3-2-1 countdown, <div class="ring"><b></b></div>. .timerbar\n        drains and .progress fills (to --pct), both over --for.\n      .poll with .opt bars growing to --pct (show real poll numbers only).\n      .stack piles its children in one spot; .swap pops one in at --in and\n        out at --out, so items replace each other in place.\n      .split with two .pane (expectation / reality); .grid of .cell\n        (starter pack); .tiers of .tier.s/.a/.b/.c/.d holding .item chips.\n      Generic, clearly fictional mockups: .chat (.msg.them / .msg.me, each\n        with a .bub; .typing dots show between --in and --out), a .lock\n        screen with .notif cards stacking in, a .post with a .heart that\n        fills at --like and .reply comments, and a .popup dialog.\n      .wipe: its second .side wipes over the first at --at (before/after).\n      .flash whites out the frame at --in; .hit zooms and shakes what it\n        wraps at --hit.\n  - Editing (scripts/video/edit.js writes these; references/\n    editing-techniques.md maps each to its name): a class on a .bg slot\n    sets how it comes in (t-cut, t-punch, t-whip, t-slide, t-zoom, t-wipe,\n    t-glitch, t-spin, t-blur, t-mask, t-leak); .flash, .leak, and .burn\n    are overlays dropped on a cut; --kb also takes kbDyn, kbDynOut, kbUp,\n    and kbDown. <div class="cam"> around the backgrounds is the camera:\n    data-punch="1.08" punches in on each *keyword* (render.js), and its\n    animations shake (camShake), punch (camPunch), or glitch (camGlitch).\n    hk-zoom on the first slot, and hk-glitch, hk-shake, or hk-bounce on\n    the hook, are the visual hook. <body class="fx-grain fx-vignette">\n    adds film grain and a vignette; cap-bounce, cap-kinetic, and cap-fade\n    animate the synced captions.\n    A photo or clip can go in a .pane, .side, or .cell too, as\n    <img class="bg-media" src="...">.\n  - The hook: give the first thing on screen class "now" instead of an\n    entrance (pop, rise, ...), so it shows on frame 0, which is the default\n    cover and the moment a viewer decides to stay. render.js --check warns\n    when the first frame has no text.\n  - Hook variants: data-variant="a" (or "b", "c") on the elements that\n    differ; render.js --variants a,b,c renders one video per variant.\n  - Captions synced to a voice line: <div class="say auto"\n    data-voice="assets/voice-2.wav" style="--voice:3.4s">The line.</div>\n    (render.js times them to the clip; see captions.js).\n  - Filmed clips with their own sound: <video class="bg-media" id="take"\n    src="assets/take.mp4" data-audio> plays the clip\'s sound in sync with\n    it, and <div class="say auto" data-clip="take">what\'s said</div>\n    captions it. scripts/video/cut.js cuts the pauses out of a take and\n    writes a page like this. A clip in a smaller box (a screen recording in\n    a phone frame) is cut to that box\'s shape.\n  - .endcard: the logo and handle at the end, added by brand.js from the\n    Visual Identity in references/brand-voice.md.\n  - Images (screenshots, photos, logos) go in an assets/ folder next to the\n    page and load with a relative src. People, products, and results must be\n    real ones the user supplied; stock and AI images are only for settings\n    and mood.',
     body_attrs='data-duration="24" data-drop="3" data-music="tech" data-bpm="120" data-key="C" data-mode="major" data-energy="3" data-motif="1 5 3 5 | 6 5 3 2"',
-    css='  /* scene 2/3: the to-do list */\n  .listhead { position: relative; height: 180px; margin-bottom: 28px; }\n  .listhead > div { position: absolute; left: 0; bottom: 0; }\n  .chips { display: flex; flex-direction: column; gap: 18px; }\n  .chip { display: flex; align-items: center; gap: 26px; align-self: flex-start;\n          background: var(--card); border: 2px solid var(--line); border-radius: 22px;\n          padding: 20px 34px 20px 24px; font-size: 46px; font-weight: 600;\n          animation: slideIn .4s cubic-bezier(.2,.8,.2,1) var(--in) both,\n                     dim .3s ease-out var(--tick) forwards; }\n  .chip:nth-child(even) { margin-left: 34px; }\n  @keyframes dim { to { color: var(--muted); border-color: #3a2a24; } }\n  .box { width: 52px; height: 52px; border-radius: 12px; border: 4px solid #5a5966; flex: none;\n         display: grid; place-items: center;\n         animation: tick .25s ease-out var(--tick) forwards; }\n  @keyframes tick { to { background: var(--accent); border-color: var(--accent); } }\n  .box svg { width: 34px; height: 34px; animation: checkIn .3s cubic-bezier(.2,.9,.3,1.4) var(--tick) both; }\n  @keyframes checkIn { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: none; } }\n  .tag { display: inline-block; font-size: 40px; font-weight: 600; color: var(--muted); margin-top: 10px; }\n\n  /* scene 4: approval card */\n  .card { background: var(--card); border: 2px solid var(--line); border-radius: 32px; padding: 40px; margin-top: 56px; position: relative; }\n  .cardtop { display: flex; justify-content: space-between; align-items: center; font-size: 36px; color: var(--muted); font-weight: 600; }\n  .pill { position: relative; height: 62px; width: 330px; }\n  .pill span { position: absolute; right: 0; top: 0; height: 62px; padding: 0 26px; border-radius: 31px;\n               display: flex; align-items: center; font-size: 32px; font-weight: 700; white-space: nowrap; }\n  .p1 { background: #3a2f17; color: var(--warn); animation: fadeOut .2s linear var(--flip) forwards; }\n  .p2 { background: #163626; color: var(--ok); animation: popIn .4s cubic-bezier(.2,.9,.3,1.3) var(--flip) both; }\n  .posttext { font-size: 44px; font-weight: 600; line-height: 1.3; margin: 34px 0 26px; }\n  .bar { height: 26px; border-radius: 13px; background: #2a2a33; margin-bottom: 18px; }\n  .btn { margin-top: 26px; height: 108px; border-radius: 24px; background: var(--accent); color: #fff;\n         display: grid; place-items: center; font-size: 46px; font-weight: 800;\n         animation: press .3s ease-in-out var(--press) both, done .3s ease-out var(--flip) forwards; }\n  @keyframes press { 0% { transform: none; } 40% { transform: scale(.94); } 100% { transform: none; } }\n  @keyframes done { to { background: #2a2a33; color: var(--muted); } }\n  .cursor { position: absolute; width: 90px; height: 90px; left: 520px; top: 440px;\n            animation: fadeIn .2s ease-out var(--cin) both, cursorMove .6s cubic-bezier(.3,.7,.2,1) var(--cin) both; }\n  @keyframes cursorMove { from { transform: translate(260px, 380px); } to { transform: none; } }\n\n  /* scene 6: terminal */\n  .term { margin-top: 56px; background: #08080b; border: 2px solid var(--line); border-radius: 28px; overflow: hidden; }\n  .termbar { height: 58px; background: #16161c; display: flex; align-items: center; gap: 14px; padding-left: 26px; }\n  .termbar i { width: 20px; height: 20px; border-radius: 50%; background: #3a3a44; display: block; }\n  .termbody { padding: 30px 34px 34px; font-family: "JetBrains Mono", "DejaVu Sans Mono", monospace; font-size: 36px; line-height: 1.5; color: #d9d8d2; }\n  .termbody .dollar { color: var(--accent); }\n  .caret { display: inline-block; width: 20px; height: 40px; background: #d9d8d2; vertical-align: -6px; animation: blink 1s steps(1) 0s infinite; }\n  @keyframes blink { 50% { opacity: 0; } }\n',
+    css='  /* scene 2/3: the to-do list */\n  .listhead { position: relative; height: 180px; margin-bottom: 28px; }\n  .listhead > div { position: absolute; left: 0; bottom: 0; }\n  .chips { display: flex; flex-direction: column; gap: 18px; }\n  .chip { display: flex; align-items: center; gap: 26px; align-self: flex-start;\n          background: var(--card); border: 2px solid var(--line); border-radius: 22px;\n          padding: 20px 34px 20px 24px; font-size: 46px; font-weight: 600;\n          animation: slideIn .4s cubic-bezier(.2,.8,.2,1) var(--in) both,\n                     dim .3s ease-out var(--tick) forwards; }\n  .chip:nth-child(even) { margin-left: 34px; }\n  @keyframes dim { to { color: var(--muted); border-color: #3a2a24; } }\n  .box { width: 52px; height: 52px; border-radius: 12px; border: 4px solid #5a5966; flex: none;\n         display: grid; place-items: center;\n         animation: tick .25s ease-out var(--tick) forwards; }\n  @keyframes tick { to { background: var(--accent); border-color: var(--accent); } }\n  .box svg { width: 34px; height: 34px; animation: checkIn .3s cubic-bezier(.2,.9,.3,1.4) var(--tick) both; }\n  @keyframes checkIn { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: none; } }\n  .tag { display: inline-block; font-size: 40px; font-weight: 600; color: var(--muted); margin-top: 10px; }\n\n  /* scene 4: approval card */\n  .card { background: var(--card); border: 2px solid var(--line); border-radius: 32px; padding: 40px; margin-top: 56px; position: relative; }\n  .cardtop { display: flex; justify-content: space-between; align-items: center; font-size: 36px; color: var(--muted); font-weight: 600; }\n  .pill { position: relative; height: 62px; width: 330px; }\n  .pill span { position: absolute; right: 0; top: 0; height: 62px; padding: 0 26px; border-radius: 31px;\n               display: flex; align-items: center; font-size: 32px; font-weight: 700; white-space: nowrap; }\n  .p1 { background: #3a2f17; color: var(--warn); animation: fadeOut .2s linear var(--flip) forwards; }\n  .p2 { background: #163626; color: var(--ok); animation: popIn .4s cubic-bezier(.2,.9,.3,1.3) var(--flip) both; }\n  .posttext { font-size: 44px; font-weight: 600; line-height: 1.3; margin: 34px 0 26px; }\n  .bar { height: 26px; border-radius: 13px; background: #2a2a33; margin-bottom: 18px; }\n  .btn { margin-top: 26px; height: 108px; border-radius: 24px; background: var(--accent); color: var(--on-accent);\n         display: grid; place-items: center; font-size: 46px; font-weight: 800;\n         animation: press .3s ease-in-out var(--press) both, done .3s ease-out var(--flip) forwards; }\n  @keyframes press { 0% { transform: none; } 40% { transform: scale(.94); } 100% { transform: none; } }\n  @keyframes done { to { background: #2a2a33; color: var(--muted); } }\n  .cursor { position: absolute; width: 90px; height: 90px; left: 520px; top: 440px;\n            animation: fadeIn .2s ease-out var(--cin) both, cursorMove .6s cubic-bezier(.3,.7,.2,1) var(--cin) both; }\n  @keyframes cursorMove { from { transform: translate(260px, 380px); } to { transform: none; } }\n\n  /* scene 6: terminal */\n  .term { margin-top: 56px; background: #08080b; border: 2px solid var(--line); border-radius: 28px; overflow: hidden; }\n  .termbar { height: 58px; background: #16161c; display: flex; align-items: center; gap: 14px; padding-left: 26px; }\n  .termbar i { width: 20px; height: 20px; border-radius: 50%; background: #3a3a44; display: block; }\n  .termbody { padding: 30px 34px 34px; font-family: "JetBrains Mono", "DejaVu Sans Mono", monospace; font-size: 36px; line-height: 1.5; color: #d9d8d2; }\n  .termbody .dollar { color: var(--accent); }\n  .caret { display: inline-block; width: 20px; height: 40px; background: #d9d8d2; vertical-align: -6px; animation: blink 1s steps(1) 0s infinite; }\n  @keyframes blink { 50% { opacity: 0; } }\n',
     body='  <!-- Scene 1 (0–3s): hook, readable sound-off -->\n  <div class="scene" style="--out:2.75s">\n    <div class="huge now" style="--in:.05s" data-sfx="pop">Stop writing</div>\n    <div class="huge pop" style="--in:.4s" data-sfx="pop">marketing</div>\n    <div class="huge pop" style="--in:.75s" data-sfx="pop">posts</div>\n    <div class="huge pop accent" style="--in:1.1s" data-sfx="pop">by hand.</div>\n  </div>\n\n  <!-- Scenes 2+3 (3–12.5s): the week\'s list, then it gets done -->\n  <div class="scene" style="--out:12.25s" data-sfx="whoosh:out">\n    <div class="listhead">\n      <div class="big gone" style="--in:3.05s; --out:7.0s" data-sfx="whoosh:out">Your week:</div>\n      <div style="bottom:0">\n        <div class="mid rise" style="--in:7.3s">One plugin. <span class="accent">12 skills.</span></div>\n        <div class="tag fade" style="--in:7.7s">marketing-skill for Claude Code</div>\n      </div>\n    </div>\n    <div class="chips">\n      <div class="chip" style="--in:3.4s;  --tick:8.3s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>Competitor research</div>\n      <div class="chip" style="--in:3.75s; --tick:8.65s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>LinkedIn post</div>\n      <div class="chip" style="--in:4.1s;  --tick:9.0s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>X thread</div>\n      <div class="chip" style="--in:4.45s; --tick:9.35s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>SEO brief</div>\n      <div class="chip" style="--in:4.8s;  --tick:9.7s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>Ad copy variants</div>\n      <div class="chip" style="--in:5.15s; --tick:10.05s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>Cold emails</div>\n      <div class="chip" style="--in:5.5s;  --tick:10.4s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>TikTok script</div>\n      <div class="chip" style="--in:5.85s; --tick:10.75s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>Reddit post</div>\n    </div>\n  </div>\n\n  <!-- Scene 4 (12.5–17.5s): nothing ships without approval -->\n  <div class="scene" style="--out:17.35s" data-sfx="whoosh:out">\n    <div class="big rise" style="--in:12.55s">Nothing posts</div>\n    <div class="big rise accent" style="--in:12.85s">until you say so.</div>\n    <div class="card rise" style="--in:13.3s">\n      <div class="cardtop">\n        <div>LinkedIn · Tue 9:00</div>\n        <div class="pill" style="--flip:15.1s" data-sfx="chime:flip"><span class="p1">Ready for approval</span><span class="p2">Approved ✓</span></div>\n      </div>\n      <div class="posttext">We cut onboarding from 14 days to 3. Here\'s what we stopped doing:</div>\n      <div class="bar" style="width:92%"></div>\n      <div class="bar" style="width:78%"></div>\n      <div class="btn" style="--press:14.85s; --flip:15.1s" data-sfx="click:press">Approve</div>\n      <svg class="cursor" style="--cin:14.1s" viewBox="0 0 24 24"><path d="M4 2.5l15 9.2-6.6 1.4 3.9 7.3-2.7 1.4-3.9-7.3L4.6 19z" fill="#fff" stroke="#0f0f13" stroke-width="1.3" stroke-linejoin="round"/></svg>\n    </div>\n  </div>\n\n  <!-- Scene 5 (17.5–20.7s): free, open, editable -->\n  <div class="scene" style="--out:20.55s" data-sfx="whoosh:out">\n    <div class="huge pop" style="--in:17.6s" data-sfx="pop">Free.</div>\n    <div class="huge pop" style="--in:17.95s" data-sfx="pop">Open source.</div>\n    <div class="huge pop accent" style="--in:18.3s" data-sfx="pop">Yours to edit.</div>\n    <div class="small fade" style="--in:18.9s; margin-top:40px">Every skill is a plain SKILL.md file.</div>\n  </div>\n\n  <!-- Scene 6 (20.7–24s): CTA -->\n  <div class="scene">\n    <div class="big rise" style="--in:20.75s">Get it on GitHub</div>\n    <div class="mid rise accent" style="--in:21.05s; margin-top:18px">marcosmodly/<br>marketing-skill</div>\n    <div class="term rise" style="--in:21.5s">\n      <div class="termbar"><i></i><i></i><i></i></div>\n      <div class="termbody"><span class="dollar">$</span> claude plugin install<br>&nbsp;&nbsp;marketing-skill@marketing-skill<span class="caret"></span></div>\n    </div>\n  </div>\n')
 
 
@@ -1049,7 +1111,7 @@ TEMPLATES["montage.html"] = dict(
             font-size: 32px; font-weight: 700; letter-spacing: .5px; }
   .facts { margin: auto 0; display: flex; flex-direction: column; align-items: center; gap: 30px; text-align: center; }
   .facts.low { margin: auto 0 0; }
-  .price { width: fit-content; padding: 6px 38px 14px; border-radius: 28px; background: var(--accent); color: #fff;
+  .price { width: fit-content; padding: 6px 38px 14px; border-radius: 28px; background: var(--accent); color: var(--on-accent);
            font-size: 112px; font-weight: 900; line-height: 1.1; letter-spacing: -3px; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
   .specs { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; }
   .specs span { padding: 12px 28px 14px; border-radius: 999px; background: #fff; color: #121212; font-size: 44px; font-weight: 800; white-space: nowrap; }
@@ -1321,6 +1383,7 @@ for name, t in TEMPLATES.items():
     t = dict(t)
     t["kit"] = KIT
     t["edit"] = EDIT
+    t["looks"] = LOOKS
     t["fx_script"] = FX_SCRIPT
     t.setdefault("head_extra", "")
     t["doc"] = t["doc"] + ("" if name == "promo.html" else POINTER)

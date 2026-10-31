@@ -333,6 +333,15 @@ command below.
      drop), from `${CLAUDE_PLUGIN_ROOT}/references/editing-techniques.md`,
      which also says how the renderer makes each one, or that it can't.
      Past about 20 seconds, put a re-hook around the middle.
+   - **The visuals:** before choosing a single picture, fill in the
+     one-page visual recipe in `${CLAUDE_PLUGIN_ROOT}/references/visual-design.md`
+     (purpose, feeling, one dominant style, palette roles, the image rule,
+     type, the motion and pacing rules) and show it to the user in a short
+     block. Then give every beat one visual mode (the user's footage, a
+     screenshot, a photo, a diagram or chart, a text card, or a pause),
+     chosen by that file's decision steps, with the user's own material
+     first and every picture passing its five-question test. Change the
+     picture when the idea changes, not on a timer.
    - **The CTA**, matched to the actual goal (follow, comment a specific
      word, check the link in bio, watch the next one) — one CTA, not
      several competing asks.
@@ -385,10 +394,13 @@ command below.
    the script as numbered lines and let `scripts/video/compose.js` build
    a narrated page with captions synced to the voice (with `style: 3d` or
    `style: pixel`, drawn as 3D or pixel-art animation, a shot per line),
-   cut in an editing style (`edit: ugc`, `kinetic`, `fast`, `cinematic`,
-   `meme`, or `clean`, with the hook's visual layer as `hook-fx:` and one
-   or two `*keywords*` a line for the camera to punch in on), and run
-   `hook.js --script` on it;
+   in a visual style that fits the job (`goal:` or `look:`, from
+   `visual-design.md`), cut in an editing style (`edit: ugc`, `kinetic`,
+   `fast`, `cinematic`, `meme`, or `clean`, with `motion:` for how much
+   moves, the hook's visual layer as `hook-fx:`, and one or two `*keywords*`
+   a line for the camera to punch in on), with `[card: ...]` for the key
+   phrase and `[source: ...]` under every number, and run `hook.js --script`
+   on it and act on `compose.js`'s picture notes;
    for anything else,
    copy the template the type or format names to
    `state/videos/<date>-<slug>.html` and rewrite its scenes to the step 4
@@ -556,8 +568,10 @@ an original soundtrack, not footage), where the file was saved, which
 backgrounds were used (stock, with provider, or AI, with tool; or the
 animation style and its shots, and which of the user's images went in them), the sound (genre and hook,
 or the licensed track), the voice (recorded or generated, which voice)
-and how captions were timed, the edit (the editing style, whether it was
-picked to fit the sound or chosen, and the visual hook), which hook
+and how captions were timed, the look and the edit (the visual style and
+why it fits the job, the editing style and how much moves, whether either
+was picked or chosen, and the visual hook), what `--check` said about
+contrast and flashing, which hook
 variants were rendered, and the
 cover frame and its `--cover-ms` — or that none was
 connected/used and this script/package is the deliverable, plus which

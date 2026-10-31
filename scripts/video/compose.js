@@ -107,6 +107,9 @@ const { prepareVoice } = require('./render');
 const { visualIdentity, applyIdentity } = require('./brand');
 const { analyseTrack, alignTrack } = require('./beats');
 const EDIT = require('./edit');
+const LOOK = require('./look');
+const FIT = require('./fit');
+const captions = require('./captions');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const LEAD = 0.15; // the first line starts almost at once; the hook is already on screen
@@ -128,6 +131,7 @@ const LANDSCAPE_CSS = `<style>
   .corner { top: 42px; font-size: 34px; }
   .corner.brand { left: 64px; }
   .corner.series { right: 64px; }
+  .bg-card { left: 170px; right: 170px; top: 70px; bottom: 330px; }
 </style>
 `;
 const MEDIA_EXT = /\.(jpe?g|png|webp|gif|mp4|mov|webm|m4v)$/i;
@@ -205,9 +209,12 @@ function parseBg(text) {
 
 // *keywords* in a line: the text without the asterisks (what's spoken and captioned), and the
 // words to keep lit in the bold look
-const plainText = (s) => s.replace(/\*([^*]+)\*/g, '$1');
+// ~words~ in tildes are the wrong way (struck through in the caution color): "send it on ~Friday~"
+const CAUTION = /~([^~\s](?:[^~]*[^~\s])?)~/g;
+const plainText = (s) => s.replace(/\*([^*]+)\*/g, '$1').replace(CAUTION, '$1');
 const wordKey = (w) => w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 const keywords = (s) => [...s.matchAll(/\*([^*]+)\*/g)].flatMap((m) => m[1].split(/\s+/)).map(wordKey).filter(Boolean);
+const cautions = (s) => [...s.matchAll(CAUTION)].flatMap((m) => m[1].split(/\s+/)).map(wordKey).filter(Boolean);
 
 const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'narrated';
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -246,8 +253,10 @@ function run(cmd, args, opts = {}) {
 }
 
 // One stock photo or clip for a query, via media.js. Returns a path relative to the page, or null.
-function fetchBackground(query, assets, type, count = 1) {
-  const res = run('media.js', ['search', query, '--out', assets, '--count', String(count), ...(type === 'video' ? ['--type', 'video'] : [])]);
+function fetchBackground(query, assets, type, count = 1, { landscape = false } = {}) {
+  // three candidates for each picture kept, so the one with calm room behind the words wins (fit.js)
+  const res = run('media.js', ['search', query, '--out', assets, '--count', String(count), '--pick-from', String(Math.min(10, count * 3)),
+    ...(landscape ? ['--landscape'] : []), ...(type === 'video' ? ['--type', 'video'] : [])]);
   if (res.status !== 0) {
     console.warn(`Note: no background for "${query}": ${(res.stderr || '').trim().split('\n').slice(-3).join(' ')}`);
     return count > 1 ? [] : null;
@@ -269,8 +278,11 @@ window.renderReady = Promise.all([...document.querySelectorAll('.bg-insert')].ma
   const photo = box.parentElement.querySelector('img.bg-media');
   const shot = box.querySelector('img');
   await Promise.all([photo.decode(), shot.decode()]);
-  const k = Math.max(1080 / photo.naturalWidth, 1920 / photo.naturalHeight);
-  const [ox, oy] = [(1080 - photo.naturalWidth * k) / 2, (1920 - photo.naturalHeight * k) / 2];
+  // the frame's size, and where the crop sits (the focus point, centered by default)
+  const [W, H] = [box.parentElement.clientWidth, box.parentElement.clientHeight];
+  const [px, py] = getComputedStyle(photo).objectPosition.split(' ').map((v) => parseFloat(v) / 100);
+  const k = Math.max(W / photo.naturalWidth, H / photo.naturalHeight);
+  const [ox, oy] = [(W - photo.naturalWidth * k) * px, (H - photo.naturalHeight * k) * py];
   const at = box.dataset.at.split(/[\\s,]+/).map(Number);
   const [w, h] = [shot.naturalWidth, shot.naturalHeight];
   const rows = [], rhs = [];
@@ -301,31 +313,59 @@ window.renderReady = Promise.all([...document.querySelectorAll('.bg-insert')].ma
 // One background slot: its picture, when it comes in and goes (edit.js slotTimes), how it comes
 // in (a transition class), and its camera move.
 function bgSlot(i, shot, slot, extraClass = '') {
-  const cls = ['bg', i === 0 ? 'now' : EDIT.transitionClass(shot.transition), extraClass].filter(Boolean).join(' ');
-  const style = `--in:${slot.into}s; ${slot.out !== null ? `--out:${slot.out}s; ` : ''}--dur:${slot.dur}s${shot.move ? `; --kb:${shot.move}` : ''}`;
+  const cls = ['bg', i === 0 ? 'now' : EDIT.transitionClass(shot.transition), shot.card ? 'card' : '', extraClass].filter(Boolean).join(' ');
+  // a focus point keeps the subject in frame however the picture is cropped (9:16 or 16:9), and is where its zoom heads
+  const [fx, fy] = String(shot.focus || '').split(',').map((v) => v.trim());
+  const focus = fx && fy ? `; --ox:${fx}; --oy:${fy}; --fx:${fx}; --fy:${fy}` : '';
+  const style = `--in:${slot.into}s; ${slot.out !== null ? `--out:${slot.out}s; ` : ''}--dur:${slot.dur}s${shot.move ? `; --kb:${shot.move}` : ''}${focus}`;
   const media = shot.media;
   const insert = shot.insert;
-  const inner = !media ? ''
-    : VIDEO_EXT.test(media) ? `<video class="bg-media" src="${esc(media)}"${shot.offset ? ` data-offset="${shot.offset}"` : ''}></video>`
-      : `<img class="bg-media" src="${esc(media)}" alt="">${insert ? `<div class="bg-insert" data-at="${esc(insert.at)}"><img src="${esc(insert.screen)}" alt=""></div>` : ''}`;
-  return `  <!-- background, ${r2(shot.start)}–${r2(shot.end)}s${i > 0 ? `, ${shot.transition}` : ''} -->\n  <div class="${cls}" style="${style}">${inner}</div>`;
+  const len = shot.card ? plainText(shot.card).length : 0;
+  const inner = shot.card ? `<div class="bg-card"><b style="--card-size:${len <= 10 ? 170 : len <= 18 ? 140 : len <= 30 ? 112 : 92}px">${marked(shot.card)}</b></div>`
+    : !media ? ''
+      : VIDEO_EXT.test(media) ? `<video class="bg-media" src="${esc(media)}"${shot.offset ? ` data-offset="${shot.offset}"` : ''}></video>`
+        : `<img class="bg-media" src="${esc(media)}" alt="">${insert ? `<div class="bg-insert" data-at="${esc(insert.at)}"><img src="${esc(insert.screen)}" alt=""></div>` : ''}`;
+  return `  <!-- ${shot.card ? 'text card' : 'background'}, ${r2(shot.start)}–${r2(shot.end)}s${i > 0 ? `, ${shot.transition}` : ''} -->\n  <div class="${cls}" style="${style}">${inner}</div>`;
 }
+
+// Text with its marks as markup: *keywords* lit in the accent, ~wrong~ struck through in the caution color.
+const marked = (text) => esc(text).replace(/\*([^*]+)\*/g, '<b class="kw">$1</b>').replace(CAUTION, '<span class="no">$1</span>');
 
 // Where a line's pictures change, so a long line gets a new picture (or a reframe) every
 // maxHold seconds, cut on the beat: the split points between start and end. With the montage
 // hook, the first line opens on a burst of quick cuts instead.
-function splitPoints(start, end, k, { snapTo, micro } = {}) {
+function splitPoints(start, end, k, { snapTo, micro, clauses = [] } = {}) {
   const points = [];
   if (micro) {
     for (let j = 1; j < k && start + j * micro < end - 0.9; j++) points.push(r2(start + j * micro));
     return points;
   }
+  const reach = (0.45 * (end - start)) / k;
   for (let j = 1; j < k; j++) {
     let p = start + (j * (end - start)) / k;
-    if (snapTo) p = snapTo(p);
+    // the nearest place the line's idea turns, if there's one close to the even split
+    const near = clauses.filter((c) => Math.abs(c - p) <= reach).sort((a, b) => Math.abs(a - p) - Math.abs(b - p))[0];
+    if (near !== undefined) p = near;
+    if (snapTo) {
+      const q = snapTo(p);
+      if (near === undefined || Math.abs(q - p) <= 0.2) p = q; // on the beat when it doesn't pull the cut off the clause
+    }
     if (p - (points[points.length - 1] ?? start) >= 0.9 && end - p >= 0.9) points.push(r2(p));
   }
   return points;
+}
+
+// When each clause of a line starts (after a comma or a full stop, or at "and", "but", "so"...),
+// in video time, from its timed words: where a new picture reads as part of the sentence.
+const TURNS = new Set(['and', 'but', 'so', 'because', 'then', 'when', 'while', 'or', 'until', 'which', 'if', 'now']);
+function clauseStarts(line, words) {
+  const out = [];
+  words.forEach((w, i) => {
+    if (i === 0) return;
+    const prev = words[i - 1].text;
+    if (/[,;:.!?\u2014\u2013]$/.test(prev) || TURNS.has(wordKey(w.text))) out.push(w.start);
+  });
+  return out;
 }
 
 async function main() {
@@ -346,11 +386,15 @@ async function main() {
     const bg = bgs[0] || parseBg('');
     const shot = /\[shot:\s*([^\]]+)\]/i.exec(text);
     const cut = /\[cut:\s*([^\]]+)\]/i.exec(text);
-    const said = text.replace(/\s*\[(bg|shot|cut):[^\]]*\]/gi, '').trim();
+    // [card: 9 days late] shows the line's key phrase as a text card instead of a picture;
+    // [source: ...] puts a source or caveat for its claim on screen while it's said
+    const card = /\[card:\s*([^\]]+)\]/i.exec(text);
+    const source = /\[source:\s*([^\]]+)\]/i.exec(text);
+    const said = text.replace(/\s*\[(bg|shot|cut|card|source):[^\]]*\]/gi, '').trim();
     return {
-      n, text: plainText(said), kw: keywords(said),
-      bg: bg.query, more: bgs.slice(1).map((b) => b.query), screen: bg.screen, at: bg.at, shot: shot ? parseShot(shot[1]) : null,
-      cut: cut ? cut[1].trim().toLowerCase() : null,
+      n, text: plainText(said), kw: keywords(said), no: cautions(said),
+      bg: bg.query, more: bgs.slice(1).map((b) => b.query), screen: bg.screen, at: bg.at, focus: bg.focus, shot: shot ? parseShot(shot[1]) : null,
+      cut: cut ? cut[1].trim().toLowerCase() : null, card: card ? card[1].trim() : null, source: source ? source[1].trim() : null,
     };
   }).filter((l) => l.text);
   const badCut = lines.find((l) => l.cut && !EDIT.TRANSITIONS[l.cut]);
@@ -456,8 +500,11 @@ async function main() {
 
   // ---- the edit: cuts, camera, captions, and finishing, from the script's edit style
   let edit;
+  let look;
   try {
-    edit = EDIT.resolveStyle(meta, sound);
+    // the visual style (look.js): from look:, or picked for the video's job with goal:
+    look = LOOK.resolveLook(meta);
+    edit = EDIT.resolveStyle(meta, sound, look);
   } catch (e) {
     fail(e.message);
   }
@@ -492,15 +539,32 @@ async function main() {
   const snapTo = snap ? (p) => drop + Math.round((p - drop) / beat) * beat
     : track ? (p) => { const b = track.video.beats.find((x) => Math.abs(x - p) < 0.3); return b ?? p; } : null;
   const micro = Math.min(0.6, Math.max(0.3, beat <= 0.6 ? beat : beat / 2));
-  const shots = []; // one per background slot: { start, end, media, transition, move, scene }
-  let cutN = 0;
+  const shots = []; // one per background slot: { start, end, media | card, transition, move, scene }
+  const turnState = { cut: 0, accent: 0 };
+  // each line's words, timed, for splitting a long line where its idea turns
+  const wordCache = new Map();
+  const wordsFor = (i) => wordCache.get(i) || [];
+  if (!style.shots && edit.maxHold) {
+    for (const [i, s] of scenes.entries()) {
+      if (s.card || (i === 0 ? s.end : s.end - s.start) <= edit.maxHold * 1.25) continue;
+      const v = prepareVoice(path.join(dir, s.clip));
+      const timing = await captions.alignWords(v.prepared, s.text, { shift: v.trimmed, sidecarFor: path.join(dir, s.clip) }).catch(() => null);
+      if (timing) wordCache.set(i, timing.words.map((w) => ({ ...w, start: s.voiceAt + w.start })));
+    }
+  }
   let moveN = 0;
   const nextMove = () => edit.moves[moveN++ % edit.moves.length];
   if (!style.shots) {
     scenes.forEach((s, i) => {
       const start = i === 0 ? 0 : s.start;
       const end = s.end;
-      const montageHook = i === 0 && edit.hook === 'montage';
+      const montageHook = i === 0 && edit.hook === 'montage' && !s.card;
+      if (s.card) {
+        // a text card: the line's key phrase on the brand's base color, no picture to fetch
+        shots.push({ start, end, card: s.card, scene: i, first: true, move: 'none',
+          transition: i === 0 ? 'fade' : s.cut || EDIT.transitionFor(edit, i, scenes.length, turnState) });
+        return;
+      }
       const items = [s.bg, ...s.more].filter(Boolean);
       let k = items.length;
       if (k === 1 && edit.maxHold && end - start > edit.maxHold * 1.25) k = Math.min(3, Math.ceil((end - start) / edit.maxHold));
@@ -508,26 +572,31 @@ async function main() {
       // the pictures: several listed, several stock results for one query, or one file reframed
       let media = [];
       if (items.length > 1) {
-        media = items.map((q) => (MEDIA_EXT.test(q) ? q : args.noMedia ? null : fetchBackground(q, assets, meta['bg-type'])));
+        media = items.map((q) => (MEDIA_EXT.test(q) ? q : args.noMedia ? null : fetchBackground(q, assets, meta['bg-type'], 1, { landscape })));
       } else if (items.length === 1 && MEDIA_EXT.test(items[0])) {
         media = Array(k).fill(items[0]);
       } else if (items.length === 1 && !args.noMedia) {
-        const found = fetchBackground(items[0], assets, meta['bg-type'], k);
+        const found = fetchBackground(items[0], assets, meta['bg-type'], k, { landscape });
         media = k > 1 ? found : [found];
         if (!media.length) media = [null];
       } else media = [null];
       for (const m of media) if (m && MEDIA_EXT.test(m) && !fs.existsSync(path.join(dir, m))) console.warn(`Note: background ${m} not found next to the page`);
       k = Math.max(1, media.length);
-      const points = splitPoints(start, end, k, montageHook ? { micro } : { snapTo });
+      // a new picture where the idea turns (a clause: after a comma, at "and", "but", "so"...), on
+      // the beat when one is close, rather than on a timer
+      const clauses = k > 1 && !montageHook ? clauseStarts(s, wordsFor(i)) : [];
+      const points = splitPoints(start, end, k, montageHook ? { micro } : { snapTo, clauses });
       const bounds = [start, ...points, end];
       const reframe = media.length > 1 && media.every((m) => m === media[0]);
-      const inner = reframe && edit.cuts.includes('punch') ? 'punch' : edit.cuts.includes('cut') ? 'cut' : edit.cuts[0];
+      const pool = [edit.base, ...edit.accents];
+      const inner = reframe && pool.includes('punch') && edit.motion !== 'low' ? 'punch' : edit.base === 'fade' ? 'fade' : 'cut';
       for (let j = 0; j < bounds.length - 1; j++) {
         // a clip used twice in one line picks up where it left off
         const offset = j > 0 && media[j] === media[j - 1] && VIDEO_EXT.test(media[j] || '') ? r2(bounds[j] - start) : 0;
         shots.push({
           start: bounds[j], end: bounds[j + 1], media: media[Math.min(j, media.length - 1)], offset, scene: i, first: j === 0,
-          transition: i === 0 && j === 0 ? 'fade' : j > 0 ? (montageHook ? 'cut' : inner) : s.cut || (i === 1 ? edit.drop : edit.cuts[cutN++ % edit.cuts.length]),
+          transition: i === 0 && j === 0 ? 'fade' : j > 0 ? (montageHook ? 'cut' : inner) : s.cut || EDIT.transitionFor(edit, i, scenes.length, turnState),
+          focus: media[j] && media[j] === s.bg ? s.focus : undefined,
           // a reframe of one picture changes its framing at each cut, so the cut reads (a jump cut on a still)
           move: reframe ? ['kbIn', 'kbDynOut', 'kbLeft', 'kbRight'][j % 4] : montageHook && j < bounds.length - 2 ? 'kbDyn' : nextMove(),
           insert: s.screen && media[j] && !VIDEO_EXT.test(media[j]) && media[j] === s.bg ? { screen: s.screen, at: s.at } : null,
@@ -536,42 +605,63 @@ async function main() {
     });
   }
 
+  // ---- how each picture works as a background (fit.js): soft, dark, no subject, or busy behind the words
+  const fitNotes = [];
+  for (const m of [...new Set(shots.map((x) => x.media).filter((m) => m && fs.existsSync(path.join(dir, m))))]) {
+    const shot = shots.find((x) => x.media === m);
+    const focus = shot.focus ? shot.focus.split(',').map((v) => parseFloat(v) / 100) : [0.5, 0.5];
+    const a = FIT.analyse(path.join(dir, m), { landscape, focus });
+    if (a.notes && a.notes.length) fitNotes.push(`${m} (line ${scenes[shot.scene].n}): ${a.notes.join('; ')}`);
+  }
+
   // ---- the page
   let head = html.slice(html.indexOf('<html>'), html.indexOf('</head>') + '</head>'.length);
   if (landscape) head = head.replace('</head>', `${LANDSCAPE_CSS}</head>`);
   const bodyClass = (/<body[^>]*\bclass="([^"]*)"/.exec(html.slice(html.indexOf('</head>'))) || [])[1] || 'fyp';
   // the edit's finishing: caption style, grain, vignette, and a color grade (the bold look keeps its own)
-  const fxClasses = [
+  // the look (look.js): its classes and textures, its headline font, and its accent when the brand has none
+  const identity0 = visualIdentity();
+  const looked = LOOK.lookClasses(look);
+  const headFont = identity0 && identity0.head ? null : look && look.head; // the brand's Headline font wins
+  if (headFont) head = head.replace('</head>', `${LOOK.fontLink(look)}</head>`);
+  const fxClasses = [...new Set([
     !bold && !subtitle && edit.captions !== 'pop' ? `cap-${edit.captions}` : '',
-    edit.grain ? 'fx-grain' : '', edit.vignette ? 'fx-vignette' : '',
-  ].filter(Boolean).join(' ');
+    edit.grain ? 'fx-grain' : '', edit.vignette ? 'fx-vignette' : '', ...looked.classes, headFont ? 'has-head' : '',
+  ].filter(Boolean))].join(' ');
+  const bodyVars = [
+    ...(edit.grade && !bold ? [`--grade: ${edit.grade}`] : []),
+    ...(headFont ? looked.vars : []),
+    ...LOOK.accentVars(look, identity0),
+  ];
   const attrs = [
     `class="${bodyClass}${bold ? ' bold' : ''}${subtitle ? ' sub' : ''}${fxClasses ? ` ${fxClasses}` : ''}"`, ...(landscape ? ['data-size="1920x1080"'] : []), `data-duration="${duration}"`, `data-drop="${drop}"`,
-    `data-edit="${edit.name}"`, ...(edit.grade && !bold ? [`style="--grade: ${edit.grade}"`] : []),
+    `data-edit="${edit.name}"`, ...(look ? [`data-look="${look.name}"`, `data-motion="${edit.motion}"`] : []), ...(bodyVars.length ? [`style="${bodyVars.join('; ')}"`] : []),
     ...(character ? [`data-character="${esc(character)}"`] : []),
     ...(musicSrc ? [`data-music-src="${esc(musicSrc)}"`, 'data-music="none"', ...(track ? [`data-music-start="${track.musicStart}"`] : [])] : [`data-music="${sound.music}"`]),
     ...['bpm', 'key', 'mode', 'energy', 'motif'].filter((k) => sound[k] !== undefined).map((k) => `data-${k}="${esc(String(sound[k]))}"`),
   ].join(' ');
   // the bold look shows the first line from frame 0; a hook that is that line isn't shown twice
   const hookIsLine = bold && meta.hook && wordKey(plainText(meta.hook)) === wordKey(scenes[0].text);
-  const lit = (text) => esc(text).replace(/\*([^*]+)\*/g, '<b class="kw">$1</b>');
+  const lit = marked;
   // the hook's text, with its share of the visual hook: a glitch, a jolt, or its words swelling in turn
   const hookFx = { glitch: 'hk-glitch', shake: 'hk-shake', bounce: 'hk-bounce' }[edit.hook] || '';
   const hookHtml = () => {
     if (edit.hook !== 'bounce') return lit(meta.hook);
     const lits = new Set(keywords(meta.hook));
-    return plainText(meta.hook).split(/\s+/).map((w, k) => `<i style="--k:${k}">${lits.has(wordKey(w)) ? `<b class="kw">${esc(w)}</b>` : esc(w)}</i>`).join(' ');
+    const nos = new Set(cautions(meta.hook));
+    return plainText(meta.hook).split(/\s+/).map((w, k) => `<i style="--k:${k}">${lits.has(wordKey(w)) ? `<b class="kw">${esc(w)}</b>` : nos.has(wordKey(w)) ? `<span class="no">${esc(w)}</span>` : esc(w)}</i>`).join(' ');
   };
   const sceneHtml = scenes.map((s, i) => {
     const last = i === scenes.length - 1;
     const parts = [];
     if (i === 0 && meta.hook && !hookIsLine) parts.push(`    <div class="cap hook${hookFx ? ` ${hookFx}` : ''}"><span>${hookHtml()}</span></div>`);
+    if (s.source) parts.push(`    <div class="source">${esc(s.source)}</div>`);
     if (last && meta.cta) parts.push(`    <div class="end"><div class="cap hl pop" style="--in:${s.start}s" data-sfx="chime"><span>${esc(plainText(meta.cta))}</span></div></div>`);
     // bold: a short line shows whole; a long one a few words at a time, so it doesn't bury the picture.
     // The first line is always whole: it's the cover.
     const whole = i === 0 || s.text.split(/\s+/).length <= BOLD_WHOLE;
     const cls = bold ? `say auto${whole ? ' line' : ''}${i === 0 ? ' now' : ''}` : `say auto${subtitle && i === 0 ? ' now' : ''}`;
-    const kw = s.kw.length ? ` data-kw="${esc([...new Set(s.kw)].join(','))}"` : '';
+    const kw = (s.kw.length ? ` data-kw="${esc([...new Set(s.kw)].join(','))}"` : '') + (s.no.length ? ` data-no="${esc([...new Set(s.no)].join(','))}"` : '');
     parts.push(`    <div class="${cls}" data-voice="${esc(s.clip)}" style="--voice:${s.voiceAt}s"${kw}>${esc(s.text)}</div>`);
     return `  <!-- line ${s.n}, ${s.start}–${s.end}s${s.voiceAt < s.start ? ` (its voice leads the cut from ${s.voiceAt}s)` : ''} -->\n  <div class="scene narr center"${last ? '' : ` style="--out:${r2(s.end - 0.15)}s"`}>\n${parts.join('\n')}\n  </div>`;
   }).join('\n\n');
@@ -632,20 +722,21 @@ ${inserts}</body>
 </html>
 `;
   // the brand's colors, font, and end card, from the Visual Identity
-  const look = visualIdentity();
-  const branded = look ? applyIdentity(doc, look, { pageDir: dir }) : { html: doc, changes: [], problems: [] };
+  const branded = identity0 ? applyIdentity(doc, identity0, { pageDir: dir }) : { html: doc, changes: [], problems: [] };
   fs.writeFileSync(page, branded.html);
 
   console.log(`Wrote ${page}: ${scenes.length} lines, ${duration}s`);
   for (const [i, s] of scenes.entries()) {
     const mine = shots.filter((x) => x.scene === i);
-    const pics = mine.length ? `  ${mine[0].media ? `bg ${mine[0].media}` : 'no bg'}${mine.length > 1 ? ` +${mine.length - 1} more` : ''}${i > 0 ? ` (${mine[0].transition})` : ''}` : '';
+    const pics = mine.length ? `  ${mine[0].card ? `card "${plainText(mine[0].card)}"` : mine[0].media ? `bg ${mine[0].media}` : 'no bg'}${mine.length > 1 ? ` +${mine.length - 1} more` : ''}${i > 0 ? ` (${mine[0].transition})` : ''}${s.source ? ', sourced' : ''}` : '';
     console.log(`  ${String(s.n).padStart(2)}. ${s.start.toFixed(2)}–${s.end.toFixed(2)}s  ${s.clip}${pics}${s.shot && style.shots ? `  shot ${s.shot.name}` : ''}  ${s.text.slice(0, 48)}${s.text.length > 48 ? '...' : ''}`);
   }
-  console.log(`  edit: ${edit.name}${edit.picked ? ' (picked to fit the sound; set edit: to choose)' : ''}: ${edit.about}. Hook: ${edit.hook}; keyword punch-ins: ${edit.punch ? `${Math.round((edit.punch - 1) * 100)}%` : 'off'}${edit.jcut ? `; J-cuts ${edit.jcut}s` : ''}.`);
+  if (look) console.log(`  look: ${look.name}${look.goal && !meta.look ? ` (for goal: ${look.goal})` : ''}: ${look.about}${headFont ? `; headline in ${headFont[0]}` : ''}.`);
+  console.log(`  edit: ${edit.name}${edit.picked ? ' (picked to fit the sound; set edit: to choose)' : ''}: ${edit.about}. Motion: ${edit.motion}. Hook: ${edit.hook}; keyword punch-ins: ${edit.punch ? `${Math.round((edit.punch - 1) * 100)}%` : 'off'}${edit.jcut ? `; J-cuts ${edit.jcut}s` : ''}.`);
+  for (const n of fitNotes) console.warn(`Note: ${n}`);
   if (style.shots) console.log(`  style: ${styleName} (templates/${style.template})`);
   console.log(`  sound: ${musicSrc ? `licensed track ${musicSrc}${track ? `, ${track.bpm} BPM, started at ${track.musicStart}s so its lift lands as the hook ends, cuts on its beat` : ''}` : `${sound.music}${sound.music !== 'none' ? `, ${sound.bpm} BPM, ${sound.key} ${sound.mode || ''}, energy ${sound.energy}, cuts on the beat` : ''}`}${musicSrc ? '' : identity ? ' (the Sonic Identity)' : ' (the template default; no Sonic Identity saved yet)'}`);
-  console.log(`  look: ${branded.changes.length ? branded.changes.join('; ') : 'the template default; no Visual Identity saved yet'}`);
+  console.log(`  brand: ${branded.changes.length ? branded.changes.join('; ') : 'the template default; no Visual Identity saved yet'}`);
   for (const p of branded.problems) console.warn(`Note: ${p}`);
   if (!meta.hook && !bold && !subtitle) console.warn('Note: no hook in the frontmatter, so the first frame has no text. Add "hook: ..." to stop the scroll.');
   if (meta.hook) for (const p of require('./hook').checkHook(meta.hook).problems) console.warn(`Note: hook: ${p} (node hook.js --script ${path.basename(scriptFile)} checks all three layers)`);

@@ -353,10 +353,25 @@ const CAPTION_CSS = `
   body.cap-kinetic:not(.bold):not(.sub) .say.auto .cc i.kw { animation: kinUp .24s cubic-bezier(.2,1.4,.4,1) var(--in) both, kwLit .04s linear var(--in) forwards, kwPop .32s cubic-bezier(.2,1.6,.4,1) var(--in) both; }
   @keyframes kinUp { from { opacity: 0; translate: 0 .5em; } to { opacity: 1; translate: 0 0; } }
   body.cap-fade .say { font-size: 66px; font-weight: 700; -webkit-text-stroke: 0; text-shadow: 0 2px 4px rgba(0,0,0,.55), 0 4px 26px rgba(0,0,0,.6); }
-  body.cap-fade .say.auto > .cc { animation: ccFade .3s ease-out var(--in) both, ccOut .01s linear var(--out, 999s) forwards; }
+  /* a soft dark halo behind each phrase, so quiet captions still read over a bright picture */
+  body.cap-fade .say.auto > .cc { width: fit-content; justify-self: center; padding: .25em 1em; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(8,8,12,.62), rgba(8,8,12,.4) 60%, rgba(8,8,12,0));
+    animation: ccFade .3s ease-out var(--in) both, ccOut .01s linear var(--out, 999s) forwards; }
   body.cap-fade .say.auto .cc i:not(.kw) { color: rgba(255,255,255,.6); animation: ccBright .14s linear var(--in) forwards; }
   @keyframes ccFade { from { opacity: 0; translate: 0 12px; } to { opacity: 1; translate: 0 0; } }
   @keyframes ccBright { to { color: #fff; } }
+  /* panel: each phrase in sentence case on a solid dark panel, readable over any footage, the
+     word being said unmarked (documentary, corporate, minimal) */
+  body.cap-panel .say { font-size: 54px; font-weight: 700; line-height: 1.3; letter-spacing: 0; -webkit-text-stroke: 0; text-shadow: none; }
+  body.cap-panel .say.auto > .cc { width: fit-content; max-width: 100%; justify-self: center; background: rgba(12,12,16,.78); border-radius: .3em;
+    padding: .1em .45em .15em; animation: ccIn .12s ease-out var(--in) both, ccOut .01s linear var(--out, 999s) forwards; }
+  body.cap-panel .say.auto .cc i:not(.kw):not(.no) { color: #fff; animation: none; }
+
+  /* ~wrong~ words (data-no): struck through in the caution color as they're said, so the
+     meaning never rests on color alone */
+  body .say.auto .cc i.no:not(.kw) { text-decoration: line-through .09em transparent; animation: noLit .04s linear var(--in) forwards; }
+  body.cap-kinetic .say.auto .cc i.no:not(.kw) { animation: kinUp .24s cubic-bezier(.2,1.4,.4,1) var(--in) both, noLit .04s linear var(--in) forwards; }
+  @keyframes noLit { to { color: var(--bad, #e0605a); text-decoration-color: var(--bad, #e0605a); } }
 `;
 
 const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

@@ -18,10 +18,14 @@
  *
  * In brand-voice.md:
  *   ## Visual Identity
- *   - Accent: #e07a55
+ *   - Accent: #db7350
  *   - Background: #0f0f13
  *   - Text: #f3f2ee
  *   - Font: Space Grotesk          (any Google Fonts family; everyday posts keep TikTok Sans)
+ *   - Headline font: DM Serif Display   (optional: the hook and text cards; two families are enough.
+ *                                    A weight after the name picks one: "Inter 800"; without one, the regular)
+ *   - Caution: #e0605a             (optional: ~wrong~ words, struck through)
+ *   - Positive: #3fbf7f            (optional: checkmarks and good outcomes)
  *   - Logo: state/videos/assets/logo.png
  *   - Handle: @yourbrand
  *   - Character: state/videos/assets/hero.glb   (your own rigged 3D character, in the mascot's place)
@@ -53,8 +57,10 @@ function visualIdentity(file = path.join(ROOT, 'references', 'brand-voice.md')) 
   const id = {
     accent: color(field('Accent')), bg: color(field('Background')), text: color(field('Text')),
     font: field('Font'), logo: field('Logo'), handle: field('Handle'), character: field('Character'),
+    head: field('Headline font'), bad: color(field('Caution')), ok: color(field('Positive')),
   };
   if (id.font && !/^[A-Za-z0-9 ]+$/.test(id.font)) id.font = undefined;
+  if (id.head && !/^[A-Za-z0-9 ]+$/.test(id.head)) id.head = undefined;
   return Object.values(id).some(Boolean) ? id : null;
 }
 
@@ -73,6 +79,9 @@ const luminance = (hex) => {
   });
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 };
+// The text color that reads best on a fill: white or near-black, whichever has more contrast
+// (stickers and labels on the accent are small text, so every bit counts).
+const onAccent = (fill) => (contrast('#ffffff', fill) >= contrast('#121212', fill) ? '#fff' : '#121212');
 function contrast(a, b) {
   const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p);
   return (x + 0.05) / (y + 0.05);
@@ -80,11 +89,11 @@ function contrast(a, b) {
 
 // Contrast warnings for the identity's colors: white text sits on the accent (highlighted
 // captions, buttons), and body text on the background.
-function contrastProblems(id, defaults = { accent: '#e07a55', bg: '#0f0f13', text: '#f3f2ee' }) {
+function contrastProblems(id, defaults = { accent: '#db7350', bg: '#0f0f13', text: '#f3f2ee' }) {
   const c = { ...defaults, ...Object.fromEntries(Object.entries(id || {}).filter(([, v]) => v)) };
   const problems = [];
   const onAccent = contrast('#ffffff', c.accent);
-  if (onAccent < 3) problems.push(`white text on the accent ${c.accent} has a contrast of ${onAccent.toFixed(1)}:1, under 3:1; highlighted captions and buttons will be hard to read, so use a darker accent`);
+  if (onAccent < 3) problems.push(`white text on the accent ${c.accent} has a contrast of ${onAccent.toFixed(1)}:1, under 3:1, so highlighted captions, stickers, and buttons on it use dark text instead (a darker accent keeps them white)`);
   const body = contrast(c.text, c.bg);
   if (body < 4.5) problems.push(`text ${c.text} on background ${c.bg} has a contrast of ${body.toFixed(1)}:1, under 4.5:1`);
   return problems;
@@ -120,7 +129,7 @@ function applyIdentity(html, id, { pageDir = '.', endcard, lines = [], fine = ''
   const changes = [];
   const problems = contrastProblems(id);
   // what an earlier run added
-  html = html.replace(/<style id="brand">[\s\S]*?<\/style>\n?/, '').replace(/<link id="brand-font"[^>]*>\n?/, '')
+  html = html.replace(/<style id="brand">[\s\S]*?<\/style>\n?/, '').replace(/<link id="brand-font"[^>]*>\n?/g, '')
     .replace(/\n? *<!-- brand:endcard -->[\s\S]*?<!-- \/brand:endcard -->/, '');
   html = html.replace(/(<div class="scene[^"]*") style="--out:[\d.]+s" data-brand-out>/, '$1>');
   html = onBody(html, (attrs) => {
@@ -129,19 +138,22 @@ function applyIdentity(html, id, { pageDir = '.', endcard, lines = [], fine = ''
   });
 
   const vars = [];
-  if (id.accent) vars.push(`--accent: ${id.accent};`);
+  // text on the accent: white when it reads (3:1, these are big words), else near-black
+  if (id.accent) vars.push(`--accent: ${id.accent};`, `--on-accent: ${onAccent(id.accent)};`);
   // the soft background glows, tinted from the accent so they don't clash with it
   const glows = id.accent ? `  .glow.g1 { background: ${mix(id.accent, id.bg || '#0f0f13', 0.45)}; } .glow.g2 { background: ${mix(id.accent, id.bg || '#0f0f13', 0.7)}; }` : '';
   if (id.bg) {
     vars.push(`--bg: ${id.bg};`, `--card: ${mix(id.bg, '#ffffff', 0.07)};`, `--line: ${mix(id.bg, '#ffffff', 0.14)};`);
   }
   if (id.text) vars.push(`--text: ${id.text};`);
+  if (id.bad) vars.push(`--bad: ${id.bad};`);
+  if (id.ok) vars.push(`--ok: ${id.ok};`);
   if (id.text || id.bg) vars.push(`--muted: ${mix(id.text || '#f3f2ee', id.bg || '#0f0f13', 0.42)};`);
   const css = [];
   if (vars.length) {
     css.push(`  :root { ${vars.join(' ')} }`);
     if (glows) css.push(glows);
-    changes.push(`colors (${['accent', 'bg', 'text'].filter((k) => id[k]).map((k) => `${k} ${id[k]}`).join(', ')})`);
+    changes.push(`colors (${['accent', 'bg', 'text', 'bad', 'ok'].filter((k) => id[k]).map((k) => `${{ bad: 'caution', ok: 'positive' }[k] || k} ${id[k]}`).join(', ')})`);
   }
   let fontLink = '';
   if (id.font && id.font !== 'Inter') {
@@ -149,6 +161,15 @@ function applyIdentity(html, id, { pageDir = '.', endcard, lines = [], fine = ''
     // everyday posts keep TikTok Sans, the platforms' own caption font
     css.push(`  body:not(.fyp) { font-family: "${id.font}", "Inter", "Liberation Sans", "Noto Color Emoji", sans-serif; }`);
     changes.push(`font ${id.font}`);
+  }
+  // the headline font: the hook and text cards (the body font stays for captions and labels)
+  if (id.head) {
+    // "Inter 800" asks for that weight; a display face without one ("Archivo Black") is used as drawn
+    const [, family, weight] = /^(.*?)(?:\s+(\d{3}))?$/.exec(id.head.trim());
+    fontLink += `<link id="brand-font" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${family.replace(/ /g, '+')}${weight ? `:wght@${weight}` : ''}&display=block">\n`;
+    css.push(`  body { --font-head: "${family}"; --head-weight: ${weight || 400}; }`);
+    html = onBody(html, (attrs) => (/\bhas-head\b/.test(attrs) ? attrs : /class="/.test(attrs) ? attrs.replace(/class="([^"]*)"/, 'class="$1 has-head"') : `${attrs} class="has-head"`));
+    changes.push(`headline font ${id.head}`);
   }
   if (css.length || fontLink) html = html.replace('</head>', `${fontLink}<style id="brand">\n${css.join('\n')}\n</style>\n</head>`);
 
@@ -230,4 +251,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { visualIdentity, applyIdentity, contrastProblems, contrast };
+module.exports = { visualIdentity, applyIdentity, contrastProblems, contrast, onAccent };

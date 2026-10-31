@@ -15,6 +15,7 @@
  *               [--bold] [--series "week 2"] [--brand "Your Name"]
  *               [--edit ugc|meme|fast|kinetic|cinematic|clean] [--hook-fx zoom|shake|glitch|flash|bounce|none]
  *               [--punch 10%] [--focus 50%,32%] [--broll "assets/app.mp4@invoice+2.5, assets/shot.png@6.2"]
+ *               [--look documentary|social|minimal|...] [--motion low|medium|high]
  *
  * --min-pause: pauses at least this long are cut (shorter ones are breathing room and stay).
  * --pad: how much of each pause stays on either side of the cut, so words aren't clipped.
@@ -34,6 +35,8 @@
  * "file@where+seconds", comma-separated, where "where" is seconds into the cut, or a word or
  * phrase from --text (the first time it's said); "+seconds" is how long (default 2). Use the
  * user's own screen recordings, product shots, or photos; the take's sound plays on under them.
+ * --look sets the visual style (look.js: its captions, grade, texture, and headline font; a
+ * documentary look puts the captions on a solid panel, for example), and --motion how much moves.
  */
 const fs = require('fs');
 const path = require('path');
@@ -43,6 +46,7 @@ const { probeDuration } = require('./render');
 const { sonicIdentity } = require('./compose');
 const { visualIdentity, applyIdentity } = require('./brand');
 const EDIT = require('./edit');
+const LOOK = require('./look');
 
 const TEMPLATE = path.join(__dirname, 'templates', 'narrated.html');
 const TAIL = 1.2; // after the take ends, room for the sonic logo
@@ -57,7 +61,7 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--bold') args.bold = true;
-    else if (['--out', '--min-pause', '--pad', '--text', '--page', '--hook', '--cta', '--series', '--brand', '--edit', '--hook-fx', '--punch', '--focus', '--broll'].includes(a)) args[a.slice(2).replace(/-(\w)/g, (m, c) => c.toUpperCase())] = argv[++i];
+    else if (['--out', '--min-pause', '--pad', '--text', '--page', '--hook', '--cta', '--series', '--brand', '--edit', '--hook-fx', '--punch', '--focus', '--broll', '--look', '--motion'].includes(a)) args[a.slice(2).replace(/-(\w)/g, (m, c) => c.toUpperCase())] = argv[++i];
     else if (a === '-h' || a === '--help') args.help = true;
     else args.positional.push(a);
   }
@@ -71,8 +75,11 @@ function ffmpeg(args) {
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 // *words* in asterisks: kept yellow in the bold look, never part of the words timed to the voice
-const plainText = (s) => s.replace(/\*([^*]+)\*/g, '$1');
-const lit = (s) => esc(s).replace(/\*([^*]+)\*/g, '<b class="kw">$1</b>');
+// ~words~ in tildes: the wrong way, struck through in the caution color
+const CAUTION = /~([^~\s](?:[^~]*[^~\s])?)~/g;
+const plainText = (s) => s.replace(/\*([^*]+)\*/g, '$1').replace(CAUTION, '$1');
+const lit = (s) => esc(s).replace(/\*([^*]+)\*/g, '<b class="kw">$1</b>').replace(CAUTION, '<span class="no">$1</span>');
+const cautions = (s) => [...new Set([...s.matchAll(CAUTION)].flatMap((m) => m[1].split(/\s+/)).map((w) => w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')).filter(Boolean))];
 const keywords = (s) => [...new Set([...s.matchAll(/\*([^*]+)\*/g)].flatMap((m) => m[1].split(/\s+/))
   .map((w) => w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')).filter(Boolean))];
 const r2 = (t) => Math.round(t * 100) / 100;
@@ -159,12 +166,21 @@ function writePage(page, clipSrc, length, args, { bounds = [], words = [] } = {}
       energy: Number.isFinite(id.energy) ? Math.max(1, id.energy - 1) : undefined, motif: id.motif,
     }).filter(([, v]) => v !== undefined && v !== '' && !Number.isNaN(v))));
   }
-  const edit = EDIT.resolveStyle({ edit: args.edit || 'ugc', 'hook-fx': args.hookFx, punch: args.punch }, sound);
+  const look = LOOK.resolveLook({ look: args.look, motion: args.motion });
+  const edit = EDIT.resolveStyle({ edit: args.edit || (look ? look.edit : 'ugc'), 'hook-fx': args.hookFx, punch: args.punch, motion: args.motion }, sound, look);
   if (edit.hook === 'montage') edit.hook = 'zoom'; // one take, so no burst of other pictures
   const duration = r2(length + TAIL);
-  const fx = [!args.bold && edit.captions !== 'pop' ? `cap-${edit.captions}` : '', edit.grain ? 'fx-grain' : '', edit.vignette ? 'fx-vignette' : ''].filter(Boolean).join(' ');
+  // the look's classes, textures, headline font, and accent (the brand's own win over it)
+  const id0 = visualIdentity();
+  const looked = LOOK.lookClasses(look);
+  const headFont = id0 && id0.head ? null : look && look.head;
+  if (headFont) head = head.replace('</head>', `${LOOK.fontLink(look)}</head>`);
+  const fx = [...new Set([!args.bold && edit.captions !== 'pop' ? `cap-${edit.captions}` : '', edit.grain ? 'fx-grain' : '', edit.vignette ? 'fx-vignette' : '',
+    ...looked.classes, headFont ? 'has-head' : ''].filter(Boolean))].join(' ');
+  const vars = [...(edit.grade && !args.bold ? [`--grade: ${edit.grade}`] : []), ...(headFont ? looked.vars : []),
+    ...LOOK.accentVars(look, id0)];
   const attrs = [`class="fyp${args.bold ? ' bold' : ''}${fx ? ` ${fx}` : ''}"`, `data-duration="${duration}"`, `data-drop="${Math.min(2, r2(length / 3))}"`, `data-edit="${edit.name}"`,
-    ...(edit.grade && !args.bold ? [`style="--grade: ${edit.grade}"`] : []),
+    ...(look ? [`data-look="${look.name}"`] : []), ...(vars.length ? [`style="${vars.join('; ')}"`] : []),
     ...['music', 'bpm', 'key', 'mode', 'energy', 'motif'].filter((k) => sound[k] !== undefined).map((k) => `data-${k}="${esc(String(sound[k]))}"`)].join(' ');
   // the dynamic zoom: a new framing at every jump cut (not in the clean edit)
   const zoom = edit.name === 'clean' ? 0 : Math.max(1.1, edit.punch || 1.1);
@@ -182,7 +198,8 @@ function writePage(page, clipSrc, length, args, { bounds = [], words = [] } = {}
   if (args.cta) parts.push(`    <div class="end"><div class="cap hl pop" style="--in:${r2(Math.max(0, length - 2.5))}s" data-sfx="chime"><span>${esc(plainText(args.cta))}</span></div></div>`);
   if (args.text) {
     const kw = keywords(args.text);
-    parts.push(`    <div class="say auto" data-clip="take"${kw.length ? ` data-kw="${esc(kw.join(','))}"` : ''}>${esc(plainText(args.text).trim())}</div>`);
+    const no = cautions(args.text);
+    parts.push(`    <div class="say auto" data-clip="take"${kw.length ? ` data-kw="${esc(kw.join(','))}"` : ''}${no.length ? ` data-no="${esc(no.join(','))}"` : ''}>${esc(plainText(args.text).trim())}</div>`);
   }
   const corners = [['brand', args.brand], ['series', args.series]].filter(([, v]) => v)
     .map(([k, v]) => `\n  <div class="corner ${k}" style="--out:${r2(length)}s">${esc(v)}</div>`).join('');
@@ -196,11 +213,12 @@ function writePage(page, clipSrc, length, args, { bounds = [], words = [] } = {}
     brolls.push(b);
   }
   brolls.sort((a, b) => a.at - b.at);
-  const cutList = edit.cuts.filter((c) => EDIT.TRANSITIONS[c].covers || c === 'fade');
+  // cutaways come in on the style's own base cut, the first on an accent
+  const cutList = [edit.base, ...(edit.accents || [])].filter((c) => EDIT.TRANSITIONS[c].covers || c === 'fade');
   const brollHtml = brolls.map((b, k) => {
     const prev = brolls[k - 1];
     if (prev && b.at < prev.end) b.at = prev.end;
-    const tr = cutList[k % cutList.length] || 'cut';
+    const tr = (k === 0 && cutList[1]) || cutList[0] || 'cut';
     const src = path.relative(path.dirname(page), path.resolve(path.dirname(page), b.file)).split(path.sep).join('/');
     if (!fs.existsSync(path.resolve(path.dirname(page), b.file))) notes.push(`--broll: ${b.file} not found next to the page; put it in assets/`);
     const media = /\.(mp4|mov|webm|m4v)$/i.test(b.file) ? `<video class="bg-media" src="${esc(src)}" data-loop="false"></video>` : `<img class="bg-media" src="${esc(src)}" alt="">`;
@@ -238,10 +256,9 @@ ${parts.join('\n')}
 </body>
 </html>
 `;
-  const look = visualIdentity();
-  const branded = look ? applyIdentity(doc, look, { pageDir: path.dirname(page) }) : { html: doc, changes: [], problems: [] };
+  const branded = id0 ? applyIdentity(doc, id0, { pageDir: path.dirname(page) }) : { html: doc, changes: [], problems: [] };
   fs.writeFileSync(page, branded.html);
-  return { duration, sound, identity: !!id, look: branded, edit, brolls, notes, zoom };
+  return { duration, sound, identity: !!id, look: branded, edit, brolls, notes, zoom, lookName: look ? `${look.name}: ${look.about}` : '' };
 }
 
 async function main() {
@@ -297,7 +314,8 @@ async function main() {
     for (const b of brolls) console.log(`  b-roll ${b.file} ${b.at}–${b.end}s (${b.tr})`);
     for (const n of notes) console.warn(`Note: ${n}`);
     console.log(`  sound: the take's own voice over ${sound.music}${identity ? ' (the Sonic Identity, one energy step lower)' : ' (the template default)'}`);
-    console.log(`  look: ${look.changes.length ? look.changes.join('; ') : 'the template default; no Visual Identity saved yet'}`);
+    console.log(`  brand: ${look.changes.length ? look.changes.join('; ') : 'the template default; no Visual Identity saved yet'}`);
+    if (written.lookName) console.log(`  look: ${written.lookName}`);
     for (const p of look.problems) console.warn(`Note: ${p}`);
     if (!args.text) console.warn('Note: no --text, so no captions. Most people watch muted: pass what\'s said, word for word.');
     if (!args.hook) console.warn('Note: no --hook, so the first frame has no text. Add one to stop the scroll.');

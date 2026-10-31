@@ -168,6 +168,7 @@ node cut.js take.mp4 --text "what's said" --page page.html # a filmed talking-he
 node cut.js take.mp4 --text "what's said" --page page.html --broll "assets/app.mp4@invoice+2"  # ...cutting away to your screen recording at "invoice"
 node hook.js "hook one" "hook two" "hook three"            # each hook's type, what to fix, and whether they're different types
 node hook.js --script script.md                           # a script's hook in all three layers: on screen, spoken, and what moves
+node fit.js assets/a.jpg assets/b.jpg                     # how well each works behind words: sharpness, exposure, subject, calm room for captions
 ```
 
 Every page's hook is on screen from the first frame, which is also the
@@ -182,7 +183,9 @@ the sonic logo), the visual counterpart of the Sonic Identity.
 Every render lints its layout as it goes: text outside the area the
 platforms' buttons and captions leave clear, text spilling out of its box
 or clipped, and text running into other text or a card all get reported
-with the time they happen. That's what catches rewritten copy that runs
+with the time they happen. `--check` also measures each text's contrast
+against the actual picture behind it, and catches flashing (more than three
+a second) and constant shaking. That's what catches rewritten copy that runs
 long. `check.js` runs the same lint over every template (or the pages you
 name), checks every sound cue, the music settings, the fonts, and the
 loudness, and writes a report with a contact sheet per page to look over.
@@ -289,6 +292,53 @@ How a video's soundtrack is put together:
   your takes, fetches a background per line, times every scene to its line
   with cuts on the beat, and writes the page with the hook on screen from
   the first frame.
+
+### The look: style, color, pictures, and type
+
+Before the edit comes the look: one coherent visual system for the whole
+video, chosen for its job rather than for what's trending. `goal:` picks one
+(`teach`, `trust`, `entertain`, `story`, `sell`, `suspense`, `inspire`,
+`review`, `comedy`, `music`), or `look:` names it:
+
+| `look:` | Feels like |
+|---|---|
+| `social` | Social-native short-form: big captions, punch-ins, one bold accent |
+| `minimal`, `corporate` | A neutral base and one accent; captions on a clean panel |
+| `explainer` | Educational: crisp, a step at a time, words building as they're said |
+| `documentary` | Credible: natural color, clean cuts, sources on screen |
+| `cinematic`, `luxury` | A brand film, or premium: serif titles, a deliberate grade, grain, a vignette |
+| `editorial` | Magazine: a big serif headline, slides and wipes on the turns |
+| `tech` | Futuristic: dark, a cyan accent, a faint grid, glitches only on the turns |
+| `retro` | VHS: faded color, scanlines, a terminal headline |
+| `suspense` | Dark, slow, held frames, no flashes |
+| `cozy`, `handmade` | Lo-fi and calm, or tactile with a paper texture and handwriting |
+| `playful` | Comedy: bright and punchy |
+
+Each sets the headline font, the captions, the color grade, a texture, and
+how much moves (`motion: low`, `medium`, or `high`; low is the calm option
+for serious videos and motion-sensitive viewers). Your Visual Identity always
+wins over it: add `Headline font:`, `Caution:`, and `Positive:` to it for a
+second font and color roles.
+
+The pictures get as much care:
+- `[card: 9 days late]` shows a line's key phrase as a text card instead of a
+  picture, and `[source: ...]` puts a source on screen under any number.
+- `*key*` words light up in your accent; `~wrong~` words are struck through in
+  your caution color, so meaning never rests on color alone.
+- Stock is picked for calm room behind the words: three candidates per
+  picture, the best kept (`fit.js`), and `compose.js` warns about any picture
+  that's soft, dark, subject-less, or busy where the captions go.
+  `[bg: assets/photo.jpg focus=30%,40%]` keeps your subject in frame however
+  it's cropped.
+- A long line changes picture where its idea turns (at a comma, an "and" or
+  "but"), not on a timer.
+- `--check` measures every caption's contrast against the real picture behind
+  it, fails more than three flashes a second, and notes constant shaking.
+
+[`references/visual-design.md`](../references/visual-design.md) is the full
+guide: the one-page visual recipe, color directions by mood, the picture
+hierarchy and a five-question test, shot types and how to get each, type,
+motion, pacing, and 30 common styles mapped to settings.
 
 ### How it's cut: editing styles
 

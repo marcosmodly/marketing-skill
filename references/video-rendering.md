@@ -70,6 +70,54 @@ share the voice files, so make the vertical one first, then compose again
 with `--format landscape --out <name>-landscape.html`. Pixel art is
 vertical only.
 
+## The look: style, color, pictures, and type
+
+Before writing the visual lines, fill in the one-page visual recipe from
+`visual-design.md` (purpose, feeling, one dominant style, palette roles, the
+image rule, type, the motion and pacing rules) and tell the user in a short
+block. Then set it in the frontmatter:
+
+- `goal:` picks the look and how much moves for the video's job: `teach`,
+  `trust`, `entertain`, `story`, `sell`, `suspense`, `inspire`, `review`,
+  `comedy`, or `music`.
+- `look:` sets the visual style directly: `social`, `minimal`, `explainer`,
+  `documentary`, `corporate`, `cinematic`, `editorial`, `luxury`, `tech`,
+  `retro`, `suspense`, `cozy`, `handmade`, or `playful`. Each sets the hook's
+  type and treatment, a headline font, the captions (`panel` puts each
+  phrase on a solid dark panel, readable over any footage), a grade, a
+  texture (grain, a vignette, scanlines, a grid, paper), an accent when the
+  brand has none, and the editing style. The brand's own colors and
+  `Headline font:` win over the look's.
+- `motion: low`, `medium`, or `high` sets how much moves; `low` is the calm,
+  accessible one.
+
+Per line, choose one visual mode (the map in `visual-design.md`):
+
+- `[card: 9 days late]`: the line's key phrase as a text card on the brand's
+  base color, instead of a picture. For the one thing to remember, a number,
+  or a pause; don't repeat the whole line.
+- `[source: Freelancer survey, 2025]`: a small source or caveat on screen
+  for the whole line. Every number, result, or claim gets one (`hook.js
+  --script` asks for it), and only real sources.
+- `[bg: assets/photo.jpg focus=30%,40%]`: a focus point that keeps the
+  subject in frame however the picture is cropped (9:16 and 16:9 differ),
+  and that the slow zoom heads for.
+- Mark words by their job: `*key*` (lit in the accent, bigger) and
+  `~wrong~` (struck through in the caution color: "send it before Friday,
+  not on ~Friday night~"). One or two a line.
+- Write stock queries as shots ("close-up hands typing invoice laptop
+  night"), not topics. `compose.js` fetches three candidates per picture and
+  keeps the best fit (`fit.js`: sharp enough, well exposed, a clear subject,
+  calm room behind the captions and the hook), and prints a note on any
+  picture that's soft, dark, subject-less, or busy behind the words. Act on
+  the notes before rendering: a calmer picture, a focus point, or panel
+  captions.
+
+`render.js --check` also measures every text's contrast against the real
+picture behind it (4.5:1 small, 3:1 large), fails more than three flashes in
+a second, and notes constant shaking, every picture moving the same way, or
+a different transition on every cut.
+
 ## The edit: how it's cut
 
 Every narrated video is cut in an editing style, set with `edit:` in the
@@ -96,7 +144,9 @@ the user, and offer another when they describe a feel ("more energy",
   the cut still reads.
 - **One line's own cut.** `[cut: glitch]` (or `whip`, `punch`, `flash`,
   `zoom`, `mask`, `leak`, `burn`, ...) on a line sets how it comes in, for
-  the moment that means something: the reveal, the turn, the payoff.
+  the moment that means something: the reveal, the turn, the payoff. The
+  rest stay on the style's clean base cut, with its accents only on the drop,
+  the payoff, and a turn every few cuts.
 - **Sounds that sell the cuts.** Styles with sounds put a whoosh on whips
   and zooms, an impact on punches, a glitch on glitches, and a riser into
   the drop; they duck under the voice like everything else.

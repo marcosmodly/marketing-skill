@@ -5,6 +5,49 @@ Skills that read "our changelog" for source material read this file too.
 
 ## 0.8.0 (unreleased)
 
+- **Looks: one coherent visual style per video.** `look:` sets the hook's
+  type and treatment, a headline font, the captions, a color grade, a
+  texture, an accent, the editing style, and how much moves, together:
+  `social`, `minimal`, `explainer`, `documentary`, `corporate`, `cinematic`,
+  `editorial`, `luxury`, `tech`, `retro` (scanlines and a tracking band),
+  `suspense`, `cozy`, `handmade` (paper texture), or `playful`. `goal:`
+  picks one for the video's job (`teach`, `trust`, `story`, `sell`...). The
+  brand's Visual Identity wins over a look's colors and font.
+- **Motion intensity.** `motion: low`, `medium`, or `high` (`--motion` on
+  `cut.js`). Low drops shakes, flashes, glitches, spins, and whips, softens
+  punch-ins and captions, and holds pictures longer: the calm option for
+  serious and premium videos and for motion-sensitive viewers.
+- **Transitions with intention.** Each editing style now keeps one clean base
+  cut and saves its conspicuous transitions for the drop, the payoff, and a
+  turn every few cuts, instead of a different transition on every cut.
+- **Visual QA in `--check` and `check.js`**: every text's contrast measured
+  against the pixels actually behind it (4.5:1 small, 3:1 large, at phone
+  size); more than three flashes in a second fails; constant shaking, every
+  picture moving the same way, and a different transition on every cut are
+  noted.
+- **Text cards, sources, and color roles.** `[card: 9 days late]` shows a
+  line's key phrase on the brand's base color instead of a picture;
+  `[source: ...]` puts a source under a claim for the whole line (and
+  `hook.js --script` asks for one on every number); `~wrong~` words are struck
+  through in the caution color, beside `*key*` words in the accent. Panel
+  captions (`captions-fx: panel`) set each phrase on a solid dark panel; soft
+  captions get a dark halo. Text on the accent (stickers, chips, buttons,
+  highlighted captions) is whichever of white or near-black reads better on
+  it: near-black on the default coral, which is now a shade deeper.
+- **Pictures picked and checked.** `fit.js` measures how well a picture works
+  behind words (sharpness at the frame's size, exposure, a clear subject,
+  calm room where the captions and hook sit); `media.js --pick-from` keeps the
+  best of several stock results, `compose.js` fetches three per picture and
+  warns about the user's own photos, and `focus=` on a background keeps its
+  subject in frame in any crop. A long line now changes picture where its
+  idea turns (a clause), on the beat when one is close, instead of on a timer.
+- The Visual Identity takes `Headline font:` (a second family for the hook and
+  text cards), `Caution:`, and `Positive:`.
+- **`references/visual-design.md`**: the one-page visual recipe, styles matched
+  to the video's job, palette roles and color directions by mood, the picture
+  hierarchy and five-question test, shot types and how to get each, type,
+  motion intensity, pacing, a visual map per line with its decision steps,
+  and 30 common styles mapped to settings (or "not built").
 - **Editing styles: how a video is cut, in one word.** `edit:` in a
   narrated script picks `ugc` (hard cuts and punch-ins on the beat, a fast
   zoom on the hook, bouncing captions), `kinetic` (slides, iris masks, and

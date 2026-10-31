@@ -86,6 +86,9 @@ set, it looks like:
 - Background: #0b1020
 - Text: #f5f7ff
 - Font: Space Grotesk
+- Headline font: DM Serif Display (optional: the hook and text cards; add a weight, "Inter 800", for a family with several)
+- Caution: #e0605a (optional: ~wrong~ words, struck through)
+- Positive: #3fbf7f (optional: checkmarks and good outcomes)
 - Logo: state/videos/assets/logo.png
 - Handle: @yourbrand
 - Character: state/videos/assets/mascot.glb (optional: the brand's own rigged 3D character, in place of the robot in 3D videos)

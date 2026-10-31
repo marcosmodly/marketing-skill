@@ -8,7 +8,7 @@
  *
  * Usage:
  *   node media.js search "<query>" --out <assets dir> [--type photo|video|music] [--count 3]
- *                 [--provider pexels|pixabay|openverse]
+ *                 [--provider pexels|pixabay|openverse] [--pick-from 6] [--landscape]
  *   node media.js credit <file> --ai "<tool / model>" [--prompt "<prompt used>"]
  *   node media.js credit <file> --source "<library or site>" --license "<license>"
  *                 [--link "<page>"] [--creator "<name>"] [--line "<credit line, if one is required>"]
@@ -23,6 +23,10 @@
  * - Pixabay needs no credit, but files must be downloaded rather than
  *   hotlinked, searches are cached for 24 hours, and there are no bulk
  *   downloads (--count is capped at 10).
+ *
+ * --pick-from 6 downloads up to six candidates and keeps the --count that work best as a
+ * background (fit.js: sharp enough, well exposed, a clear subject, calm room behind the captions
+ * and the hook), deleting the rest; --landscape measures them for a 16:9 frame.
  * - Openverse results are limited to licenses that allow commercial use and
  *   modification (no NC or ND); CC BY and BY-SA need a credit.
  *
@@ -39,7 +43,8 @@ const { spawnSync } = require('child_process');
 
 // Node's fetch ignores HTTP(S)_PROXY unless NODE_USE_ENV_PROXY is set at startup,
 // so behind a proxy, re-run this script with it on.
-if ((process.env.HTTPS_PROXY || process.env.https_proxy) && !process.env.NODE_USE_ENV_PROXY) {
+// (only when run, not when another script requires it for keepBest)
+if (require.main === module && (process.env.HTTPS_PROXY || process.env.https_proxy) && !process.env.NODE_USE_ENV_PROXY) {
   const run = spawnSync(process.execPath, process.argv.slice(1), {
     stdio: 'inherit',
     env: { ...process.env, NODE_USE_ENV_PROXY: '1', NODE_NO_WARNINGS: '1' },
@@ -67,7 +72,8 @@ function parseArgs(argv) {
   const args = { positional: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (['--out', '--type', '--count', '--provider', '--ai', '--prompt', '--source', '--license', '--link', '--creator', '--line'].includes(a)) args[a.slice(2)] = argv[++i];
+    if (['--out', '--type', '--count', '--provider', '--ai', '--prompt', '--source', '--license', '--link', '--creator', '--line', '--pick-from'].includes(a)) args[a.slice(2).replace(/-(\w)/g, (m, c) => c.toUpperCase())] = argv[++i];
+    else if (a === '--landscape') args.landscape = true;
     else if (a === '-h' || a === '--help') args.help = true;
     else args.positional.push(a);
   }
@@ -266,11 +272,32 @@ function nextName(dir, slug, ext) {
   }
 }
 
+// Of several downloaded candidates, keeps the `count` that work best as backgrounds (fit.js),
+// best first, and deletes the rest and their credits; anything that couldn't be measured falls in
+// behind the ones that could. Changes `files` and `credits` in place.
+function keepBest(files, credits, out, count, landscape = false) {
+  const ranked = require('./fit').rank(files.map((f) => path.join(out, f.file)), { landscape });
+  const keep = [...ranked.map((r) => path.basename(r.file)), ...files.map((f) => f.file)].filter((f, i, a) => a.indexOf(f) === i).slice(0, count);
+  for (const f of files.filter((x) => !keep.includes(x.file))) {
+    fs.rmSync(path.join(out, f.file), { force: true });
+    if (credits.includes(f)) credits.splice(credits.indexOf(f), 1);
+  }
+  const byName = new Map(files.map((f) => [f.file, f]));
+  files.length = 0;
+  for (const k of keep) {
+    const r = ranked.find((x) => path.basename(x.file) === k);
+    files.push(r ? Object.assign(byName.get(k), { fit: r.score }) : byName.get(k));
+  }
+  return files;
+}
+
 async function search(args) {
   const query = args.positional[1];
   const out = args.out;
   const type = args.type || 'photo';
   const count = Math.min(MAX_COUNT, Math.max(1, Number(args.count || 3)));
+  // with --pick-from, more candidates come down than are kept, and the best fits stay
+  const pickFrom = type === 'music' ? count : Math.min(MAX_COUNT, Math.max(count, Number(args.pickFrom) || count));
   if (!query || !out) fail('Usage: node media.js search "<query>" --out <assets dir> [--type photo|video|music] [--count 3] [--provider ...]');
   if (!['photo', 'video', 'music'].includes(type)) fail('--type must be photo, video, or music.');
   if (args.provider && !PROVIDERS[args.provider]) fail(`Unknown --provider "${args.provider}" (use ${Object.keys(PROVIDERS).join(', ')}).`);
@@ -297,7 +324,7 @@ async function search(args) {
   for (const name of order) {
     let candidates;
     try {
-      candidates = await PROVIDERS[name].search(query, type, count, cacheDir);
+      candidates = await PROVIDERS[name].search(query, type, pickFrom, cacheDir);
     } catch (e) {
       if (!(e instanceof ProviderError)) throw e;
       problems.push(`${name}: ${e.message}`);
@@ -306,7 +333,7 @@ async function search(args) {
     const files = [];
     const fresh = candidates.filter((c) => !have.has(c.id));
     for (const c of fresh) {
-      if (files.length >= count) break;
+      if (files.length >= pickFrom) break;
       let got;
       try {
         got = await download(c.url);
@@ -324,6 +351,7 @@ async function search(args) {
       credits.push(entry);
       files.push(entry);
     }
+    if (files.length > count) keepBest(files, credits, out, count, !!args.landscape);
     if (files.length) {
       saveCredits(out, credits);
       for (const p of problems) console.error(`Note: ${p}`);
@@ -371,7 +399,9 @@ async function main() {
   return search(args);
 }
 
-main().catch((e) => {
+if (require.main === module) main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
+
+module.exports = { keepBest };

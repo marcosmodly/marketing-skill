@@ -14,8 +14,10 @@ Three words to keep apart, because users mix them:
   second. [`hooks.md`](hooks.md) covers writing it.
 - An **editing technique** is one way of cutting or moving the picture, text,
   or sound: a jump cut, a whip pan, a riser.
-- An **editing style** is the overall look, several techniques used together:
-  UGC, fast-paced, cinematic. One word in the script sets it (`edit:`).
+- An **editing style** is how it's cut, several techniques used together:
+  UGC, fast-paced, cinematic. One word in the script sets it (`edit:`). The
+  visual style (colors, type, captions, texture) is a **look**
+  ([`visual-design.md`](visual-design.md)), which picks an editing style too.
 
 ## Editing styles
 
@@ -27,12 +29,26 @@ the others when the user describes a feel.
 
 | `edit:` | The look | What it does | Good for |
 |---|---|---|---|
-| `ugc` | A creator's own edit | Hard cuts and punch-in cuts on the beat, a whip now and then, a fast zoom on the hook, the camera punching in 8% on each `*keyword*`, a new picture at least every 3.2s, bouncing captions where the word being said swells, short J-cuts, an impact on the drop | Relatable product ads, talking heads (`cut.js` uses it by default), tips |
-| `kinetic` | Typography-led | Slides, iris masks, wipes, and zooms between lines, the hook's words swelling one after another, captions that build word by word as they're said, dynamic zooms | Apps, SaaS, and tech explainers |
-| `fast` | High energy | Punches, whips, glitches, spins, and flashes on the beat, a burst of quick cuts in the hook (a rapid montage), a new picture every 2.2s, a riser into a flash on the drop with a shake, 12% punch-ins | Energetic hooks, quick product showcases, launches |
-| `cinematic` | Slow and atmospheric | Crossfades, blur dissolves, and light leaks, a film burn on the drop with a riser into it, soft captions, film grain, a vignette, a warm low-contrast grade, longer holds, J-cuts of 0.25s | Brand stories, emotional storytelling, founder stories |
+| `ugc` | A creator's own edit | Clean cuts on the beat, a punch-in or a whip every third turn and on the payoff, a fast zoom on the hook, the camera punching in 8% on each `*keyword*`, a new picture at least every 3.2s, bouncing captions where the word being said swells, short J-cuts, an impact on the drop | Relatable product ads, talking heads (`cut.js` uses it by default), tips |
+| `kinetic` | Typography-led | Clean cuts with an iris mask, wipe, or zoom on every other turn, the hook's words hopping one after another, captions that build word by word as they're said, dynamic zooms | Apps, SaaS, and tech explainers |
+| `fast` | High energy | Punch-in cuts on the beat, a whip, glitch, or spin on every other turn, a burst of quick cuts in the hook (a rapid montage), a new picture every 2.2s, a riser into a flash on the drop with a shake, 12% punch-ins | Energetic hooks, quick product showcases, launches |
+| `cinematic` | Slow and atmospheric | Dissolves, a light leak or blur dissolve every third turn, a film burn on the drop with a riser into it, soft captions on a dark halo, film grain, a vignette, a warm low-contrast grade, longer holds, J-cuts of 0.25s | Brand stories, emotional storytelling, founder stories |
 | `meme` | Comedic timing | Hard cuts, exaggerated 16% punch-ins that shake on every keyword, a shaking hook with an impact | Skits, reactions, comment bait |
 | `clean` | Plain | Crossfades and slow zooms, no extra sounds (the look before editing styles existed) | Quiet explainers, or when the user wants no effects |
+
+Each style keeps one base cut for most of the video and saves its
+conspicuous transitions for the moments that mean something: the drop out of
+the hook, the payoff, a turn every few cuts, and any line marked `[cut: ...]`.
+A different transition on every cut reads as random (`render.js --check`
+notes it). `transitions: whip, punch` sets an explicit rotation instead, for
+when the user asks for one.
+
+`motion:` sets how much moves, separately from the style: `low` (no shakes,
+flashes, glitches, spins, or whips; gentle punch-ins; calmer captions; longer
+holds: for serious, premium, or calm videos, and anyone sensitive to motion),
+`medium` (the style, but shakes only on the drop and no flashes or spins after it), or `high`
+(the style as it is). A look (`look:`, in `visual-design.md`) sets the edit
+and the motion together with the colors, type, and captions.
 
 Two looks are styles of their own rather than edits: **3D motion design** is
 `style: 3d` (the mascot, 3D titles, the product demo's screens) and **pixel
@@ -49,6 +65,7 @@ hook-fx: glitch          # the visual hook: zoom, shake, glitch, flash, bounce, 
 transitions: whip, punch # the cuts between lines, taken in turn
 drop: flash              # the cut out of the hook, where the beat comes in
 punch: 10%               # punch-ins on each *keyword* (no turns them off)
+motion: medium           # low, medium, or high: how much moves
 captions-fx: kinetic     # pop, bounce, kinetic, or fade
 grain: yes               # vignette: yes too
 max-hold: 3              # the longest one picture holds (0: never split a line)
@@ -189,8 +206,8 @@ sound would drift. The renderer plays it at normal speed and says so.
 
 | Technique | How here |
 |---|---|
-| Color grading | One grade across every picture (`--grade`), set by each editing style and the Visual Identity |
-| Color correction | Partly: bright backgrounds are darkened enough for white text, and `montage.js inspect` flags dark or low-resolution photos. Fix white balance before, in the phone's photo editor |
+| Color grading | One grade across every picture (`--grade`), set by the look (`visual-design.md`) or the editing style |
+| Color correction | Partly: bright backgrounds are darkened enough for white text, `fit.js` (run by `compose.js`) and `montage.js inspect` flag dark, clipped, or low-resolution pictures. Fix white balance before, in the phone's photo editor |
 | Film grain | `grain: yes` (on in `cinematic`) |
 | Vignette | `vignette: yes` (on in `cinematic`) |
 | Glow effect | The colored glows behind a page; the 3D sets' lighting |

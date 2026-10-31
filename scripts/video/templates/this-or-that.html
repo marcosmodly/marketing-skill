@@ -22,7 +22,8 @@
     --line: #2b2b35;
     --text: #f3f2ee;
     --muted: #9a99a4;
-    --accent: #e07a55;
+    --accent: #db7350;
+    --on-accent: #121212;   /* text on the accent: whichever of white or near-black reads better on it (brand.js and compose.js set it for the brand's) */
     --ok: #3fbf7f;
     --bad: #e0605a;
     --warn: #e8b04a;
@@ -77,6 +78,7 @@
   .bg.now { animation: fadeOut .45s ease-in var(--out, 999s) forwards; }
   .bg:empty { display: none; }
   .bg-media { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;
+              object-position: var(--ox, 50%) var(--oy, 50%); transform-origin: var(--fx, 50%) var(--fy, 50%);
               filter: var(--grade, saturate(.9) contrast(1.05) brightness(.9));
               animation: var(--kb, kbIn) var(--dur, 8s) linear var(--in) both; }
   .bg.blur .bg-media { filter: var(--grade, saturate(.9) contrast(1.05) brightness(.9)) blur(var(--blur, 10px)); }
@@ -87,7 +89,7 @@
   .bg.tint::before { content: ''; position: absolute; inset: 0; z-index: 1; background: var(--accent); mix-blend-mode: soft-light; opacity: .5; }
   /* the user's screenshot on a screen in their photo: placed by compose.js from the screen's four corners,
      moving with the photo's own zoom */
-  .bg-insert { position: absolute; inset: 0; z-index: 0; animation: var(--kb, kbIn) var(--dur, 8s) linear var(--in) both; }
+  .bg-insert { position: absolute; inset: 0; z-index: 0; transform-origin: var(--fx, 50%) var(--fy, 50%); animation: var(--kb, kbIn) var(--dur, 8s) linear var(--in) both; }
   .bg-insert img { position: absolute; left: 0; top: 0; transform-origin: 0 0; filter: var(--grade, saturate(.9) contrast(1.05) brightness(.9)); }
   .bg::after { content: ''; position: absolute; inset: 0; z-index: 2;
                background: linear-gradient(to bottom, rgba(10,10,14,.72), rgba(10,10,14,.12) 30%, rgba(10,10,14,.22) 62%, rgba(10,10,14,.88)),
@@ -126,7 +128,7 @@
   .cap > span { background: #fff; color: #121212; padding: .05em .32em; border-radius: .2em;
                 -webkit-box-decoration-break: clone; box-decoration-break: clone; }
   .cap.dark > span { background: rgba(0,0,0,.76); color: #fff; }
-  .cap.hl > span { background: var(--accent); color: #fff; }
+  .cap.hl > span { background: var(--accent); color: var(--on-accent); }
   .cap.out { font-size: 82px; font-weight: 900; line-height: 1.12; color: #fff; paint-order: stroke fill; -webkit-text-stroke: 14px #000; }
   .cap.out > span { background: none; color: inherit; padding: 0; }
   .cap.left { text-align: left; }
@@ -183,7 +185,7 @@
   .corner.series { right: 150px; }
 
   /* labels and reactions */
-  .sticker { width: fit-content; background: var(--accent); color: #fff; font-size: 44px; font-weight: 800; line-height: 1.2;
+  .sticker { width: fit-content; background: var(--accent); color: var(--on-accent); font-size: 44px; font-weight: 800; line-height: 1.2;
              padding: 10px 28px 12px; border-radius: 16px; rotate: -3deg; box-shadow: 0 12px 34px rgba(0,0,0,.35); }
   .sticker.yellow { background: #ffd23f; color: #121212; }
   .sticker.light { background: #fff; color: #121212; }
@@ -268,7 +270,7 @@
   .bub { max-width: 600px; padding: 20px 30px 22px; border-radius: 36px; font-size: 42px; font-weight: 600; line-height: 1.25;
          animation: bubIn .35s cubic-bezier(.2,.9,.3,1.3) var(--in) both; }
   .them .bub { background: #e4e2dc; border-bottom-left-radius: 10px; transform-origin: 0 100%; }
-  .me .bub { background: var(--accent); color: #fff; border-bottom-right-radius: 10px; transform-origin: 100% 100%; }
+  .me .bub { background: var(--accent); color: var(--on-accent); border-bottom-right-radius: 10px; transform-origin: 100% 100%; }
   @keyframes bubIn { from { opacity: 0; transform: scale(.5); } to { opacity: 1; transform: none; } }
   .typing { display: flex; gap: 10px; padding: 28px 30px; border-radius: 36px; background: #e4e2dc; width: fit-content;
             animation: fadeIn .2s ease-out var(--in) both, fadeOut .15s linear var(--out) forwards; }
@@ -318,7 +320,7 @@
   .popup p { font-size: 38px; font-weight: 600; color: #4a4a54; line-height: 1.3; margin-top: 12px; }
   .btns { display: flex; gap: 18px; margin-top: 30px; }
   .btns span { flex: 1; height: 96px; border-radius: 24px; display: grid; place-items: center; font-size: 36px; font-weight: 800; background: #e4e2dc; }
-  .btns span:last-child { background: var(--accent); color: #fff; }
+  .btns span:last-child { background: var(--accent); color: var(--on-accent); }
 
   /* before/after: the second .side wipes over the first at --at */
   .wipe { position: relative; flex: 1; border-radius: 40px; overflow: hidden; }
@@ -431,6 +433,64 @@
   @keyframes grain { 0% { translate: 0 0; } 20% { translate: -30px 20px; } 40% { translate: 20px -40px; } 60% { translate: -40px -10px; } 80% { translate: 30px 30px; } 100% { translate: 0 0; } }
   .fx-vignette .cam::after { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none;
                              background: radial-gradient(ellipse 78% 64% at 50% 46%, transparent 52%, rgba(0,0,0,.6) 100%); }
+
+
+  /* ---- visual design: looks, text cards, sources, and color roles ---- */
+
+  /* the headline font (a look's, or the Visual Identity's Headline font) on the hook and text cards */
+  .has-head .hook > span, .has-head .bg-card b { font-family: var(--font-head); font-weight: var(--head-weight, 800); }
+
+  /* looks (look.js, body class look-<name>): how the hook is set; the captions, grade, and textures come with them */
+  :is(.look-documentary, .look-corporate) .hook > span { background: rgba(12,12,16,.8); color: #fff; }
+  :is(.look-cinematic, .look-luxury, .look-suspense, .look-editorial, .look-retro, .look-handmade) .hook > span {
+    background: none; color: #fff; padding: 0; text-shadow: 0 2px 6px rgba(0,0,0,.55), 0 6px 40px rgba(0,0,0,.6); }
+  .look-cinematic .hook { font-size: 78px; line-height: 1.14; }
+  .look-editorial .hook { font-size: 96px; line-height: 1.02; letter-spacing: -2px; text-align: left; }
+  .look-luxury .hook { font-size: 46px; line-height: 1.7; letter-spacing: .2em; text-transform: uppercase; }
+  .look-suspense .hook { font-size: 64px; line-height: 1.25; letter-spacing: .06em; text-transform: uppercase; }
+  .look-tech .hook > span { background: rgba(8,14,20,.78); color: #e8fbff; box-shadow: inset 0 0 0 3px var(--accent), 0 0 26px color-mix(in srgb, var(--accent) 40%, transparent); }
+  .look-retro .hook { font-size: 92px; line-height: 1.06; }
+  .look-retro .hook > span { text-shadow: 3px 0 #ff2a6d, -3px 0 #05d9e8, 0 4px 20px rgba(0,0,0,.6); }
+  .look-cozy .hook > span { background: #f6eedf; color: #3a2a1e; }
+  .look-handmade .hook { font-size: 96px; line-height: 1.08; }
+  .look-playful .hook > span { background: #ffd23f; color: #121212; }
+  /* one accent, used consistently: in these looks the word being said and the *keywords* take the look's accent, not a second color */
+  :is(.look-minimal, .look-editorial, .look-luxury, .look-tech, .look-retro, .look-cozy, .look-handmade) { --hi: var(--accent); --kw: var(--accent); }
+
+  /* textures over the frame: VHS scanlines with a rolling tracking band, a faint grid at the edges, paper */
+  body.tx-scanlines::before { content: ''; position: absolute; inset: 0; z-index: 29; pointer-events: none; mix-blend-mode: multiply;
+                               background: repeating-linear-gradient(to bottom, rgba(0,0,0,.24) 0 2px, transparent 2px 5px); }
+  .tx-scanlines .cam::before { content: ''; position: absolute; left: 0; right: 0; top: -12%; height: 9%; z-index: 4; pointer-events: none; mix-blend-mode: screen;
+                                background: linear-gradient(transparent, rgba(255,255,255,.1), transparent); animation: tracking 7s linear 0s infinite; }
+  @keyframes tracking { to { top: 110%; } }
+  .tx-grid .cam::before { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: .22;
+                           background-image: linear-gradient(color-mix(in srgb, var(--accent) 75%, transparent) 2px, transparent 2px),
+                                             linear-gradient(90deg, color-mix(in srgb, var(--accent) 75%, transparent) 2px, transparent 2px);
+                           background-size: 90px 90px;
+                           -webkit-mask-image: radial-gradient(ellipse 78% 66% at 50% 45%, transparent 40%, #000 100%);
+                           mask-image: radial-gradient(ellipse 78% 66% at 50% 45%, transparent 40%, #000 100%); }
+  .tx-paper .cam::before { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none; mix-blend-mode: multiply; opacity: .5;
+                            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><filter id='p'><feTurbulence type='fractalNoise' baseFrequency='.035' numOctaves='4' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .96 0 0 0 0 .92 0 0 0 0 .84 0 0 0 -.9 1.25'/></filter><rect width='100%' height='100%' filter='url(%23p)'/></svg>"); }
+
+  /* a text card ([card: ...] in compose.js): the line's key phrase, huge, on the brand's base color,
+     in place of a picture; kept above the captions' band */
+  .bg.card { background: var(--bg); }
+  .bg.card::after { display: none; }
+  .bg-card { position: absolute; left: 90px; right: 150px; top: 330px; bottom: 820px; display: flex; align-items: center; justify-content: center; text-align: center; }
+  .bg-card b { font-weight: var(--head-weight, 900); font-size: var(--card-size, 132px); line-height: 1.04; letter-spacing: -.02em; color: var(--text); text-wrap: balance;
+                animation: cardIn .55s cubic-bezier(.2,.9,.3,1.15) var(--in) both; }
+  .bg-card .kw { color: var(--accent); }
+  @keyframes cardIn { from { opacity: 0; translate: 0 40px; scale: .94; } to { opacity: 1; translate: 0 0; scale: 1; } }
+
+  /* a source or caveat for a line's claim ([source: ...]): small but readable, up for the whole line */
+  .source { align-self: flex-start; max-width: 100%; margin-bottom: auto; padding: 8px 20px 10px; border-radius: 12px; background: rgba(12,12,16,.74); color: #ecebf0;
+             font-family: "Inter", "Liberation Sans", sans-serif; font-size: 36px; font-weight: 600; line-height: 1.25; text-align: left; text-shadow: none; }
+  .narr > .hook:has(+ .source) { margin-bottom: 0; }
+  .narr > .hook + .source { margin-top: 20px; }
+
+  /* color roles: *keywords* (the key, the accent) and ~wrong~ (the wrong way, struck through in the caution color, so it doesn't rest on color alone) */
+  .no { color: var(--bad); text-decoration: line-through .08em var(--bad); }
+  .hook .no { text-decoration-thickness: .07em; }
 
 
   .round { width: 100%; display: flex; flex-direction: column; gap: 34px; }

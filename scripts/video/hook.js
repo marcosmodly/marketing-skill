@@ -54,7 +54,7 @@ const NUMBER_CLAIM = /\d+(\.\d+)?\s*(%|percent|x\b|times\b)|\$\s?\d|\b\d+\s*(hou
 const CTA_VERBS = /\b(follow|subscribe|comment|link in bio|click|tap|download|sign up|try|book|buy|shop|join|dm|save this|share)\b/gi;
 const REHOOK = /\b(but|here'?s the (thing|catch|part)|the best part|wait|and that'?s not all|the catch|here'?s where|plot twist|turns out|until)\b/i;
 
-const plain = (s) => String(s || '').replace(/\*([^*]+)\*/g, '$1').trim();
+const plain = (s) => String(s || '').replace(/\*([^*]+)\*/g, '$1').replace(/~([^~\s](?:[^~]*[^~\s])?)~/g, '$1').trim();
 const words = (s) => plain(s).split(/\s+/).filter(Boolean);
 
 // Banned words from the Brand Voice (references/brand-voice.md), quoted one per bullet.
@@ -120,7 +120,7 @@ function checkScript(file) {
   const { parseScript } = require('./voice');
   const EDIT = require('./edit');
   const { meta, body } = parseFrontmatter(fs.readFileSync(file, 'utf8'));
-  const lines = parseScript(body).map((l) => ({ ...l, text: l.text.replace(/\s*\[(bg|shot|cut):[^\]]*\]/gi, '').trim(), raw: l.text })).filter((l) => l.text);
+  const lines = parseScript(body).map((l) => ({ ...l, text: l.text.replace(/\s*\[(bg|shot|cut|card|source):[^\]]*\]/gi, '').trim(), raw: l.text })).filter((l) => l.text);
   const bold = String(meta.captions || '').toLowerCase() === 'bold';
   const out = { file, layers: {}, problems: [], advice: [], confirm: [] };
   if (!lines.length) {
@@ -149,17 +149,23 @@ function checkScript(file) {
   // what moves in the first half second
   let edit = null;
   try {
-    edit = EDIT.resolveStyle(meta, { music: meta.music, energy: parseFloat(meta.energy) });
+    edit = EDIT.resolveStyle(meta, { music: meta.music, energy: parseFloat(meta.energy) }, require('./look').resolveLook(meta));
   } catch (e) {
     out.problems.push(e.message);
   }
   const style = String(meta.style || 'photo').toLowerCase();
   const firstShot = (/\[shot:\s*([^\]]+)\]/i.exec(lines[0].raw) || [])[1] || '';
-  out.layers.visual = { hookFx: edit ? edit.hook : 'unknown', edit: edit ? edit.name : 'unknown', firstShot: firstShot || (style === 'photo' ? 'a background' : `the ${style} style's first shot`) };
-  if (edit && edit.hook === 'none' && edit.name !== 'cinematic') out.advice.push('visual hook: nothing moves in the first half second; set hook-fx: (zoom, shake, glitch, flash, bounce, or montage)');
+  out.layers.visual = { hookFx: edit ? edit.hook : 'unknown', edit: edit ? `${edit.name}, motion ${edit.motion}${meta.look || meta.goal ? `, look ${meta.look || meta.goal}` : ''}` : 'unknown', firstShot: firstShot || (style === 'photo' ? 'a background' : `the ${style} style's first shot`) };
+  if (edit && edit.hook === 'none' && edit.motion !== 'low') out.advice.push('visual hook: nothing moves in the first half second; set hook-fx: (zoom, shake, glitch, flash, bounce, or montage)');
   const types = [...(out.layers.text ? out.layers.text.types : []), ...said.types].map((t) => t.id);
   if (types.includes('demonstration') && style === 'photo' && !/\[bg:\s*assets\//i.test(lines[0].raw)) {
     out.advice.push('a demonstration hook should open on the product working: put the user\'s screen recording or screenshot behind line 1');
+  }
+  // a number on screen or in the voice needs its source on screen (references/visual-design.md)
+  for (const l of lines) {
+    if ((NUMBER_CLAIM.test(plain(l.text)) || classify(l.text).some((t) => t.id === 'statistic')) && !/\[source:/i.test(l.raw)) {
+      out.confirm.push(`line ${l.n} states a number or a result: use it only if it's real, and add [source: ...] so the viewer sees where it's from`);
+    }
   }
   // the shape behind it: the payoff early, one call to action, a re-hook in a longer video
   const total = lines.reduce((a, l) => a + words(l.text).length / WORDS_PER_SECOND + 0.35, 0);

@@ -108,7 +108,11 @@ was made with the same renderer.
   half second, punch-ins on the words that sell it, whip pans, glitches,
   light leaks, and b-roll every few seconds. Hooks are checked before
   anything renders: their type, all three layers (on screen, spoken, and
-  visual), and whether three to test are really different. The bold look gives it a cover that stops the
+  visual), and whether three to test are really different. A look sets one
+  coherent visual style for the video's job (documentary, cinematic,
+  editorial, tech, retro, and more), stock is picked for calm room behind
+  the captions, and the check before rendering measures text contrast
+  against the real picture. The bold look gives it a cover that stops the
   scroll: huge boxed captions with the selling words in yellow over your
   face (your app on the laptop in your photo) or the mascot.
 - **Montages from your own videos:** hand over the phone clips you or a

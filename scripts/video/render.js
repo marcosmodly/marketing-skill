@@ -650,9 +650,185 @@ async function lintTimeline(page, duration, step = 0.25) {
   return [...seen.values(), ...retentionProblems(samples, duration, step, breaks)];
 }
 
+// ---- visual QA (references/visual-design.md, "Accessibility"): what --check measures beyond layout
+// How big the frame looks on a phone, for telling large text from small (WCAG counts 24px, or
+// 18.66px bold, as large: 3:1 is enough there, 4.5:1 below it).
+const PHONE_WIDTH = { portrait: 390, landscape: 844 };
+
+// Text contrast against the pixels actually behind it, at each settled moment: the page is
+// shot once with the text's ink hidden (boxes and panels behind words stay), and each text's
+// color is compared with what's under it. A word with a heavy outline is judged against its
+// outline instead. Returns problems (labeled Contrast; under 2:1 fails, the rest is advice).
+async function contrastProblems(page, times) {
+  const problems = [];
+  const seen = new Set();
+  const phone = WIDTH > HEIGHT ? PHONE_WIDTH.landscape : PHONE_WIDTH.portrait;
+  for (const t of times) {
+    await seek(page, t);
+    const texts = await page.evaluate(([phoneW, frameW]) => {
+      const out = [];
+      const parse = (c) => (c.match(/[\d.]+/g) || []).map(Number);
+      const settled = (el) => {
+        for (let e = el; e; e = e.parentElement) {
+          for (const a of e.getAnimations()) {
+            const c = a.effect.getComputedTiming();
+            if (c.activeDuration === Infinity || c.localTime === null) continue;
+            if (c.localTime > c.delay && c.localTime < c.delay + c.activeDuration) return false;
+          }
+        }
+        return true;
+      };
+      for (const el of document.body.querySelectorAll('*')) {
+        if (el.closest('[data-lint="off"], script, style, svg')) continue;
+        const own = [...el.childNodes].filter((n) => n.nodeType === 3 && n.textContent.trim());
+        if (!own.length) continue;
+        const cs = getComputedStyle(el);
+        let o = 1;
+        for (let e = el; e && e !== document.documentElement; e = e.parentElement) {
+          const c = getComputedStyle(e);
+          if (c.display === 'none' || c.visibility === 'hidden') { o = 0; break; }
+          o *= parseFloat(c.opacity);
+        }
+        if (o < 0.9 || !settled(el)) continue;
+        // the element's own words only (not a child's icon or checkbox), the middle of each line
+        const rects = own.flatMap((n) => {
+          const range = document.createRange();
+          range.selectNodeContents(n);
+          return [...range.getClientRects()];
+        }).filter((r) => r.width > 4 && r.height > 4)
+          .map((r) => ({ x: Math.max(0, r.left + r.width * 0.04), y: Math.max(0, r.top + r.height * 0.2), w: r.width * 0.92, h: r.height * 0.6 }));
+        if (!rects.length) continue;
+        // a strike or underline painted as the text's own background is part of the text, not behind it
+        if (cs.backgroundImage !== 'none' && cs.display.startsWith('inline')) el.dataset.cxDeco = '';
+        // on a solid box of its own (a sticker, a chip, a boxed caption, a card): judged against that box's color
+        let solid = null;
+        for (let e = el; e && e !== document.body; e = e.parentElement) {
+          const b = getComputedStyle(e);
+          const bg = parse(b.backgroundColor);
+          if (b.backgroundImage !== 'none' && !e.hasAttribute('data-cx-deco')) break;
+          if (bg.length >= 3 && (bg.length < 4 || bg[3] >= 0.95)) { solid = bg.slice(0, 3); break; }
+          if (bg.length === 4 && bg[3] > 0.05) break; // a see-through panel: measured on the picture
+        }
+        const size = parseFloat(cs.fontSize) * phoneW / frameW;
+        const bold = parseInt(cs.fontWeight, 10) >= 700;
+        const color = parse(cs.color);
+        if (color.length > 3 && color[3] < 0.5) continue; // transparent ink: not text to read
+        out.push({
+          text: el.textContent.trim().replace(/\s+/g, ' ').slice(0, 48), color: color.slice(0, 3), rects, solid,
+          large: size >= 24 || (bold && size >= 18.66),
+          stroke: parseFloat(cs.webkitTextStrokeWidth) || 0, strokeColor: parse(cs.webkitTextStrokeColor).slice(0, 3),
+          shadow: cs.textShadow && cs.textShadow !== 'none',
+        });
+      }
+      return out;
+    }, [phone, WIDTH]);
+    if (!texts.length) continue;
+    // the frame with every text's ink hidden: what each word sits on
+    await page.addStyleTag({ content: '*, *::before, *::after { color: transparent !important; -webkit-text-stroke-color: transparent !important; text-shadow: none !important; text-decoration-color: transparent !important; } [data-cx-deco] { background-image: none !important; }' });
+    const shot = (await page.screenshot({ type: 'png' })).toString('base64');
+    await page.evaluate(() => {
+      document.head.lastElementChild.remove();
+      for (const el of document.querySelectorAll('[data-cx-deco]')) delete el.dataset.cxDeco;
+    });
+    const measured = await page.evaluate(async ([png, items]) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${png}`;
+      await img.decode();
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth;
+      c.height = img.naturalHeight;
+      const g = c.getContext('2d', { willReadFrequently: true });
+      g.drawImage(img, 0, 0);
+      const lin = (v) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
+      const lum = ([r, gg, b]) => 0.2126 * lin(r) + 0.7152 * lin(gg) + 0.0722 * lin(b);
+      const ratio = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      return items.map((it) => {
+        const lt = lum(it.color);
+        if (it.solid) return { ...it, contrast: ratio(lt, lum(it.solid)), outline: null };
+        const ratios = [];
+        for (const r of it.rects) {
+          const x0 = Math.floor(r.x);
+          const y0 = Math.floor(r.y);
+          const w = Math.min(c.width - x0, Math.ceil(r.w));
+          const h = Math.min(c.height - y0, Math.ceil(r.h));
+          if (w <= 0 || h <= 0) continue;
+          const d = g.getImageData(x0, y0, w, h).data;
+          for (let i = 0; i < d.length; i += 4 * 5) ratios.push(ratio(lt, lum([d[i], d[i + 1], d[i + 2]])));
+        }
+        ratios.sort((a, b) => a - b);
+        // what at least 90% of the area behind the words reaches
+        return { ...it, contrast: ratios.length ? ratios[Math.floor(ratios.length * 0.1)] : null, outline: it.stroke >= 3 && it.strokeColor.length === 3 ? ratio(lt, lum(it.strokeColor)) : null };
+      });
+    }, [shot, texts]);
+    for (const m of measured) {
+      if (m.contrast === null) continue;
+      const need = m.large ? 3 : 4.5;
+      // a heavy outline carries the word on any background; then the outline is what's judged
+      const got = m.outline !== null ? Math.max(m.outline, m.contrast) : m.contrast;
+      if (got >= need || seen.has(m.text)) continue;
+      seen.add(m.text);
+      const fix = m.shadow ? 'its shadow helps, but a panel behind it or a darker shade on the picture would be surer' : 'put it on a panel (captions-fx: panel, or a boxed caption), add an outline, or darken the picture behind it';
+      problems.push({
+        t, label: 'Contrast', advice: got >= 2, kind: `contrast ${got.toFixed(1)}:1, under ${need}:1 for ${m.large ? 'large' : 'small'} text`, text: m.text, detail: fix,
+      });
+    }
+  }
+  return problems;
+}
+
+// Flashing, shaking, and sameness, read from the page's own cues: more than three flashes in
+// any second fails (WCAG 2.3.1, a seizure risk); a shake every few seconds, a flash on most cuts,
+// every picture moving the same way, or a different transition on every cut is advice.
+async function motionProblems(page, duration) {
+  const r = await page.evaluate(() => {
+    const sec = (v) => { v = String(v || '').trim(); return v.endsWith('ms') ? parseFloat(v) / 1000 : parseFloat(v); };
+    const at = (el) => sec(getComputedStyle(el).getPropertyValue('--in'));
+    const flashes = [
+      ...[...document.querySelectorAll('.flash, .burn, .bg.t-glitch')].map(at),
+      ...document.getAnimations().filter((a) => /^(camGlitch|hkGlitch|glitchBg)$/.test(a.animationName) && !a.effect.target.matches('.bg.t-glitch'))
+        .map((a) => a.effect.getComputedTiming().delay / 1000),
+    ].filter(Number.isFinite).sort((a, b) => a - b);
+    const shakes = document.getAnimations().filter((a) => /^(camShake|hkJolt|hit)$/.test(a.animationName)).length;
+    const slots = [...document.querySelectorAll('.bg')].filter((b) => b.querySelector('.bg-media'))
+      .map((b) => ({ t: sec(b.style.getPropertyValue('--in')) || 0, move: (b.style.getPropertyValue('--kb') || 'kbIn').trim(), tr: [...b.classList].find((c) => c.startsWith('t-')) || '' }))
+      .sort((a, b) => a.t - b.t);
+    return { flashes, shakes, slots };
+  });
+  const problems = [];
+  for (let i = 0; i < r.flashes.length; i++) {
+    const inSecond = r.flashes.filter((x) => x >= r.flashes[i] && x < r.flashes[i] + 1).length;
+    if (inSecond > 3) {
+      problems.push({ t: r.flashes[i], label: 'Visual', kind: `${inSecond} flashes or glitches within one second`, text: '', detail: 'more than three a second can trigger seizures (WCAG 2.3.1); space them out or use motion: low' });
+      break;
+    }
+  }
+  const cuts = r.slots.length - 1;
+  if (r.flashes.length >= 3 && cuts > 0 && r.flashes.length > cuts / 2) {
+    problems.push({ t: r.flashes[0], label: 'Visual', advice: true, kind: `${r.flashes.length} flashes or glitches over ${cuts} cuts`, text: '', detail: 'save them for the turns that matter (the drop, the payoff); on most cuts they read as noise and tire the eye' });
+  }
+  if (r.shakes > Math.max(3, duration / 5)) {
+    problems.push({ t: 0, label: 'Visual', advice: true, kind: `the camera shakes ${r.shakes} times in ${Math.round(duration)}s`, text: '', detail: 'constant shake is tiring and hard on motion-sensitive viewers; keep it for a few hits, or use motion: medium' });
+  }
+  if (r.slots.length >= 4 && new Set(r.slots.map((x) => x.move)).size === 1 && r.slots[0].move !== 'none') {
+    problems.push({ t: r.slots[0].t, label: 'Visual', advice: true, kind: `every picture moves the same way (${r.slots[0].move})`, text: '', detail: 'vary the move (--kb), or let the edit style rotate them' });
+  }
+  const loud = new Set(r.slots.map((x) => x.tr).filter((c) => c && c !== 't-cut' && c !== 't-punch'));
+  if (loud.size >= 5) {
+    problems.push({ t: 0, label: 'Visual', advice: true, kind: `${loud.size} different transitions`, text: '', detail: 'a different transition on every cut reads as random; use one base cut and save one or two for the turns' });
+  }
+  return problems;
+}
+
+// Everything --check looks at beyond layout and pacing: contrast at each settled moment and the
+// cover, and flashing, shaking, and sameness.
+async function visualProblems(page, duration) {
+  const times = [0, ...(await slideTimes(page, duration))].filter((t, i, a) => a.indexOf(t) === i);
+  return [...await contrastProblems(page, times), ...await motionProblems(page, duration)];
+}
+
 const describeLint = (p) => `${p.t.toFixed(2)}s: ${p.text ? `"${p.text}" ` : ''}${p.kind}${p.detail ? ` (${p.detail})` : ''}`;
 // Advice (pacing notes) is shown but doesn't fail a check.
-const lintLabel = (p) => (p.advice ? 'Pacing' : 'Layout');
+const lintLabel = (p) => p.label || (p.advice ? 'Pacing' : 'Layout');
 
 // The settled moment of each scene, just before it leaves: one per .scene, .gone, or .swap exit,
 // plus the end. <body data-slides="2.6,6.8,..."> overrides. Used for --slides and check.js.
@@ -946,9 +1122,12 @@ async function prepareVoices(page, settings) {
       const el = document.querySelector(`[data-voice-index="${index}"]`);
       // a whole-line caption (the bold look) is one box around every chunk; its data-kw words stay lit
       el.innerHTML = el.classList.contains('line') ? `<span class="ln">${markup}</span>` : markup;
-      const kw = new Set((el.dataset.kw || '').split(',').map((w) => w.trim()).filter(Boolean));
-      for (const w of kw.size ? el.querySelectorAll('i') : []) {
-        if (kw.has(w.textContent.toLowerCase().replace(/[^\p{L}\p{N}]/gu, ''))) w.classList.add('kw');
+      // *keywords* (data-kw) stay lit; ~wrong~ words (data-no) are struck through in the caution color
+      for (const [attr, cls] of [['kw', 'kw'], ['no', 'no']]) {
+        const set = new Set((el.dataset[attr] || '').split(',').map((w) => w.trim()).filter(Boolean));
+        for (const w of set.size ? el.querySelectorAll('i') : []) {
+          if (set.has(w.textContent.toLowerCase().replace(/[^\p{L}\p{N}]/gu, ''))) w.classList.add(cls);
+        }
       }
     }, [clip.index, html]);
     chunks.forEach((c, i) => cues.push({
@@ -1274,7 +1453,7 @@ async function runPage(browser, pagePath, outPath, args, variant, many) {
     if (!(duration > 0)) fail('Set the length with <body data-duration="24"> on the page, or pass --duration.');
     for (const p of checkMix(settings, duration)) console.warn(`Warning${label}: ${p}`);
     if (args.check) {
-      const lint = await lintTimeline(page, duration);
+      const lint = [...await lintTimeline(page, duration), ...await visualProblems(page, duration)];
       for (const p of lint) console.warn(`${lintLabel(p)}${label}: ${describeLint(p)}`);
       const failing = lint.filter((p) => !p.advice);
       console.log(failing.length ? `${failing.length} layout problem(s) in ${pagePath}${label}` : `No layout problems in ${pagePath}${label}`);
@@ -1430,7 +1609,7 @@ if (require.main === module) {
 
 module.exports = {
   WIDTH, HEIGHT, meanLuma, loadPlaywright, launchBrowser, openPage, prepareMedia, readPage, checkMusic, checkMix, mixVoice, seek,
-  lintLayout, lintTimeline, describeLint, lintLabel, slideTimes, textSnapshot, retentionProblems, writeSoundtrack, measureAudio, muxSoundtrack,
+  lintLayout, lintTimeline, visualProblems, contrastProblems, motionProblems, describeLint, lintLabel, slideTimes, textSnapshot, retentionProblems, writeSoundtrack, measureAudio, muxSoundtrack,
   prepareVoice, prepareVoices, describeVoices, probeDuration, variantsOf, applyVariant, coverProblems,
   renderFrames, preparePage, defaultWorkers, clipTime,
 };
