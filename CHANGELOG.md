@@ -25,6 +25,12 @@ Skills that read "our changelog" for source material read this file too.
   half second finished in real time while the page loaded, so it never
   appeared in the video. The renderer now holds every animation still until
   it seeks to each frame.
+- **Fix: a silent voice recording no longer hangs the render.** A take with
+  nothing audible in it (a muted mic, the wrong input) left the render waiting
+  forever; `render.js`, `compose.js`, and `montage.js` now stop at once with
+  "assets/line-2.wav has no audible voice; re-record it", naming every silent
+  take. The video scripts also end on SIGTERM and SIGHUP (`timeout`, `kill`,
+  a closed terminal), which they used to ignore.
 - **Pixel art stays crisp when the camera moves.** Punch-ins, the hook zoom,
   and the drop zoom by whole pixels (12.5%: every art pixel exactly 9 screen
   pixels, never a mix of 8 and 9), jump instead of glide, and shake without

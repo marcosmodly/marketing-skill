@@ -107,7 +107,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const { parseScript } = require('./voice');
-const { prepareVoice } = require('./render');
+const { prepareVoice, prepareVoiceFiles } = require('./render');
 const { visualIdentity, applyIdentity } = require('./brand');
 const { analyseTrack, alignTrack } = require('./beats');
 const { SOUNDS } = require('./soundtrack');
@@ -475,6 +475,13 @@ async function main() {
       }
     }
   }
+  // every line measured now, so a recording with no audible voice in it stops here, by name
+  let voices;
+  try {
+    voices = prepareVoiceFiles(clips.map((c) => path.join(dir, c)));
+  } catch (e) {
+    fail(e.message);
+  }
 
   // ---- timing: each scene is its line plus a beat, with cuts on the music's beat
   const html = fs.readFileSync(path.join(__dirname, 'templates', style.template), 'utf8');
@@ -533,7 +540,7 @@ async function main() {
   let drop = 0;
   let voiceEnd = 0;
   lines.forEach((l, i) => {
-    const { length } = prepareVoice(path.join(dir, clips[i]));
+    const { length } = voices[i];
     const start = t;
     // a J-cut: the next line's voice leads its picture a little (never out of the hook, so the drop lands clean)
     const voiceAt = i >= 2 && edit.jcut ? Math.max(voiceEnd + 0.12, start - edit.jcut) : start;
