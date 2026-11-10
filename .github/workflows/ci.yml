@@ -23,6 +23,8 @@ jobs:
         run: bash scripts/ci/smoke_publish.sh
       - name: Results numbers (results.py on made-up logs)
         run: bash scripts/ci/smoke_results.sh
+      - name: The release this would publish (release_notes.py)
+        run: python3 scripts/ci/release_notes.py --out "$RUNNER_TEMP/notes.md"
       - name: Templates are in sync with build.py
         run: |
           python3 scripts/video/templates/build.py
