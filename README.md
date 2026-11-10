@@ -108,9 +108,11 @@ was made with the same renderer.
   and meme sound effects, cut in an editing style (UGC, kinetic
   typography, fast-paced, cinematic, or meme): a visual hook in the first
   half second, punch-ins on the words that sell it, whip pans, glitches,
-  light leaks, and b-roll every few seconds. Hooks are checked before
-  anything renders: their type, all three layers (on screen, spoken, and
-  visual), and whether three to test are really different. A look sets one
+  light leaks, and b-roll every few seconds. Hooks start from the video's
+  job (the types that suit it, with templates) and are checked before
+  anything renders: their type, all three layers (on screen, what's heard
+  first, and what moves), whether three to test are really different, and
+  which line keeps the hook's promise. A look sets one
   coherent visual style for the video's job (documentary, cinematic,
   editorial, tech, retro, and more), stock is picked for calm room behind
   the captions, and the check before rendering measures text contrast

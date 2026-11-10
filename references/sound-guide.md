@@ -124,6 +124,16 @@ Pixel-art videos (`pixel.html`, or `compose.js` with `style: pixel`) take
 8-bit video ends on the brand's sonic logo. A 3D video keeps the identity
 as it is.
 
+### Under the hook
+
+The music's beat drops on the cut out of the hook (`data-drop`), and by
+default its intro builds under the hook into it: the home chord, a riser in
+the genres that have one, and a hit on the drop. `hook-audio: silence` in a
+script plays the hook over nothing but the voice and lands the music all at
+once on the drop, which makes a serious line, a confession, or a reveal
+feel like it matters. Use it for one video in a few, not every one: silence
+works by contrast.
+
 ## Sound effects
 
 `data-sfx` cues place these on the page's own timing. All are synthesized

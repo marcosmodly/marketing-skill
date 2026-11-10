@@ -530,6 +530,12 @@ PIXEL_TEMPLATES["pixel.html"] = dict(
     body_attrs='class="pixel" data-duration="15.5" data-drop="3.0" data-music="chiptune" data-bpm="150" data-key="C" data-mode="major" data-energy="2" data-motif="1 5 3 5 | 4 6 5 -"',
     css=NARRATED_CSS + """  .art { image-rendering: pixelated; }
   .art-scrim { display: none; }
+  /* the camera on pixel art (compose.js, edit.js pixelPunch): zooms only by whole eighths, from a
+     point on the 8px grid, so a 9/8 punch lands every art pixel on exactly 9 screen pixels; it
+     jumps in and out (steps) rather than gliding, and shakes by whole art pixels without rotating */
+  .pixel .cam { transform-origin: 536px 808px; --punch: 1.125; }
+  @keyframes camShakePx { 0% { translate: 0 0; scale: 1.125; } 20% { translate: -18px 9px; } 40% { translate: 18px -9px; }
+                          60% { translate: -9px 18px; } 80% { translate: 9px -9px; } 100% { translate: 0 0; scale: 1.125; } }
   html body.pixel { font-family: "Pixelify Sans", "Noto Color Emoji", monospace; }
   .pixel .cap { font-weight: 700; }
   .pixel .cap > span { background: #f4f4f4; color: #1a1c2c; border-radius: 0; padding: .04em .3em; box-shadow: 0 8px 0 #1a1c2c; }

@@ -373,7 +373,9 @@ Without one, it picks from your sound (a phonk or house identity gets
 which. Mark the words that sell each line with asterisks (`lose *money* on
 every late invoice`): they stay lit, pop bigger, and the camera punches in
 on them. `hook-fx:` sets the visual hook, what moves in the first half
-second (`zoom`, `shake`, `glitch`, `flash`, `bounce`, or `montage`), and
+second (`zoom`, `shake`, `glitch`, `flash`, `bounce`, or `montage`),
+`hook-audio: silence` lets your first line be heard alone before the music
+lands on the cut, `[sfx: ping]` on a line plays a sound with it, and
 `[cut: glitch]` on a line sets how that one comes in. Your filmed takes get
 the same treatment from `cut.js`: every jump cut changes the framing, the
 keywords punch in, and `--broll` cuts away to your screen recording while

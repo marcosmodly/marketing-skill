@@ -16,6 +16,8 @@
  *   e.g. "1 3 5 6 | 5 3 2 -". Each bar's tokens share it equally; ' and ,
  *   shift a note an octave up or down, - holds the previous note, . rests.
  * - data-drop: when the beat comes in. The intro builds into it.
+ * - data-intro="silence": no intro. The hook plays over silence (the voice alone) and the music
+ *   lands all at once on the drop: the sound-drop hook (references/hooks.md, "Audio hooks").
  * - data-break="8.5-13.5": thins the music out under quieter moments.
  *
  * How it plays: the hook enters at the drop as the lead melody, answered by a
@@ -1143,13 +1145,16 @@ function buildMusic(opts, key) {
   const kit = g.chip ? { kick: chipKick, snare: chipSnare, clap: chipSnare, hat: chipHat, crash: chipCrash } : { kick, snare, clap, hat, crash };
   const padOf = (notes, dur, opts) => (g.chip ? chipArp(notes, dur, { rate: 15 }) : strings(rng, notes, dur, opts));
 
-  // ---- intro: the chord before the drop, plus a riser into it
+  // ---- intro: the chord before the drop, plus a riser into it (or, for a silent hook, nothing
+  // until the hit on the drop)
   if (drop > 0) {
-    const introChord = key.chord(progression[progression.length - 1], 4, 0);
-    const pad = padOf(introChord, drop, { cutoff: 1000, attack: 0.35 });
-    harm.add(pad, 0, g.chip ? 0.18 : 0.35);
-    send.add(pad, 0, 0.35);
-    if (drop >= 1.5 && !g.chip) drums.add(riser(rng, 1.5), drop - 1.5, 0.55);
+    if (opts.intro !== 'silence') {
+      const introChord = key.chord(progression[progression.length - 1], 4, 0);
+      const pad = padOf(introChord, drop, { cutoff: 1000, attack: 0.35 });
+      harm.add(pad, 0, g.chip ? 0.18 : 0.35);
+      send.add(pad, 0, 0.35);
+      if (drop >= 1.5 && !g.chip) drums.add(riser(rng, 1.5), drop - 1.5, 0.55);
+    }
     if (drop >= 0.5) {
       drums.add(g.impact ? impact(rng) : kit.crash(rng), drop, g.impact ? 0.8 : 0.6);
     }
@@ -1376,7 +1381,7 @@ function buildSoundtrack(cues, opts) {
   if (genreSpec) {
     music = buildMusic({
       genreSpec, duration, drop, bpm, energy: Math.min(5, Math.max(1, Math.round(opts.energy || 3))),
-      breaks: opts.breaks || [], seed: hashString(`${genreName}|${opts.key}|${mode}|${opts.motif || spec.motif}|${bpm}`),
+      breaks: opts.breaks || [], intro: opts.intro, seed: hashString(`${genreName}|${opts.key}|${mode}|${opts.motif || spec.motif}|${bpm}`),
       motif, progression,
     }, key);
   }

@@ -21,13 +21,15 @@ in one short block, so the choices are deliberate and checkable:
 
 | Item | The question | In the script |
 |---|---|---|
+| Direction | "After watching, the viewer should understand or feel ___." One sentence, written before anything else | the message every choice below serves |
 | Purpose | What should this video accomplish? | `goal:` (below) |
-| Audience and emotion | Who's watching, and what should it feel like? | picks the look |
+| Audience and emotion | Who's watching, and the one feeling it should leave? | picks the look ("Start from one feeling") |
 | Dominant style | One look, at most one supporting style | `look:` |
 | Palette | Base, accent, text, and what each color means | the Visual Identity, or the look's accent |
 | Image rule | What kind of picture proves or explains each point? | each line's `[bg: ...]`, `[card: ...]`, or `[shot: ...]` |
 | Typography | A headline font and a body font | the look's headline, or the identity's `Headline font:` |
 | Motion rule | What moves, and why? | `motion: low`, `medium`, or `high` |
+| Motion plan | Per scene: what moves, which way, how fast, and what the viewer should notice | the table in "Plan the movement" |
 | Pacing rule | What causes a cut or a new picture? | an idea changing (see "Pacing") |
 | Accessibility | How will it stay readable and comfortable? | `render.js --check` measures it |
 | Rights and accuracy | Are the assets usable, and the claims fair? | the user's own material, `[source: ...]` |
@@ -50,6 +52,24 @@ and tone, not because a style is trending.
 | `review` | Analyze or review | `minimal` | medium | Screenshots, comparisons, callouts; a neutral base and one highlight |
 | `comedy` | Make comedy | `playful` | high | A clear setup and payoff, timing-led cuts |
 | `music` | Music content | `social` | high | Beat-aware edits, with a licensed track's beat (`beats.js`) |
+
+The goal also points to the hook types that suit it (`hooks.md`, "Pick by the
+video's goal"; `hook.js --goal <goal>`).
+
+### Start from one feeling
+
+Pick one primary feeling and turn it into settings. Tendencies, not laws.
+
+| Feeling | Visual clues | Here |
+|---|---|---|
+| Calm | Slow movement, open space, soft light, restrained color | `look: cozy` or `minimal`, `motion: low`, `edit: clean`, long holds |
+| Excitement | Strong contrast, quicker movement, energetic cuts | `look: social`, `motion: high`, `edit: fast` |
+| Sadness | Muted color, still frames, negative space | `look: cinematic`, `motion: low`, `max-hold: 5`, `[cut: fade]`, `hook-audio: silence` |
+| Curiosity | Partial reveals, unusual framing, controlled contrast | `look: suspense` or `editorial`; a close-up first and the whole later; `[cut: mask]` on the reveal |
+| Trust | Clear layouts, stable movement, readable type | `goal: trust` (`documentary`, low), panel captions, `[source: ...]` |
+| Nostalgia | Grain, warm or faded color, retro details | `look: retro` or `cozy`, `grain: yes`; pixel art for a game memory |
+| Urgency | A strong focal point, concise text, purposeful pace | `look: social`, `motion: medium`, `max-hold: 2.5`, short lines; a real deadline only |
+| Wonder | Scale, depth, atmospheric light, gradual reveals | `look: cinematic` with wide shots; the 3D `globe` or `rings`; a montage photo's `dolly-in` or `rise` |
 
 ## Looks
 
@@ -108,6 +128,120 @@ win over the look's.
 | Anime / illustrated, fantasy | Not drawn locally: a connected video model (paid, quoted first), never copying a franchise or artist |
 | Whiteboard / sketch | Not built: the 3D `notes` shot is the closest |
 
+## Style recipes
+
+Six styles most short-form videos are made in, each with how to build it
+here, a timed sequence to start from, and what to avoid. Choose the one that
+makes the message clearer, not the one that looks most impressive.
+
+### Cinematic photo montage
+
+Still pictures, a film-like grade, slow controlled camera moves, atmosphere,
+and sound, so stills feel like a moving scene. For emotional stories,
+reflections, brand stories, mood pieces, short documentaries. Here:
+`montage-video` (the user's photos) or `clip-montage`, or a narrated script
+with `look: cinematic`. Look for subject separation, light and shadow,
+believable places, foreground and background depth, and one grade (warm and
+nostalgic, cool and restrained, neutral, dark, or soft) that never shifts skin
+or product color.
+
+| Time | Shot | Move (a montage line's `[move: ...]`) |
+|---|---|---|
+| 0–3s | Wide, establishing | `push-in`, slow |
+| 3–6s | Medium, the action | `pan-left` or `pan-right` |
+| 6–9s | Close-up, the emotion | `push-in focus=x%,y%` on the face or detail, very slow |
+| 9–12s | Detail | `drift`, a short lateral move |
+| 12–15s | Wide, the ending | `pull-out`, or `none` with `[hold: 2 bars]` |
+
+Use `orbit` or `dolly-in` (depth) only on a photo with clear near and far
+parts; a cut or a dissolve follows the emotional rhythm. Avoid lens flares,
+heavy grain, the same move on every picture (`--check` notes it), a dramatic
+transition on every cut, and pictures that don't belong to one story.
+
+### Motion graphics and typography
+
+Shapes, text, icons, diagrams, numbers, and animated layouts. For explainers,
+statistics, comparisons, app demos, and feature announcements. Here:
+`look: explainer` (or `tech`), `edit: kinetic`, `[card: ...]` for the key
+phrase, the 3D `cards`, `icons`, and `chart` shots, and the marketing
+templates (`promo`, `how-to`, `announcement`). The templates share one graphic
+kit, so stroke widths, corners, and spacing stay consistent.
+
+| Time | Beat | Here |
+|---|---|---|
+| 0–2s | A large question | `hook:`, `hook-fx: bounce` |
+| 2–4s | A diagram shows the problem | `[shot: cards ...]` or `[card: ...]` |
+| 4–6s | The solution, as a highlighted panel | `[card: ...]` in the accent, `[cut: mask]` |
+| 6–8s | Three benefits, one at a time | Three short lines, a `*keyword*` each |
+| 8–10s | The takeaway and the brand mark | `cta:` and the end card |
+
+Type moves by fading and rising, a word at a time, or a scale on one keyword;
+numbers count up. Avoid many fonts or shapes, random movement, and text that
+leaves before it can be read (`--check` measures reading time).
+
+### Pixel art
+
+Visible pixels, simple forms, a limited palette, frame-by-frame movement:
+nostalgic, playful, game-like. For short narrative series, everyday stories,
+retro themes, and game content. Here: `style: pixel`. The renderer keeps the
+rules: one pixel size (each art pixel 8x8 on screen), 16 colors plus the
+brand's accent, hard edges (no smoothing), whole-pixel camera moves that jump
+rather than glide (`editing-techniques.md`), stepped animation in the dialog
+box, and the user's photo pixelated into the same palette (`[shot: photo]`)
+rather than pasted in sharp. Give each character a recognizable silhouette
+and a few fixed colors, and each place a light source and a few reused props.
+Avoid mixing in blurry or detailed artwork, more colors, changing proportions,
+busy backgrounds, and movement smoother than the style.
+
+### Minimalist advertising
+
+A clear composition, restrained color, generous negative space, concise
+text, and a strong product. For app and software ads, launches, premium
+brands, and a simple call to action. Here: `look: minimal` (or `luxury`,
+`editorial`), `motion: low`, one accent, the user's own product shot or
+screen, and a clean background.
+
+| Time | Visual | Here |
+|---|---|---|
+| 0–3s | The problem, stated | `hook:` rising in; a calm background |
+| 3–6s | The product appears | The user's product shot (`[bg: assets/product.png]`), or the 3D `hero` with their screenshot |
+| 6–10s | A feature, demonstrated | Their screen recording, the `how-to` phone frame |
+| 10–13s | The main benefit | `[card: ...]` with the benefit in the accent |
+| 13–15s | Brand and call to action | `cta:` and the end card, held long enough to read |
+
+Avoid decoration, tiny screenshots, unreadable UI, complicated transitions,
+claims the product can't back, and a call to action that's gone in a blink.
+
+### 3D and futuristic
+
+Depth, light, materials, perspective, and moving through space. For technology
+products, abstract ideas, product visualization, and science. Here:
+`style: 3d` (with `look: tech` for the futuristic version). The sets keep one
+material language (glossy and soft, with metal and glowing accents used
+sparingly), a key light, and a rim light in the brand's accent. Camera moves
+each have a reason: the `desk` push into the screen for emphasis, `rings` and
+the moving `globe` for energy and reach, a pull back to show scale, and the
+mascot's shots held steady for a clean presentation. Avoid neon on every
+surface, reflections and glow everywhere, rotation with no motive, unclear
+scale, and detail that's beside the point. Never show a feature the product
+doesn't have.
+
+### Mixed styles
+
+Not mixing everything: one style is the foundation and each other one has a
+job. Keep one palette (the Visual Identity across all of it), one headline and
+body font, matching or deliberately separated lighting, the same line weights
+and corners, and a transition that explains each change of style. Return to
+the opening style at the end, so it closes where it began.
+
+| Mix | Here |
+|---|---|
+| Cinematic photo + clean typography | `look: cinematic` with `[card: ...]` on the key lines |
+| Real product footage + 2D labels | `clip-montage` with `[callout: ...]`, or `cut.js --broll` |
+| 3D object + minimal labels | `style: 3d` with the `hero` or `desk` shot holding their screenshot |
+| Documentary photo + an animated chart | `look: documentary` lines with a `[card: ...]` and `[source: ...]`; the 3D `chart` for real numbers |
+| Opening problem in photos, product in 3D | Two renders joined in an editor (CapCut): one `compose.js` video is one style |
+
 ## Color
 
 ### A small palette, with roles
@@ -123,7 +257,29 @@ win over the look's.
 
 Start with two to four colors plus neutrals, and give each a stable job for
 the whole video: here the accent always marks the key word, and the caution
-color always marks the wrong way. Meaning never rests on color alone: a
+color always marks the wrong way.
+
+**Proportion.** About 60% base (the background, the environment), 30%
+supporting (panels, secondary shapes, the picture's own dominant color), and
+10% accent (the keyword, the CTA, the one thing to notice). A guideline, not a
+rule: if the accent is everywhere, nothing stands out.
+
+### Starting palettes
+
+For a brand with no Visual Identity yet, these make a coherent start; save the
+chosen one as `Background:`, `Accent:`, and `Text:` in `brand-voice.md`. The
+contrasts are measured: supporting colors are for shapes and panels, never
+text, and text on the accent is picked automatically (white or near-black).
+
+| Style | Base | Supporting | Accent | Text | Contrast | Closest look |
+|---|---|---|---|---|---|---|
+| Cinematic | `#17191D` | `#77736E` | `#C58B52` | `#F5F5F2` | text 16:1, accent 6:1 | `cinematic` |
+| Technology | `#111827` | `#2563EB` | `#FBBF24` | `#F5F5F2` | text 16:1, accent 10.6:1 | `explainer`, `tech` |
+| Pixel / retro | `#191310` | `#A65D4E` | `#E8D5AD` | `#F5F5F2` | text 17:1, accent 12.7:1 | `retro` |
+| Minimal / premium | `#F5F2EC` | `#B9B3A8` | `#747A5A` | `#1C1C1A` | text 15:1, accent 4:1 (large text only) | `minimal`, `luxury` |
+| Futuristic | `#090D18` | `#24245C` | `#67E8F9` | `#F5F5F2` | text 18:1, accent 13.4:1 | `tech` |
+
+Pixel art keeps its own 16-color palette; only the accent follows the brand. Meaning never rests on color alone: a
 `~wrong~` word is struck through as well as red, and a keyword is lit and
 bigger. Text on the accent (stickers, chips, buttons) is whichever of white
 or near-black reads better on it, worked out from the accent.
@@ -229,6 +385,44 @@ customers, team, product, or results. Nothing staged or generated is shown
 as real evidence, and every license and credit is kept (`media.js` writes
 `CREDITS.md`).
 
+### Prompting AI pictures
+
+For a connected image or video model (always quoted and approved first,
+`video-rendering.md`), and for the prompts `visual-brief-generator` writes.
+Build every prompt in this order:
+
+**Subject + action + environment + composition + lighting + palette + style +
+aspect ratio + exclusions**
+
+> A young adult at a desk using a laptop, seen from a slightly raised rear
+> three-quarter angle, a quiet bedroom at night, the subject on the right with
+> calm empty space on the left and in the top fifth for the title, soft
+> monitor light, muted navy and warm amber, cinematic editorial photography,
+> vertical 9:16, no text, no logos, no watermark.
+
+- **Leave room for the words.** Say where the calm space goes: the top band
+  for the hook, the band above the bottom quarter for captions (or the side
+  the subject isn't on). `fit.js` measures it once the picture is in.
+- **Keep scenes consistent.** Write a short visual spec once (the character,
+  clothing, place, time of day, palette, light direction, camera angle, art
+  style) and repeat it word for word in every prompt; change only what should
+  change from scene to scene.
+- **Pixel art:** the pixel scale (e.g. "a 135x240 canvas, each pixel crisp"),
+  a palette limit ("16 colors"), the outline color, the perspective, the
+  character and place, a transparent background if it's an asset, and
+  whether it's one picture or a sprite sheet (then the exact cell count, cell
+  size, and spacing; check every frame lines up).
+- **3D:** the object or scene, the camera angle, one material (matte, glass,
+  metal, soft plastic), the lighting (key, fill, rim), the background, the
+  palette, the render style, the aspect ratio, and no text or logos.
+- **The workflow:** write the spec, generate a few options, pick one
+  direction, reuse its description, make the scene variations, then inspect
+  each for anatomy, object details, perspective, and garbled text, and
+  replace weak ones. Grade and crop them all the same way.
+- **Never trust what a model draws as text, a logo, an interface, or a
+  fact.** Put real words on in the edit (captions, `[card: ...]`), and the
+  real product screens in (`screen=`, the 3D `hero` and `desk` shots).
+
 ## Typography
 
 - Two families: a distinctive headline font for the hook and text cards, and
@@ -278,6 +472,42 @@ transition on every cut reads as random; `--check` notes it.
 - The most important element gets the clearest movement.
 - No more than three flashes in any second (`--check` fails it); keep shakes
   for a few hits.
+- Three levels, never all strong at once: the primary move (the camera, the
+  big reveal), the secondary (the words, a label), and ambient (grain, a slow
+  drift). Alternate stillness and movement, slow and fast, wide and close.
+
+### What each movement says
+
+| Movement | Effect | Here |
+|---|---|---|
+| Zoom in | Focus, importance, intimacy | `kbIn`, a keyword punch-in, a montage `push-in` |
+| Zoom out | Reveal, context, an ending | `kbOut`, `pull-out` |
+| Pan | Exploring a wide picture | `kbLeft` / `kbRight`, `pan-left` / `pan-right` |
+| Tilt | Height or detail | `kbUp` / `kbDown`, `rise` |
+| Slide | An organized entrance | `[cut: slide]`, a template's `.slide` |
+| Fade | A gentle arrival or exit | `[cut: fade]`, `captions-fx: fade` |
+| Scale pop | Energy on a hook or keyword | `hook-fx: bounce`, `.pop` |
+| Rotation | Playful or dimensional | `[cut: spin]` (high motion only) |
+| Parallax | Depth from stills | A montage photo's `orbit`, `dolly-in`, `rise` |
+| Mask reveal | Discovery | `[cut: mask]` |
+| Tracking | Following a subject | A still's own move, a montage `[callout: ...]`; not built for a moving subject in a clip |
+
+### Plan the movement
+
+Before rendering, write one row per scene and show it with the visual recipe:
+
+| Scene | What moves | Direction | Speed | Purpose |
+|---|---|---|---|---|
+| Opening | The camera | In | Medium | Grab attention |
+| Problem | The text | Rises in | Slow | Introduce the idea |
+| Explanation | A diagram | Builds | Medium | Show the relationship |
+| Product | The product or UI | Scales and slides in | Controlled | Reveal the solution |
+| Ending | The camera | Out | Slow | Give closure |
+
+For every move: what moves, why, where it starts and ends, how fast, and does
+it compete with the words or the subject? Sound follows the same plan: a soft
+`swish` on a panel coming in, a `click` on a tap, a low `boom` on the big
+reveal, and none on most moves.
 
 ## Pacing
 
@@ -366,3 +596,11 @@ What only eyes can judge, on the `--slides` frames and a phone:
 | Misleading charts | The user's real numbers, labeled, with `[source: ...]` |
 | AI imagery as evidence | Never; label it, and only for illustration |
 | Designed on a big monitor | Look at `--slides` at phone size |
+| Looks random | No direction: write the one sentence, then `goal:` or `look:` |
+| Pictures don't match | One grade for all (the look's); replace the odd one, or crop it to match |
+| A crowded frame | Remove 30%: keep only what carries the message, then compare |
+| Product unclear | A clean hero shot (the user's own) and one focused demonstration |
+| Pixel art looks blurry | `style: pixel` keeps hard edges; never a smooth zoom or a sharp photo pasted in |
+| 3D looks artificial | Fewer materials, the sets' own lighting, one object at a time |
+| A mixed style feels messy | One primary style; the others each with a job (see "Mixed styles") |
+| Unsure which way to go | Make the same script in three looks (or three palettes), render `--slides` for each, and compare |

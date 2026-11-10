@@ -53,7 +53,11 @@ and the motion together with the colors, type, and captions.
 Two looks are styles of their own rather than edits: **3D motion design** is
 `style: 3d` (the mascot, 3D titles, the product demo's screens) and **pixel
 art** is `style: pixel`. An `edit:` still applies to them (the hook, punch-ins
-on keywords, the drop), since their pictures sit in the same camera layer.
+on keywords, the drop), since their pictures sit in the same camera layer. In
+pixel art the camera keeps the pixel grid: a punch-in is a whole step (12.5%,
+so every art pixel grows from 8 to exactly 9 screen pixels), it jumps in and
+out instead of gliding, a shake moves by whole pixels without tilting, and
+`motion: low` has no punch-ins, since the smallest crisp one isn't gentle.
 **Collage** has no preset: the closest are the `starter-pack` and
 `slideshow` templates and the 3D `wall` shot.
 
@@ -62,6 +66,7 @@ Any part of a style can be changed on its own, in the frontmatter:
 ```
 edit: ugc
 hook-fx: glitch          # the visual hook: zoom, shake, glitch, flash, bounce, montage, or none
+hook-audio: silence      # under the hook: build (the music's intro, the default) or silence (the voice alone)
 transitions: whip, punch # the cuts between lines, taken in turn
 drop: flash              # the cut out of the hook, where the beat comes in
 punch: 10%               # punch-ins on each *keyword* (no turns them off)
@@ -195,7 +200,8 @@ sound would drift. The renderer plays it at normal speed and says so.
 | Impact sound | `impact` (short and tight, for punch-ins and hard cuts) and `boom` (a deep hit with a long tail, for a punchline) |
 | Risers | `riser`, cued on the reveal: it builds for 1.4s before it (in `fast` and `cinematic`, into the drop); `drumroll` |
 | Bass drop | `bass` (a sub drop); the generated music's beat drops at `data-drop` |
-| UI sound effects | `click`, `typing`, `ping`, `pop`, `tick`, `shutter` |
+| UI sound effects | `click`, `typing`, `ping`, `pop`, `tick`, `shutter`; in a script, `[sfx: click]` on the line |
+| Silence / sound drop | `hook-audio: silence`: the first line alone, then the music lands on the drop (no riser into it) |
 | Sound layering | Music, effects, and voice are mixed in one pass; one element can cue several sounds (`data-sfx="riser impact"`) |
 | Audio ducking | Automatic: the music and effects dip under every voice line |
 | Voiceover processing | Silence trimmed and levels evened per line; the mix lands at about -14 LUFS. EQ and compression aren't applied |

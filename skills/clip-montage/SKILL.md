@@ -163,7 +163,10 @@ command below. `VIDEO` below means `${CLAUDE_PLUGIN_ROOT}/scripts/video`.
      none.
    - **The words on screen:** the hook (three options from
      `${CLAUDE_PLUGIN_ROOT}/references/hooks.md`, each from a different
-     pattern), a label for each shot, a status sticker if any, and the
+     pattern, checked with `node VIDEO/hook.js "one" "two" "three"`; its
+     "Visual hooks" table has the openings a montage does well: a detail
+     that pulls out to the whole, a freeze frame, a match cut, the result
+     first), a label for each shot, a status sticker if any, and the
      CTA, plus the price and specs for a listing or a product. Every fact
      comes from the user or the client. If one is missing, ask, or leave
      it out.

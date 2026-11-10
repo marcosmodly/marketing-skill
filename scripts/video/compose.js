@@ -67,6 +67,8 @@
  * picks by the sound's genre and energy. Each part can be set on its own:
  *   edit: ugc
  *   hook-fx: glitch          # what moves in the first half second: zoom, shake, glitch, flash, bounce, montage, none
+ *   hook-audio: silence      # what plays under the hook: build (the music's intro builds into the drop,
+ *                            # the default) or silence (the voice alone, then the music lands on the drop)
  *   transitions: whip, punch # the cuts between lines, in turn (fade, cut, flash, slide, whip, zoom, punch,
  *                            # wipe, glitch, spin, blur, mask, leak, burn); drop: the one out of the hook
  *   punch: 10%               # the camera punching in on each *keyword* as it's said (no to turn it off)
@@ -75,7 +77,9 @@
  *   max-hold: 3              # the longest one picture holds before a new one or a reframe (0: never split)
  *   j-cut: 0.2               # how far each line's voice leads its picture
  * And per line: [cut: glitch] for how that line comes in, [bg: a | b | c] for several pictures
- * cut between as it's said (b-roll; one query alone fetches as many as the line needs).
+ * cut between as it's said (b-roll; one query alone fetches as many as the line needs), and
+ * [sfx: ping] for a sound as the line starts (any sound in references/sound-guide.md: a
+ * notification, a click, a ka-ching under the hook when it explains the picture).
  *
  * Your own character: "character: assets/hero.glb" puts the user's rigged 3D character (a .glb
  * from Blender, Ready Player Me, or VRoid, a .vrm, or Mixamo's .fbx) in the robot mascot's place in every shot it
@@ -106,6 +110,7 @@ const { parseScript } = require('./voice');
 const { prepareVoice } = require('./render');
 const { visualIdentity, applyIdentity } = require('./brand');
 const { analyseTrack, alignTrack } = require('./beats');
+const { SOUNDS } = require('./soundtrack');
 const EDIT = require('./edit');
 const LOOK = require('./look');
 const FIT = require('./fit');
@@ -390,13 +395,18 @@ async function main() {
     // [source: ...] puts a source or caveat for its claim on screen while it's said
     const card = /\[card:\s*([^\]]+)\]/i.exec(text);
     const source = /\[source:\s*([^\]]+)\]/i.exec(text);
-    const said = text.replace(/\s*\[(bg|shot|cut|card|source):[^\]]*\]/gi, '').trim();
+    // [sfx: ping] plays a sound as the line starts: a notification, a tap, a sale under the hook
+    const sfx = /\[sfx:\s*([^\]]+)\]/i.exec(text);
+    const said = text.replace(/\s*\[(bg|shot|cut|card|source|sfx):[^\]]*\]/gi, '').trim();
     return {
       n, text: plainText(said), kw: keywords(said), no: cautions(said),
       bg: bg.query, more: bgs.slice(1).map((b) => b.query), screen: bg.screen, at: bg.at, focus: bg.focus, shot: shot ? parseShot(shot[1]) : null,
       cut: cut ? cut[1].trim().toLowerCase() : null, card: card ? card[1].trim() : null, source: source ? source[1].trim() : null,
+      sfx: sfx ? sfx[1].trim().toLowerCase().split(/[\s,]+/).filter(Boolean) : [],
     };
   }).filter((l) => l.text);
+  const badSfx = lines.find((l) => l.sfx.some((s) => !SOUNDS.includes(s)));
+  if (badSfx) fail(`Line ${badSfx.n}: [sfx: ${badSfx.sfx.join(' ')}]? The sounds are ${SOUNDS.join(', ')} (references/sound-guide.md).`);
   const badCut = lines.find((l) => l.cut && !EDIT.TRANSITIONS[l.cut]);
   if (badCut) fail(`Line ${badCut.n}: [cut: ${badCut.cut}]? The transitions are ${Object.keys(EDIT.TRANSITIONS).join(', ')}.`);
   if (lines[0] && lines[0].cut) console.warn(`Note: [cut: ...] on line ${lines[0].n} is ignored; it says how a line comes in, and the first is on screen from frame 0.`);
@@ -497,6 +507,11 @@ async function main() {
     }
   }
   const trackNotes = [];
+  // what plays under the hook (references/hooks.md, "Audio hooks"): the music's intro building into
+  // the drop, or silence, so the first line is heard alone and the music lands on the cut
+  const hookAudio = String(meta['hook-audio'] || 'build').trim().toLowerCase();
+  if (!['build', 'silence'].includes(hookAudio)) fail(`hook-audio: ${hookAudio}? Use build (the music builds under the hook into the drop) or silence (the voice alone, then the music lands on the drop).`);
+  const silentHook = hookAudio === 'silence' && (musicSrc || sound.music !== 'none');
 
   // ---- the edit: cuts, camera, captions, and finishing, from the script's edit style
   let edit;
@@ -509,6 +524,8 @@ async function main() {
     fail(e.message);
   }
   if (style.shots && edit.hook === 'montage') edit.hook = 'zoom'; // a drawn style has one picture per line
+  const pixel = styleName === 'pixel';
+  if (pixel) edit.punch = EDIT.pixelPunch(edit.punch, edit.motion); // whole-pixel zooms only (edit.js)
   if (bold && edit.captions !== 'pop' && !meta['captions-fx']) edit.captions = 'pop'; // the bold look animates its own words
 
   const scenes = [];
@@ -637,7 +654,10 @@ async function main() {
     `class="${bodyClass}${bold ? ' bold' : ''}${subtitle ? ' sub' : ''}${fxClasses ? ` ${fxClasses}` : ''}"`, ...(landscape ? ['data-size="1920x1080"'] : []), `data-duration="${duration}"`, `data-drop="${drop}"`,
     `data-edit="${edit.name}"`, ...(look ? [`data-look="${look.name}"`, `data-motion="${edit.motion}"`] : []), ...(bodyVars.length ? [`style="${bodyVars.join('; ')}"`] : []),
     ...(character ? [`data-character="${esc(character)}"`] : []),
-    ...(musicSrc ? [`data-music-src="${esc(musicSrc)}"`, 'data-music="none"', ...(track ? [`data-music-start="${track.musicStart}"`] : [])] : [`data-music="${sound.music}"`]),
+    // a silent hook holds a licensed track back until the drop, starting it that much later in, so
+    // its lift still lands on the drop; the generated music skips its intro (data-intro)
+    ...(musicSrc ? [`data-music-src="${esc(musicSrc)}"`, 'data-music="none"', ...(track ? [`data-music-start="${silentHook ? r2(track.musicStart + drop) : track.musicStart}"`] : []), ...(silentHook ? [`data-music-at="${drop}"`] : [])]
+      : [`data-music="${sound.music}"`, ...(silentHook ? ['data-intro="silence"'] : [])]),
     ...['bpm', 'key', 'mode', 'energy', 'motif'].filter((k) => sound[k] !== undefined).map((k) => `data-${k}="${esc(String(sound[k]))}"`),
   ].join(' ');
   // the bold look shows the first line from frame 0; a hook that is that line isn't shown twice
@@ -672,9 +692,10 @@ async function main() {
   const cue = (t, sfx, note) => cues.push(`  <i class="cue" hidden style="--in:${r2(t)}s" data-sfx="${sfx}"></i>${note ? ` <!-- ${note} -->` : ''}`);
   const hookSfx = { shake: 'impact', glitch: 'glitch', flash: 'impact', zoom: edit.impact ? 'whoosh' : '' }[edit.hook];
   if (hookSfx) cue(edit.hook === 'zoom' ? 0.1 : edit.hook === 'shake' ? 0.04 : 0.08, hookSfx, `the ${edit.hook} hook`);
+  for (const s of scenes) if (s.sfx.length) cue(s.voiceAt, s.sfx.join(' '), `line ${s.n}'s [sfx: ...]`);
   const dropShot = style.shots ? null : shots.find((x) => x.scene === 1 && x.first);
   const dropTr = dropShot ? dropShot.transition : style.shots ? 'cut' : null;
-  const dropSounds = [edit.riser && drop >= 1.2 ? 'riser' : '', edit.impact && EDIT.TRANSITIONS[dropTr || 'cut'].sfx !== 'impact' ? 'impact' : ''].filter(Boolean);
+  const dropSounds = [edit.riser && drop >= 1.2 && !silentHook ? 'riser' : '', edit.impact && EDIT.TRANSITIONS[dropTr || 'cut'].sfx !== 'impact' ? 'impact' : ''].filter(Boolean);
   if (scenes.length > 1 && dropSounds.length) cue(drop, dropSounds.join(' '), 'the drop');
   if (edit.cutSfx) {
     for (const x of shots) {
@@ -688,7 +709,7 @@ async function main() {
 
   // ---- the camera: every picture sits in one layer that punches in, shakes, or glitches on the
   // hook and the drop (and on each *keyword*, added by render.js once the words are timed)
-  const camAnim = EDIT.cameraAnimation({ hook: edit.hook, dropFx: dropTr === 'punch' && edit.dropFx === 'punch' ? 'none' : edit.dropFx, drop: scenes.length > 1 ? drop : 0, drawn: !!style.shots });
+  const camAnim = EDIT.cameraAnimation({ hook: edit.hook, dropFx: dropTr === 'punch' && edit.dropFx === 'punch' ? 'none' : edit.dropFx, drop: scenes.length > 1 ? drop : 0, drawn: !!style.shots, pixel });
   const camOpen = `  <div class="cam" data-lint="off"${edit.punch ? ` data-punch="${edit.punch}"${edit.punchFx ? ` data-punch-fx="${edit.punchFx}"` : ''}` : ''} style="${edit.punch ? `--punch:${edit.punch}; ` : ''}${camAnim ? `animation: ${camAnim}` : ''}">`;
   // what's behind the text: a drawn style's canvas and one shot per line, or a photo slot per line
   const slots = EDIT.slotTimes(shots);
@@ -732,10 +753,11 @@ ${inserts}</body>
     console.log(`  ${String(s.n).padStart(2)}. ${s.start.toFixed(2)}–${s.end.toFixed(2)}s  ${s.clip}${pics}${s.shot && style.shots ? `  shot ${s.shot.name}` : ''}  ${s.text.slice(0, 48)}${s.text.length > 48 ? '...' : ''}`);
   }
   if (look) console.log(`  look: ${look.name}${look.goal && !meta.look ? ` (for goal: ${look.goal})` : ''}: ${look.about}${headFont ? `; headline in ${headFont[0]}` : ''}.`);
-  console.log(`  edit: ${edit.name}${edit.picked ? ' (picked to fit the sound; set edit: to choose)' : ''}: ${edit.about}. Motion: ${edit.motion}. Hook: ${edit.hook}; keyword punch-ins: ${edit.punch ? `${Math.round((edit.punch - 1) * 100)}%` : 'off'}${edit.jcut ? `; J-cuts ${edit.jcut}s` : ''}.`);
+  console.log(`  edit: ${edit.name}${edit.picked ? ' (picked to fit the sound; set edit: to choose)' : ''}: ${edit.about}. Motion: ${edit.motion}. Hook: ${edit.hook}; keyword punch-ins: ${edit.punch ? `${Math.round((edit.punch - 1) * 1000) / 10}%` : 'off'}${pixel ? ' (pixel art: whole-pixel zooms that jump, never glide)' : ''}${edit.jcut ? `; J-cuts ${edit.jcut}s` : ''}.`);
   for (const n of fitNotes) console.warn(`Note: ${n}`);
   if (style.shots) console.log(`  style: ${styleName} (templates/${style.template})`);
-  console.log(`  sound: ${musicSrc ? `licensed track ${musicSrc}${track ? `, ${track.bpm} BPM, started at ${track.musicStart}s so its lift lands as the hook ends, cuts on its beat` : ''}` : `${sound.music}${sound.music !== 'none' ? `, ${sound.bpm} BPM, ${sound.key} ${sound.mode || ''}, energy ${sound.energy}, cuts on the beat` : ''}`}${musicSrc ? '' : identity ? ' (the Sonic Identity)' : ' (the template default; no Sonic Identity saved yet)'}`);
+  console.log(`  sound: ${musicSrc ? `licensed track ${musicSrc}${track ? `, ${track.bpm} BPM, started at ${track.musicStart}s so its lift lands as the hook ends, cuts on its beat` : ''}` : `${sound.music}${sound.music !== 'none' ? `, ${sound.bpm} BPM, ${sound.key} ${sound.mode || ''}, energy ${sound.energy}, cuts on the beat` : ''}`}${musicSrc ? '' : identity ? ' (the Sonic Identity)' : ' (the template default; no Sonic Identity saved yet)'}${silentHook ? `; the hook plays over silence and the music lands on the drop at ${drop}s` : ''}`);
+  if (hookAudio === 'silence' && !silentHook) console.warn('Note: hook-audio: silence holds the music back until the drop, but this video has no music (music: none).');
   console.log(`  brand: ${branded.changes.length ? branded.changes.join('; ') : 'the template default; no Visual Identity saved yet'}`);
   for (const p of branded.problems) console.warn(`Note: ${p}`);
   if (!meta.hook && !bold && !subtitle) console.warn('Note: no hook in the frontmatter, so the first frame has no text. Add "hook: ..." to stop the scroll.');

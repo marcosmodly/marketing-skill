@@ -167,7 +167,10 @@ command below. `VIDEO` below means `${CLAUDE_PLUGIN_ROOT}/scripts/video`.
      own recordings, one file per voiced line, in any language.
    - **The words on screen:** the hook (three options from
      `${CLAUDE_PLUGIN_ROOT}/references/hooks.md`, each from a different
-     pattern), a label for each shot, a status sticker if any ("just
+     pattern, checked with `node VIDEO/hook.js "one" "two" "three"`; its
+     "Visual hooks" table has the openings a montage does well: a detail
+     that pulls out to the whole, a freeze frame, a match cut, the result
+     first), a label for each shot, a status sticker if any ("just
      listed", "open house sat 1–4", "new", "20% off"), the price, the
      specs, and the CTA. Every fact comes from the user or the client:
      the price, beds, baths, square footage, dimensions, materials, and

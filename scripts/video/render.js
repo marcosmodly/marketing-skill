@@ -203,6 +203,16 @@ async function openPage(browser, pagePath) {
   page.on('requestfailed', (req) => { if (req.resourceType() === 'script') scriptFailed(req.url()); });
   page.on('response', (res) => { if (res.request().resourceType() === 'script' && res.status() >= 400) scriptFailed(res.url()); });
   await routeCached(page);
+  // Freeze the page's animation clock before it loads. seek() reaches animations through
+  // document.getAnimations(), which drops one that has finished, so on a running clock the
+  // visual hook (a half-second shake or glitch on the camera, no fill) ended in real time while
+  // the page loaded and never appeared in the video. Frozen, every animation waits at 0 for seek.
+  try {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Animation.setPlaybackRate', { playbackRate: 0 });
+  } catch (e) {
+    scriptProblems.push(`couldn't hold the page's animations still while it loads (${e.message}), so the first half second's effects may be missing`);
+  }
   await page.goto('file://' + path.resolve(pagePath), { waitUntil: 'networkidle' });
   await page.evaluate(() => document.fonts.ready);
   const ready = await page.evaluate(() => Promise.race([
@@ -788,7 +798,7 @@ async function motionProblems(page, duration) {
       ...document.getAnimations().filter((a) => /^(camGlitch|hkGlitch|glitchBg)$/.test(a.animationName) && !a.effect.target.matches('.bg.t-glitch'))
         .map((a) => a.effect.getComputedTiming().delay / 1000),
     ].filter(Number.isFinite).sort((a, b) => a - b);
-    const shakes = document.getAnimations().filter((a) => /^(camShake|hkJolt|hit)$/.test(a.animationName)).length;
+    const shakes = document.getAnimations().filter((a) => /^(camShake|camShakePx|hkJolt|hit)$/.test(a.animationName)).length;
     const slots = [...document.querySelectorAll('.bg')].filter((b) => b.querySelector('.bg-media'))
       .map((b) => ({ t: sec(b.style.getPropertyValue('--in')) || 0, move: (b.style.getPropertyValue('--kb') || 'kbIn').trim(), tr: [...b.classList].find((c) => c.startsWith('t-')) || '' }))
       .sort((a, b) => a.t - b.t);
@@ -926,6 +936,7 @@ async function readPage(page) {
       voices,
       duration: num(d.duration),
       drop: num(d.drop),
+      intro: d.intro || '',
       bpm: num(d.bpm),
       key: d.key,
       mode: d.mode,
@@ -1144,11 +1155,14 @@ async function prepareVoices(page, settings) {
 // data-punch="1.08">, written by compose.js and cut.js) zooms in on each keyword as it's said,
 // holds, and eases back, so the picture moves with the voice's emphasis while the words stay
 // put. data-punch-fx="shake" shakes it too (the meme cut). Keywords in the first 0.6s, near the
-// drop, or within 0.7s of the last punch are skipped, so the hits stay hits.
+// drop, or within 0.7s of the last punch are skipped, so the hits stay hits. In pixel art the
+// punch jumps in and out (steps), never through an in-between zoom that would make some art pixels
+// wider than others, and its shake doesn't rotate.
 async function addPunchIns(page) {
   return page.evaluate(() => {
     const cam = document.querySelector('.cam[data-punch]');
     if (!cam || !(parseFloat(cam.dataset.punch) > 1)) return 0;
+    const pixel = document.body.classList.contains('pixel');
     const toSeconds = (v) => (String(v || '').trim().endsWith('ms') ? parseFloat(v) / 1000 : parseFloat(v));
     const drop = parseFloat(document.body.dataset.drop);
     const times = [...document.querySelectorAll('.say.auto i.kw')].map((w) => toSeconds(w.style.getPropertyValue('--in')))
@@ -1158,8 +1172,8 @@ async function addPunchIns(page) {
     for (const t of times) {
       if (t < 0.6 || t - last < 0.7 || (Number.isFinite(drop) && Math.abs(t - drop) < 0.5)) continue;
       // a shake goes first, so the punch's zoom (later in the list) wins while both run
-      if (cam.dataset.punchFx === 'shake') adds.push(`camShake .4s linear ${t.toFixed(3)}s`);
-      adds.push(`camKw .62s cubic-bezier(.2,.8,.2,1) ${t.toFixed(3)}s`);
+      if (cam.dataset.punchFx === 'shake') adds.push(`${pixel ? 'camShakePx .4s steps(1, end)' : 'camShake .4s linear'} ${t.toFixed(3)}s`);
+      adds.push(`camKw .62s ${pixel ? 'steps(1, end)' : 'cubic-bezier(.2,.8,.2,1)'} ${t.toFixed(3)}s`);
       last = t;
     }
     if (!adds.length) return 0;
