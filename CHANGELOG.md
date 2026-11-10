@@ -5,6 +5,12 @@ Skills that read "our changelog" for source material read this file too.
 
 ## 0.8.0 (unreleased)
 
+- **A voice recording with nothing audible in it stops with a message
+  naming it**, instead of hanging the render: `render.js`, `compose.js`, and
+  `montage.js` say "assets/line-2.wav has no audible voice; re-record it"
+  (every silent take at once) when a take is silent or nearly so (a muted
+  mic, the wrong input). The video scripts also end on SIGTERM and SIGHUP
+  now (`timeout`, `kill`, a closed terminal), which they used to ignore.
 - **Every video starts with the project.** Before a format, a script, or a
   render, `short-form-video` (and `clip-montage` and `montage-video` for the
   user's own business) checks the project's own files with the new

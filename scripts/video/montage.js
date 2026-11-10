@@ -114,7 +114,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const { pathToFileURL } = require('url');
 const { parseScript } = require('./voice');
-const { prepareVoice, meanLuma, launchBrowser } = require('./render');
+const { prepareVoice, prepareVoiceFiles, meanLuma, launchBrowser } = require('./render');
 const captions = require('./captions');
 const { visualIdentity, applyIdentity } = require('./brand');
 const { parseFrontmatter, sonicIdentity } = require('./compose');
@@ -763,10 +763,17 @@ async function build(args) {
       if (res.status !== 0) fail(`${(res.stderr || '').trim()}\n\nOr use the user's own recordings: one file per [say: ...] line in assets/, and\n"recordings: assets/${slug}-{n}.m4a" in the frontmatter.`);
     }
   }
-  for (const s of said) {
-    s.say = s.tags.say;
-    s.voiceLength = prepareVoice(path.join(dir, s.clipFile)).length;
+  // a recording with no audible voice in it stops here, by name (every one of them at once)
+  let voices;
+  try {
+    voices = prepareVoiceFiles(said.map((s) => path.join(dir, s.clipFile)));
+  } catch (e) {
+    fail(e.message);
   }
+  said.forEach((s, i) => {
+    s.say = s.tags.say;
+    s.voiceLength = voices[i].length;
+  });
 
   // ---- a voiceover: one recording of the user's own, under the whole video
   let voiceover = null;
@@ -774,7 +781,12 @@ async function build(args) {
     if (!fs.existsSync(path.join(dir, meta.voiceover))) fail(`Voiceover not found: ${meta.voiceover} (relative to ${dir})`);
     const at = meta['voiceover-at'] !== undefined ? parseFloat(meta['voiceover-at']) : 0.3;
     if (!(at >= 0)) fail(`voiceover-at: ${meta['voiceover-at']}? Write when it starts, in seconds, like 0.3.`);
-    const length = prepareVoice(path.join(dir, meta.voiceover)).length;
+    let length;
+    try {
+      ({ length } = prepareVoice(path.join(dir, meta.voiceover)));
+    } catch (e) {
+      fail(e.message);
+    }
     voiceover = { src: meta.voiceover, at, length, end: at + length, text: String(meta['voiceover-text'] || '').trim() };
     const talking = shots.filter((s) => s.sound);
     if (talking.length) notes.push(`${talking.length > 1 ? `shots ${talking.map((s) => s.n).join(', ')} keep their` : `shot ${talking[0].n} keeps its`} own sound under the voiceover; both play`);
