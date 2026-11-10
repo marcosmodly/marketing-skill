@@ -1,0 +1,45 @@
+name: Release
+
+# Every update to main is a release (CLAUDE.md). A push that carries a new
+# version in .claude-plugin/plugin.json, with its dated section in
+# CHANGELOG.md, is tagged v<version> on that commit and published as a GitHub
+# release whose notes are that section (scripts/ci/release_notes.py). A push
+# whose version is already released is left alone, with a warning that it
+# changed main without a release.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Tag and publish the release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Read the version and its notes
+        id: notes
+        run: python3 scripts/ci/release_notes.py --out "$RUNNER_TEMP/notes.md" >> "$GITHUB_OUTPUT"
+      - name: Publish the release
+        if: steps.notes.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.notes.outputs.tag }}
+          TITLE: ${{ steps.notes.outputs.title }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1 || git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            echo "::warning::$TAG is already released, so this push to main has no release of its own. Bump the version in .claude-plugin/plugin.json and add its dated CHANGELOG.md section to release it."
+            exit 0
+          fi
+          gh release create "$TAG" --target "$GITHUB_SHA" --title "$TITLE" --notes-file "$RUNNER_TEMP/notes.md"

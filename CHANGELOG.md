@@ -3,6 +3,15 @@
 What changed in each version of the plugin (`.claude-plugin/plugin.json`).
 Skills that read "our changelog" for source material read this file too.
 
+## 0.8.1 (2026-11-10)
+
+- **A release for every update.** Merging a new version to `main` now tags
+  it and publishes its GitHub release on its own, with that version's
+  section of this changelog as the notes (`.github/workflows/release.yml`,
+  `scripts/ci/release_notes.py`). CI checks on every pull request that the
+  release it would publish can be read, and `CLAUDE.md` makes a version bump
+  and a dated changelog section part of every change.
+
 ## 0.8.0 (2026-11-10)
 
 - **Hooks picked for the video's job.** `hook.js --goal sell` lists the hook

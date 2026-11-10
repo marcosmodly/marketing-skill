@@ -140,6 +140,9 @@ won't be merged:
 If users will notice your change, add a bullet to the top section of
 [CHANGELOG.md](CHANGELOG.md) saying what it does for them. Leave the
 version in `plugin.json` as it is; it's set when a release goes out.
+Every merge to `main` that carries a new version and its dated changelog
+section is tagged and published as a GitHub release automatically
+(`.github/workflows/release.yml`).
 
 ## Commits
 
