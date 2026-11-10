@@ -10,7 +10,7 @@ Usage: python3 scripts/ci/release_notes.py [--out notes.md]
 
 Prints version=, tag=, title=, and publish= lines (GitHub Actions step
 outputs). publish=false while the section is still "(unreleased)": only a
-dated section, "## 0.8.1 (2026-11-10)", is released. Exits 1 when
+dated section, "## 0.9.0 (2026-11-10)", is released. Exits 1 when
 CHANGELOG.md has no section for the version, or the section is empty.
 Standard library only.
 """

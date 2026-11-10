@@ -137,10 +137,11 @@ won't be merged:
 
 ## Changelog
 
-If users will notice your change, add a bullet to the top section of
-[CHANGELOG.md](CHANGELOG.md) saying what it does for them. Leave the
-version in `plugin.json` as it is; it's set when a release goes out.
-Every merge to `main` that carries a new version and its dated changelog
+If users will notice your change, add a bullet under `## Unreleased` at
+the top of [CHANGELOG.md](CHANGELOG.md) (add the heading if it isn't
+there) saying what it does for them. Leave the version in `plugin.json` as
+it is; it's set when a release goes out. Releases are for notable updates:
+a merge to `main` that carries a new version and its dated changelog
 section is tagged and published as a GitHub release automatically
 (`.github/workflows/release.yml`).
 
