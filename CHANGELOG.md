@@ -3,7 +3,7 @@
 What changed in each version of the plugin (`.claude-plugin/plugin.json`).
 Skills that read "our changelog" for source material read this file too.
 
-## 0.8.0 (unreleased)
+## 0.8.0 (2026-11-10)
 
 - **Hooks picked for the video's job.** `hook.js --goal sell` lists the hook
   types that suit the video (teach, trust, sell, story, comedy, transform,
