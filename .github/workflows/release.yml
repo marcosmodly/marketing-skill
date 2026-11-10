@@ -1,10 +1,10 @@
 name: Release
 
-# Notable updates ship as releases (CLAUDE.md). A push to main that carries a
+# Major updates ship as releases (CLAUDE.md). A push to main that carries a
 # new version in .claude-plugin/plugin.json, with its dated section in
 # CHANGELOG.md, is tagged v<version> on that commit and published as a GitHub
 # release whose notes are that section (scripts/ci/release_notes.py). A push
-# whose version is already released (a small update) publishes nothing.
+# whose version is already released (a minor update) publishes nothing.
 
 on:
   push:
@@ -38,7 +38,7 @@ jobs:
           TITLE: ${{ steps.notes.outputs.title }}
         run: |
           if gh release view "$TAG" >/dev/null 2>&1 || git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
-            echo "::notice::$TAG is already released, so there's nothing new to publish. Small updates wait under CHANGELOG.md's Unreleased heading for the next release."
+            echo "::notice::$TAG is already released, so there's nothing new to publish. Minor updates wait under CHANGELOG.md's Unreleased heading for the next release."
             exit 0
           fi
           gh release create "$TAG" --target "$GITHUB_SHA" --title "$TITLE" --notes-file "$RUNNER_TEMP/notes.md"
