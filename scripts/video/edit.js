@@ -204,20 +204,33 @@ function resolveStyle(meta = {}, sound = {}, look = null) {
   return applyMotion(style, meta.motion || (look && look.motion));
 }
 
+// Pixel art (style: pixel) draws each art pixel as an 8x8 block, so the camera can only zoom by
+// whole eighths (9/8 makes every pixel 9px, 10/8 makes it 10px) without some pixels coming out a
+// screen pixel wider than others (references/visual-design.md, "Pixel art"). This snaps a punch to
+// the nearest whole step, at least one. Low motion gets none: the smallest crisp punch is 12.5%.
+const PIXEL = 8;
+function pixelPunch(punch, motion) {
+  if (!(punch > 1) || motion === 'low') return 0;
+  return 1 + Math.max(1, Math.round((punch - 1) * PIXEL)) / PIXEL;
+}
+
 // The camera layer's animations, as one CSS animation list for <div class="cam">: the visual
 // hook in the first half second (frame 0 stays clean), and a hit on the drop. Keyword punch-ins
 // are added at render time, once the words are timed (render.js). Each animation starts and ends
 // at rest, so they never fight. A photo's fast-zoom hook is on its first slot (hk-zoom); a drawn
-// style has no slots, so its camera does it.
-function cameraAnimation({ hook = 'none', dropFx = 'none', drop = 0, drawn = false } = {}) {
+// style has no slots, so its camera does it. In pixel art the camera jumps instead of gliding
+// (steps), so the picture never passes through an in-between zoom, and it shakes without rotating.
+function cameraAnimation({ hook = 'none', dropFx = 'none', drop = 0, drawn = false, pixel = false } = {}) {
+  const ease = (curve) => (pixel ? 'steps(1, end)' : curve);
+  const shake = pixel ? 'camShakePx' : 'camShake';
   const list = [];
-  if (drawn && (hook === 'zoom' || hook === 'flash')) list.push('camKw 1.1s cubic-bezier(.2,.9,.3,1) .02s');
-  if (hook === 'shake') list.push('camShake .5s linear .04s');
+  if (drawn && (hook === 'zoom' || hook === 'flash')) list.push(`camKw 1.1s ${ease('cubic-bezier(.2,.9,.3,1)')} .02s`);
+  if (hook === 'shake') list.push(`${shake} .5s ${ease('linear')} .04s`);
   if (hook === 'glitch') list.push('camGlitch .46s steps(1, end) .08s');
   if (drop > 0.3) {
-    if (dropFx === 'punch') list.push(`camPunch .34s cubic-bezier(.2,.8,.2,1) ${drop}s`);
+    if (dropFx === 'punch') list.push(`camPunch .34s ${ease('cubic-bezier(.2,.8,.2,1)')} ${drop}s`);
     // the shake first, so the punch's zoom (later in the list) wins while both run
-    if (dropFx === 'shake') list.push(`camShake .45s linear ${drop}s`, `camPunch .34s cubic-bezier(.2,.8,.2,1) ${drop}s`);
+    if (dropFx === 'shake') list.push(`${shake} .45s ${ease('linear')} ${drop}s`, `camPunch .34s ${ease('cubic-bezier(.2,.8,.2,1)')} ${drop}s`);
   }
   return list.join(', ');
 }
@@ -252,4 +265,4 @@ function overlayAt(name, t) {
 
 const r2 = (t) => Math.round(t * 100) / 100;
 
-module.exports = { TRANSITIONS, MOVES, HOOK_FX, DROP_FX, CAPTION_FX, EDIT_STYLES, MOTION, applyMotion, transitionFor, autoStyle, resolveStyle, parsePunch, cameraAnimation, slotTimes, transitionClass, overlayAt };
+module.exports = { TRANSITIONS, MOVES, HOOK_FX, DROP_FX, CAPTION_FX, EDIT_STYLES, MOTION, applyMotion, transitionFor, autoStyle, resolveStyle, parsePunch, pixelPunch, cameraAnimation, slotTimes, transitionClass, overlayAt };

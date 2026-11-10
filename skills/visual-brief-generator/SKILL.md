@@ -72,7 +72,13 @@ command below.
    - If not found: proceed to produce the written brief only.
 
 4. **Draft the brief** using the exact section structure below, applying
-   brand voice/tone from `references/brand-voice.md`.
+   brand voice/tone from `references/brand-voice.md`. Read
+   `${CLAUDE_PLUGIN_ROOT}/references/visual-design.md` first: "Start from
+   one feeling" for the direction, "Starting palettes" when the brand has no
+   colors yet, the style recipes for a timed sequence to start from, and
+   "Prompting AI pictures" for how every prompt is built. Write the direction
+   as one sentence before any shot: after seeing this, the viewer should
+   understand or feel ___.
 
 5. **Report status honestly.** Never claim an asset was generated if no
    tool call actually happened. If no visual-gen tool is connected, say so
@@ -91,18 +97,31 @@ Trigger on requests like:
 Use this exact section order, as Markdown `##` headings:
 
 ### Brief Overview
-Goal, source reference, target platform(s), total duration or frame count.
+Goal, the one-sentence direction, the one feeling, source reference, target
+platform(s), total duration or frame count.
 
 ### Shot List
 A table: `Shot # | Description | Duration/Frames | Camera/Framing notes`.
 
 ### Per-Scene Prompts
-One block per shot. Each prompt must be self-contained (no dangling
-pronouns like "it" referring to a previous scene) and include:
+Open with the shared visual spec: the character, clothing, place, time of
+day, palette, light direction, camera angle, and art style, written once and
+repeated word for word in every prompt, so the scenes match. Then one block
+per shot. Each prompt must be self-contained (no dangling pronouns like "it"
+referring to a previous scene), built in this order: subject, action,
+environment, composition (including where the calm space for on-screen text
+goes), lighting, palette, style, aspect ratio, and exclusions (no text, no
+logos, no watermark). Each block includes:
 - The generation prompt itself.
 - A negative prompt, if relevant to the target tool.
 - Aspect ratio for that shot.
 - Style/mood keywords.
+
+Pixel-art and 3D prompts add the fields "Prompting AI pictures" lists (pixel
+scale, palette limit, outline, sprite-sheet cells; or material, lighting, and
+render style). A shot of the product's real interface, logo, or any exact
+words is never generated: say "use the real screen recording / logo here"
+and add the words in the edit, since models garble text, logos, and UI.
 
 ### Aspect Ratio & Format per Platform
 A table: `Platform | Aspect Ratio | File Type`.
@@ -119,6 +138,9 @@ plugin's `docs/video.md`) or how to paste these prompts into a tool manually.
 
 - Keep style/mood keywords consistent across scenes unless variation is
   intentional and called out.
+- Before calling generated assets done, check each for anatomy, object
+  details, perspective, and garbled text, and replace weak ones; grade and
+  crop them all the same way.
 - Respect brand-voice constraints (including any banned words/imagery).
 - Never fabricate an asset URL or claim generation succeeded when it
   didn't.
@@ -131,6 +153,9 @@ plugin's `docs/video.md`) or how to paste these prompts into a tool manually.
 ```markdown
 ## Brief Overview
 Goal: teaser for the "one-click export" feature launch.
+Direction: after watching, the viewer should feel that exporting is now one
+calm click instead of a mess.
+Feeling: relief (from cluttered to calm).
 Source: content-repurposer LinkedIn post draft.
 Platform: Instagram Reels.
 Total duration: 15 seconds (3 scenes, 5s each).
@@ -138,24 +163,36 @@ Total duration: 15 seconds (3 scenes, 5s each).
 ## Shot List
 | Shot # | Description | Duration | Camera/Framing notes |
 |---|---|---|---|
-| 1 | Cluttered desktop, multiple export windows open, looking chaotic | 5s | Close-up, slight overhead angle |
-| 2 | Cursor clicks a single "Export" button | 5s | Screen-capture style, centered on the button |
-| 3 | Clean report appears instantly, checkmark animation | 5s | Full-screen, centered |
+| 1 | A desk buried in printed reports and sticky notes, someone's hands sorting them | 5s | Overhead close-up, clutter in the lower two-thirds |
+| 2 | The real product: the cursor clicks "Export" once | 5s | Screen recording of the actual app, zoomed on the button |
+| 3 | The same desk, cleared, one neat report on it | 5s | Same overhead angle as shot 1, so the change reads at once |
 
 ## Per-Scene Prompts
-**Scene 1:** "A cluttered computer desktop with five overlapping export
-dialog boxes, warm office lighting, slightly messy and stressful mood,
-overhead close-up angle." Negative prompt: "no readable text, no logos."
-Aspect ratio: 9:16. Style/mood: chaotic, warm-toned, slightly comedic.
+Visual spec (repeated in every prompt): "a light oak desk in a small home
+office at dusk, seen from directly overhead, warm desk-lamp light from the
+upper left, cool blue-gray and white with one warm orange accent, clean
+editorial photography."
 
-**Scene 2:** "A cursor clicks a single glowing 'Export' button on a clean
-software interface, satisfying tactile motion, centered framing." Negative
-prompt: "no readable brand names." Aspect ratio: 9:16. Style/mood: crisp,
-minimal, satisfying.
+**Scene 1:** "Two hands sorting a messy pile of printed reports and yellow
+sticky notes on a light oak desk in a small home office at dusk, seen from
+directly overhead, the clutter filling the lower two-thirds with calm empty
+desk in the top fifth for a title, warm desk-lamp light from the upper left,
+cool blue-gray and white with one warm orange accent, clean editorial
+photography, vertical 9:16, no readable text, no logos, no watermark."
+Negative prompt: "readable words, brand names, extra fingers." Aspect ratio:
+9:16. Style/mood: busy, warm, slightly comedic.
 
-**Scene 3:** "A finished report appears on screen with a green checkmark
-animation, bright and clean, full-screen." Negative prompt: "no clutter."
-Aspect ratio: 9:16. Style/mood: bright, resolved, confident.
+**Scene 2:** Not generated: use the real screen recording of the export
+button, since a model would invent the interface and garble its text. Add
+"one click" as on-screen text in the edit.
+
+**Scene 3:** "A single neat printed report squared up on an otherwise empty
+light oak desk in a small home office at dusk, seen from directly overhead,
+the report centered low with open desk above it for a title, warm desk-lamp
+light from the upper left, cool blue-gray and white with one warm orange
+accent, clean editorial photography, vertical 9:16, no readable text, no
+logos, no watermark." Negative prompt: "clutter, readable words." Aspect
+ratio: 9:16. Style/mood: calm, resolved, confident.
 
 ## Aspect Ratio & Format per Platform
 | Platform | Aspect Ratio | File Type |
@@ -163,10 +200,11 @@ Aspect ratio: 9:16. Style/mood: bright, resolved, confident.
 | Instagram Reels | 9:16 | MP4 |
 
 ## Style & Mood Guide
-Color: cool blues and whites, one warm accent in scene 1 for contrast.
-Tone: light, a little playful, resolves into confident/clean. Pacing:
-quick cuts, no scene longer than 5s. Sound: upbeat, minimal, a single
-"ding" sound cue on scene 3's checkmark.
+Color: cool blue-gray and white as the base, one warm orange accent kept
+for the key detail. Tone: light, a little playful, resolves into calm and
+confident. Pacing: quick cuts, no scene longer than 5s; shots 1 and 3 share
+an angle so the before and after read as a match cut. Sound: upbeat,
+minimal, a single "click" on scene 2's button and a soft "ding" on scene 3.
 
 ## Generation Status / Next Steps
 No connected image/video-generation tool was available in this session, so

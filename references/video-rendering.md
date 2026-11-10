@@ -138,6 +138,12 @@ the user, and offer another when they describe a feel ("more energy",
 - **A visual hook.** `hook-fx:` sets what moves in the first half second
   (`zoom`, `shake`, `glitch`, `flash`, `bounce`, `montage`, or `none`); each
   style has its own default. Frame 0 stays clean, since it's the cover.
+- **An audio hook.** `hook-audio: silence` plays line 1 alone and lands
+  the music all at once on the drop (a licensed track too, its lift still
+  on the drop); the default, `build`, lets the music's intro build under the
+  hook. `[sfx: ping]` on a line plays a sound as it starts, for when the
+  sound is the picture: a notification, a tap, a sale (`hooks.md`, "Audio
+  hooks").
 - **B-roll.** A line held longer than the style's `max-hold` gets more than
   one picture: a search query fetches as many as it needs, `[bg: a | b |
   c]` lists them, and a single file is reframed (tighter, then wider) so
@@ -530,7 +536,10 @@ Every scene has an empty `.bg` slot timed to it.
   Weave once the user's Figma account is linked (find the model with
   `weave_find_model`, then `weave_run_model`, which quotes a cost first),
   or Higgsfield. Show the quoted cost and get an explicit yes before every
-  run, since it spends the user's credits. Download each result into
+  run, since it spends the user's credits. Write each prompt the way
+  "Prompting AI pictures" in `visual-design.md` lays it out (subject to
+  exclusions, calm room where the hook and captions go, one visual spec
+  repeated across scenes, no text or logos). Download each result into
   `assets/` and record it with `node
   ${CLAUDE_PLUGIN_ROOT}/scripts/video/media.js credit <file> --ai "<tool /
   model>" --prompt "<prompt>"`.

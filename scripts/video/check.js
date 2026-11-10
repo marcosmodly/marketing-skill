@@ -95,7 +95,7 @@ async function checkPage(browser, pagePath, outDir, withAudio, variant) {
     }
     fs.rmSync(tmp, { recursive: true, force: true });
   } catch (e) {
-    result.problems.push(`check crashed: ${e.message.split('\n')[0]}`);
+    result.problems.push(e.code === 'SILENT_VOICE' ? e.message : `check crashed: ${e.message.split('\n')[0]}`);
   } finally {
     await page.close();
   }

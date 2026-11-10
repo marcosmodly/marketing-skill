@@ -3,8 +3,46 @@
 What changed in each version of the plugin (`.claude-plugin/plugin.json`).
 Skills that read "our changelog" for source material read this file too.
 
-## 0.8.0 (unreleased)
+## 0.8.0 (2026-11-10)
 
+- **Hooks picked for the video's job.** `hook.js --goal sell` lists the hook
+  types that suit the video (teach, trust, sell, story, comedy, transform,
+  opinion, discuss, and more) with templates to write from, and
+  `--goal sell "one" "two" "three"` says which of three drafts fit.
+  `hooks.md` adds that table, templates for every type, story shapes
+  (confession, read receipt, progression...), pairs of types that work
+  together, more visual hooks (an unusual close-up, a freeze frame, a match
+  cut, the result first), and a worksheet for the promise a hook makes and
+  the line that keeps it. `hook.js` now reads the guide's own templates as
+  their types, fails generic questions ("do you like this?"), and on a
+  script reports what's heard first, the pair of types the layers make,
+  whether they suit `goal:`, and asks which line answers a question hook.
+- **Audio hooks.** `hook-audio: silence` plays the first line alone and lands
+  the music all at once on the drop (a licensed track too, its lift still on
+  the drop); `[sfx: ping]` on a script line plays a sound as it starts, for a
+  notification, a tap, or a sale under the hook.
+- **Fix: the visual hook now renders.** A camera shake or glitch in the first
+  half second finished in real time while the page loaded, so it never
+  appeared in the video. The renderer now holds every animation still until
+  it seeks to each frame.
+- **Fix: a silent voice recording no longer hangs the render.** A take with
+  nothing audible in it (a muted mic, the wrong input) left the render waiting
+  forever; `render.js`, `compose.js`, and `montage.js` now stop at once with
+  "assets/line-2.wav has no audible voice; re-record it", naming every silent
+  take. The video scripts also end on SIGTERM and SIGHUP (`timeout`, `kill`,
+  a closed terminal), which they used to ignore.
+- **Pixel art stays crisp when the camera moves.** Punch-ins, the hook zoom,
+  and the drop zoom by whole pixels (12.5%: every art pixel exactly 9 screen
+  pixels, never a mix of 8 and 9), jump instead of glide, and shake without
+  tilting; `motion: low` leaves them out.
+- **Visual direction before visuals.** `visual-design.md` starts from one
+  sentence ("the viewer should understand or feel ___"), maps eight feelings
+  to settings, adds 60/30/10 proportions and five starting palettes with
+  measured contrast, style recipes with timed sequences (cinematic photo
+  montage, motion graphics, pixel art, minimalist ad, 3D, and mixed styles),
+  a motion plan per scene, and how to prompt AI pictures. `visual-brief-generator`
+  writes every prompt that way: one shared visual spec, room left for the
+  words, and never a generated interface, logo, or line of text.
 - **Every video starts with the project.** Before a format, a script, or a
   render, `short-form-video` (and `clip-montage` and `montage-video` for the
   user's own business) checks the project's own files with the new

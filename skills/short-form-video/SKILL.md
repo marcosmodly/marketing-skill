@@ -348,17 +348,25 @@ command below.
    - **The hook (first 1–3 seconds):** written to work with the sound
      off, since a large share of viewers decide whether to keep watching
      before audio ever registers, in up to three layers that each do a
-     different job: the text on screen from frame 0, the first spoken line,
-     and the visual hook (what moves in the first half second: a fast zoom,
-     a glitch, a shake, a burst of quick cuts, the product working). State
-     each layer explicitly. Offer three hooks, each a different type from
-     `${CLAUDE_PLUGIN_ROOT}/references/hooks.md` (problem-solution,
-     curiosity, POV, warning, demonstration, listicle, and the rest), and
-     let the user pick (or render them all as variants to test). Check them
-     first with `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/hook.js "one"
-     "two" "three"`: it names each type, fails a hook that's too long,
-     throat-clears, or fits any video, and flags every number, result, or
-     offer to confirm with the user before it goes on screen.
+     different job, all about one idea: the text on screen from frame 0,
+     what's heard first (the first spoken line, and the sound under it:
+     the music building in, `hook-audio: silence` for the line alone, or a
+     `[sfx: ...]` that is the picture), and the visual hook (what moves in
+     the first half second: a fast zoom, a glitch, a shake, a burst of
+     quick cuts, the product working). State each layer explicitly. Start
+     from the video's job: `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/hook.js
+     --goal <goal>` lists the hook types that suit it (from "Pick by the
+     video's goal" in `${CLAUDE_PLUGIN_ROOT}/references/hooks.md`), with
+     templates to write from. Offer three hooks, each a different type,
+     and let the user pick (or render them all as variants to test). Check
+     them first with `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/hook.js
+     --goal <goal> "one" "two" "three"`: it names each type, fails a hook
+     that's too long, throat-clears, or fits any video (generic questions
+     too), says which don't suit the goal, and flags every number, result,
+     or offer to confirm with the user before it goes on screen. With the
+     hooks, give the promise each one makes and the line of the script that
+     keeps it ("The promise and where it's kept" in `hooks.md`): a question
+     the video doesn't answer is false curiosity.
    - **The body, beat by beat:** for each beat, what's shown, any on-screen
      text/caption cue, any spoken line or voiceover, and an approximate
      timestamp/duration — the same structure as `visual-brief-generator`'s
@@ -371,11 +379,15 @@ command below.
      drop), from `${CLAUDE_PLUGIN_ROOT}/references/editing-techniques.md`,
      which also says how the renderer makes each one, or that it can't.
      Past about 20 seconds, put a re-hook around the middle.
-   - **The visuals:** before choosing a single picture, fill in the
-     one-page visual recipe in `${CLAUDE_PLUGIN_ROOT}/references/visual-design.md`
-     (purpose, feeling, one dominant style, palette roles, the image rule,
-     type, the motion and pacing rules) and show it to the user in a short
-     block. Then give every beat one visual mode (the user's footage, a
+   - **The visuals:** before choosing a single picture, write one
+     sentence ("after watching, the viewer should understand or feel
+     ___"), then fill in the one-page visual recipe in
+     `${CLAUDE_PLUGIN_ROOT}/references/visual-design.md` (purpose, the one
+     feeling, one dominant style, palette roles, the image rule, type, the
+     motion and pacing rules, and a motion plan row per scene) and show it
+     to the user in a short block. When one of its style recipes fits
+     (cinematic photo montage, motion graphics, pixel art, minimalist ad,
+     3D, or a mix with one primary style), start from its timed sequence. Then give every beat one visual mode (the user's footage, a
      screenshot, a photo, a diagram or chart, a text card, or a pause),
      chosen by that file's decision steps, with the user's own material
      first and every picture passing its five-question test. Change the
@@ -435,7 +447,8 @@ command below.
    in a visual style that fits the job (`goal:` or `look:`, from
    `visual-design.md`), cut in an editing style (`edit: ugc`, `kinetic`,
    `fast`, `cinematic`, `meme`, or `clean`, with `motion:` for how much
-   moves, the hook's visual layer as `hook-fx:`, and one or two `*keywords*`
+   moves, the hook's visual layer as `hook-fx:` and its sound as
+   `hook-audio:` or a `[sfx: ...]` on line 1, and one or two `*keywords*`
    a line for the camera to punch in on), with `[card: ...]` for the key
    phrase and `[source: ...]` under every number, and run `hook.js --script`
    on it and act on `compose.js`'s picture notes;
@@ -582,7 +595,8 @@ Use this exact section order, as Markdown `##` headings:
 Start with one line naming the type or everyday format and how it gets
 made (e.g. "**Type:** How-to, rendered locally with your screenshots" or
 "**Format:** Tier list (everyday post), rendered locally"). Then the hook (0–3s:
-visual, on-screen text, whether it works sound-off), then the
+visual, on-screen text, what's heard first, whether it works sound-off, its
+type, the promise it makes and the line that keeps it), then the
 full beat-by-beat body with timestamps, on-screen text cues, and VO/spoken
 lines where relevant, then the CTA. One script serves all requested
 platforms unless the user asked for platform-specific edits.

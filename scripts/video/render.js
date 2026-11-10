@@ -120,14 +120,19 @@ function loadPlaywright() {
 // images into WebGL or a canvas (a screenshot on a 3D phone, a pixelated photo) need those local
 // files treated as the page's own, which Chromium refuses for file:// pages unless told otherwise.
 const BROWSER_ARGS = ['--enable-unsafe-swiftshader', '--allow-file-access-from-files'];
+// SIGTERM and SIGHUP are left to end the process, as they do by default. Playwright's own
+// handlers for them only close the browser and never exit, and, being JavaScript, they can't run
+// at all while the script waits on ffmpeg (spawnSync), so `timeout` or `kill` couldn't stop a
+// render. The browser quits by itself once this process is gone and its pipe to it closes.
+const LAUNCH = { args: BROWSER_ARGS, handleSIGTERM: false, handleSIGHUP: false };
 
 async function launchBrowser(chromium) {
   try {
-    return await chromium.launch({ args: BROWSER_ARGS });
+    return await chromium.launch(LAUNCH);
   } catch (e) {
     // no Playwright-managed Chromium downloaded: try the user's own Chrome before giving up
     try {
-      return await chromium.launch({ channel: 'chrome', args: BROWSER_ARGS });
+      return await chromium.launch({ ...LAUNCH, channel: 'chrome' });
     } catch {
       fail(`Couldn't start a browser: ${e.message.split('\n')[0]}\nRun \`npx playwright install chromium\` in scripts/video, or install Google Chrome.`);
     }
@@ -203,6 +208,16 @@ async function openPage(browser, pagePath) {
   page.on('requestfailed', (req) => { if (req.resourceType() === 'script') scriptFailed(req.url()); });
   page.on('response', (res) => { if (res.request().resourceType() === 'script' && res.status() >= 400) scriptFailed(res.url()); });
   await routeCached(page);
+  // Freeze the page's animation clock before it loads. seek() reaches animations through
+  // document.getAnimations(), which drops one that has finished, so on a running clock the
+  // visual hook (a half-second shake or glitch on the camera, no fill) ended in real time while
+  // the page loaded and never appeared in the video. Frozen, every animation waits at 0 for seek.
+  try {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Animation.setPlaybackRate', { playbackRate: 0 });
+  } catch (e) {
+    scriptProblems.push(`couldn't hold the page's animations still while it loads (${e.message}), so the first half second's effects may be missing`);
+  }
   await page.goto('file://' + path.resolve(pagePath), { waitUntil: 'networkidle' });
   await page.evaluate(() => document.fonts.ready);
   const ready = await page.evaluate(() => Promise.race([
@@ -788,7 +803,7 @@ async function motionProblems(page, duration) {
       ...document.getAnimations().filter((a) => /^(camGlitch|hkGlitch|glitchBg)$/.test(a.animationName) && !a.effect.target.matches('.bg.t-glitch'))
         .map((a) => a.effect.getComputedTiming().delay / 1000),
     ].filter(Number.isFinite).sort((a, b) => a - b);
-    const shakes = document.getAnimations().filter((a) => /^(camShake|hkJolt|hit)$/.test(a.animationName)).length;
+    const shakes = document.getAnimations().filter((a) => /^(camShake|camShakePx|hkJolt|hit)$/.test(a.animationName)).length;
     const slots = [...document.querySelectorAll('.bg')].filter((b) => b.querySelector('.bg-media'))
       .map((b) => ({ t: sec(b.style.getPropertyValue('--in')) || 0, move: (b.style.getPropertyValue('--kb') || 'kbIn').trim(), tr: [...b.classList].find((c) => c.startsWith('t-')) || '' }))
       .sort((a, b) => a.t - b.t);
@@ -926,6 +941,7 @@ async function readPage(page) {
       voices,
       duration: num(d.duration),
       drop: num(d.drop),
+      intro: d.intro || '',
       bpm: num(d.bpm),
       key: d.key,
       mode: d.mode,
@@ -1041,38 +1057,91 @@ function measureAudio(file, filter = '') {
 const VOICE_LUFS = -26;
 const BED_UNDER_VOICE = 7;
 
+// Anything quieter than this at the ends of a spoken line is silence, and is trimmed off.
+const SILENCE_DB = -45;
+
+// A path as the user would write it: relative to where they ran the script, if it's under there.
+function shownPath(file) {
+  const rel = path.relative(process.cwd(), file);
+  return rel && !rel.startsWith('..') && !path.isAbsolute(rel) ? rel : file;
+}
+
+// The error for voice lines with nothing audible in them (a muted or unplugged mic, the wrong
+// input, a blank file), naming every one so they can be re-recorded in one go. Trimming their
+// silence leaves nothing, which can't be timed or mixed (ffmpeg's amix of nothing but empty
+// inputs never finishes), so they stop the render. code 'SILENT_VOICE' marks it for callers.
+function silentVoiceError(files) {
+  const names = files.map(shownPath);
+  const one = names.length === 1;
+  const list = one ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  return Object.assign(new Error(`${list} ${one ? 'has' : 'have'} no audible voice; re-record ${one ? 'it' : 'them'} ` +
+    `(nothing in ${one ? 'it' : 'them'} is louder than ${SILENCE_DB} dB: check the mic is on and is the input being recorded)`),
+  { code: 'SILENT_VOICE', files });
+}
+
 // Cleans up and levels one spoken line, so lines recorded at different distances match: low
 // rumble filtered, silence trimmed from both ends (the line starts at its cue, and its length
 // is the speech itself), light compression, then leveled to VOICE_LUFS. Cached across runs.
 // Returns { prepared, length, trimmed }, where trimmed is how much silence came off the start.
+// Throws silentVoiceError for a line with nothing audible in it.
 const VOICE_CACHE = path.join(os.tmpdir(), 'render-video-cache', 'voice');
 //
 // A filmed clip's sound ({ sync: true }) keeps its silences, so it stays in step with the
-// picture; `offset` and `maxLength` pick the stretch that plays.
+// picture; `offset` and `maxLength` pick the stretch that plays. It's only empty when there's
+// no sound at all from `offset` on, and throws the same error then.
 function prepareVoice(file, { sync = false, offset = 0, maxLength } = {}) {
   const st = fs.statSync(file);
   const key = crypto.createHash('sha1').update(`${file}|${st.size}|${st.mtimeMs}|${VOICE_LUFS}|2|${sync}|${offset}|${maxLength}`).digest('hex').slice(0, 16);
   const prepared = path.join(VOICE_CACHE, `${key}.wav`);
   const meta = `${prepared}.json`;
-  if (!fs.existsSync(meta)) {
+  let info = null;
+  try {
+    info = JSON.parse(fs.readFileSync(meta, 'utf8'));
+  } catch { /* not prepared yet */ }
+  // (a cached length of null is an empty line, cached before those were caught: it's checked again)
+  if (!(info && info.length > 0)) {
     fs.mkdirSync(VOICE_CACHE, { recursive: true });
     const raw = path.join(VOICE_CACHE, `${key}-raw.wav`);
     const lead = path.join(VOICE_CACHE, `${key}-lead.wav`);
     const window = [...(offset ? ['-ss', String(offset)] : []), ...(maxLength ? ['-t', String(maxLength)] : [])];
     // the leading trim on its own first, to know how much it took off
     ffmpeg([...window, '-i', file, '-vn', '-af', 'aresample=48000,aformat=channel_layouts=stereo,highpass=f=80' +
-      (sync ? '' : ',silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.08'), '-c:a', 'pcm_s16le', lead]);
-    const trimmed = sync ? 0 : Math.max(0, probeDuration(file) - offset - probeDuration(lead));
+      (sync ? '' : `,silenceremove=start_periods=1:start_threshold=${SILENCE_DB}dB:start_silence=0.08`), '-c:a', 'pcm_s16le', lead]);
+    const leadLength = probeDuration(lead);
+    if (!(leadLength > 0)) {
+      // nothing left: every bit of it was quieter than SILENCE_DB
+      fs.rmSync(lead, { force: true });
+      throw silentVoiceError([file]);
+    }
+    const trimmed = sync ? 0 : Math.max(0, probeDuration(file) - offset - leadLength);
     // trailing silence: reversed, trimmed like the start, reversed back
-    ffmpeg(['-i', lead, '-af', (sync ? '' : 'areverse,silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.15,areverse,') +
+    ffmpeg(['-i', lead, '-af', (sync ? '' : `areverse,silenceremove=start_periods=1:start_threshold=${SILENCE_DB}dB:start_silence=0.15,areverse,`) +
       'acompressor=threshold=0.1:ratio=2.5:attack=15:release=200', '-c:a', 'pcm_s16le', raw]);
     const { lufs } = measureAudio(raw);
     ffmpeg(['-i', raw, '-af', `volume=${Number.isFinite(lufs) ? (VOICE_LUFS - lufs).toFixed(2) : 0}dB`, '-c:a', 'pcm_s16le', prepared]);
     fs.rmSync(raw, { force: true });
     fs.rmSync(lead, { force: true });
-    fs.writeFileSync(meta, JSON.stringify({ length: probeDuration(prepared), trimmed }));
+    info = { length: probeDuration(prepared), trimmed };
+    fs.writeFileSync(meta, JSON.stringify(info));
   }
-  return { prepared, ...JSON.parse(fs.readFileSync(meta, 'utf8')) };
+  return { prepared, ...info };
+}
+
+// prepareVoice for each of `files` (in order), with one error naming every one that has no
+// audible voice. For scripts that size scenes to their lines (compose.js, montage.js).
+function prepareVoiceFiles(files) {
+  const silent = [];
+  const prepared = files.map((file) => {
+    try {
+      return prepareVoice(file);
+    } catch (e) {
+      if (e.code !== 'SILENT_VOICE') throw e;
+      silent.push(file);
+      return null;
+    }
+  });
+  if (silent.length) throw silentVoiceError(silent);
+  return prepared;
 }
 
 // Prepares every voice clip before any frame is captured, so the page can use real line
@@ -1097,6 +1166,9 @@ async function prepareVoices(page, settings) {
   }
   const sorted = [...clips].sort((a, b) => a.time - b.time);
   const subtitles = await page.evaluate(() => document.body.classList.contains('sub'));
+  // every line prepared before any is captioned, so lines with no audible voice stop the render
+  // at once, all named together
+  const silent = [];
   for (const clip of [...clips]) {
     const name = path.basename(clip.file);
     if (clip.sync && !hasAudioStream(clip.file)) {
@@ -1104,7 +1176,19 @@ async function prepareVoices(page, settings) {
       clips.splice(clips.indexOf(clip), 1);
       continue;
     }
-    Object.assign(clip, prepareVoice(clip.file, clip));
+    try {
+      Object.assign(clip, prepareVoice(clip.file, clip));
+    } catch (e) {
+      if (e.code !== 'SILENT_VOICE') throw e;
+      clips.splice(clips.indexOf(clip), 1);
+      // a filmed clip with no sound left from its data-offset just plays silent, like one with no sound track
+      if (clip.sync) problems.push(`${name} has data-audio but no sound from ${clip.offset}s on; it plays silent`);
+      else silent.push(clip.file);
+    }
+  }
+  if (silent.length) throw silentVoiceError(silent);
+  for (const clip of clips) {
+    const name = path.basename(clip.file);
     const end = clip.time + clip.length;
     if (Number.isFinite(clip.sceneOut) && end > clip.sceneOut + 0.1) {
       problems.push(`voice ${name} runs to ${end.toFixed(2)}s, past its scene's end at ${clip.sceneOut.toFixed(2)}s; give the scene ${(end - clip.sceneOut + 0.3).toFixed(1)}s more, or shorten the line`);
@@ -1144,11 +1228,14 @@ async function prepareVoices(page, settings) {
 // data-punch="1.08">, written by compose.js and cut.js) zooms in on each keyword as it's said,
 // holds, and eases back, so the picture moves with the voice's emphasis while the words stay
 // put. data-punch-fx="shake" shakes it too (the meme cut). Keywords in the first 0.6s, near the
-// drop, or within 0.7s of the last punch are skipped, so the hits stay hits.
+// drop, or within 0.7s of the last punch are skipped, so the hits stay hits. In pixel art the
+// punch jumps in and out (steps), never through an in-between zoom that would make some art pixels
+// wider than others, and its shake doesn't rotate.
 async function addPunchIns(page) {
   return page.evaluate(() => {
     const cam = document.querySelector('.cam[data-punch]');
     if (!cam || !(parseFloat(cam.dataset.punch) > 1)) return 0;
+    const pixel = document.body.classList.contains('pixel');
     const toSeconds = (v) => (String(v || '').trim().endsWith('ms') ? parseFloat(v) / 1000 : parseFloat(v));
     const drop = parseFloat(document.body.dataset.drop);
     const times = [...document.querySelectorAll('.say.auto i.kw')].map((w) => toSeconds(w.style.getPropertyValue('--in')))
@@ -1158,8 +1245,8 @@ async function addPunchIns(page) {
     for (const t of times) {
       if (t < 0.6 || t - last < 0.7 || (Number.isFinite(drop) && Math.abs(t - drop) < 0.5)) continue;
       // a shake goes first, so the punch's zoom (later in the list) wins while both run
-      if (cam.dataset.punchFx === 'shake') adds.push(`camShake .4s linear ${t.toFixed(3)}s`);
-      adds.push(`camKw .62s cubic-bezier(.2,.8,.2,1) ${t.toFixed(3)}s`);
+      if (cam.dataset.punchFx === 'shake') adds.push(`${pixel ? 'camShakePx .4s steps(1, end)' : 'camShake .4s linear'} ${t.toFixed(3)}s`);
+      adds.push(`camKw .62s ${pixel ? 'steps(1, end)' : 'cubic-bezier(.2,.8,.2,1)'} ${t.toFixed(3)}s`);
       last = t;
     }
     if (!adds.length) return 0;
@@ -1602,6 +1689,8 @@ async function main() {
 
 if (require.main === module) {
   main().catch((e) => {
+    // a voice line with nothing in it is the user's to fix, like fail(): the message says how, with no stack
+    if (e.code === 'SILENT_VOICE') fail(e.message);
     console.error(e);
     process.exit(1);
   });
@@ -1610,6 +1699,6 @@ if (require.main === module) {
 module.exports = {
   WIDTH, HEIGHT, meanLuma, loadPlaywright, launchBrowser, openPage, prepareMedia, readPage, checkMusic, checkMix, mixVoice, seek,
   lintLayout, lintTimeline, visualProblems, contrastProblems, motionProblems, describeLint, lintLabel, slideTimes, textSnapshot, retentionProblems, writeSoundtrack, measureAudio, muxSoundtrack,
-  prepareVoice, prepareVoices, describeVoices, probeDuration, variantsOf, applyVariant, coverProblems,
+  prepareVoice, prepareVoiceFiles, prepareVoices, describeVoices, probeDuration, variantsOf, applyVariant, coverProblems,
   renderFrames, preparePage, defaultWorkers, clipTime,
 };
