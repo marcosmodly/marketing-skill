@@ -64,11 +64,39 @@ preference:
   account, if any.
 - **Reply-To** (if different from the sending address) — placeholder
   default: none, replies go to the sending address.
-- **Sending domain** — whether SPF, DKIM, and DMARC pass on the domain
-  the emails come from (the email provider's admin page says), and
-  whether cold email goes from the main domain or a separate one. Not
-  yet configured; `email-outreach` asks at setup, can't check it itself,
-  and says so in every run's report until the answer is "they pass".
+- Sending domain checked: no
+  (Change "no" to "yes" on the line above once SPF, DKIM, and DMARC pass
+  on the domain the emails come from; the email provider's admin page
+  says. Note here too whether cold email goes from the main domain or a
+  separate one. `email-outreach` asks at setup, can't check it itself,
+  and says so in every run's report until it's "yes"; auto-sending
+  refuses to run without it.)
+
+## Sending
+Who presses send. `scripts/outreach_queue.py` reads the three lines
+below, and `email-outreach` sends only what that script lists. Only you
+change them: a scheduled run never does.
+
+- Sending mode: drafts
+- Daily send cap: 10
+- Auto-send reviewed: none
+
+The modes:
+- `drafts` (the default) — nothing is sent for you. Every email is a
+  draft you read and send yourself.
+- `approve` — you read the drafts and reply naming the ones to send;
+  later runs send each at its recommended send time.
+- `auto` — emails that pass every check are sent at their send time
+  without anyone reading them. Faster, and the risk is yours: a wrong
+  fact about a stranger, or a run of bounces, goes out under your name.
+
+In both sending modes an email goes only to a real, non-role address,
+only if its draft passes `scripts/email_check.py`, only with your mailing
+address in it, and never past the daily cap (keep it low while a mailbox
+is new). `auto` also needs "Sending domain checked: yes" above, and
+pauses itself when 2 of the last 20 sends bounced or 2 unsubscribed;
+after you've looked at what went wrong, set "Auto-send reviewed" to that
+day's date (YYYY-MM-DD) to resume.
 
 ## Regions
 Not yet configured. Placeholder default: United States only. (Which
@@ -98,7 +126,8 @@ region/country (prospect-level location when known, else company HQ
 location) and assigns a specific recommended send time inside this
 window, spreading a batch across it rather than clustering every email
 at the same minute — logged per row so you know exactly when to actually
-send even though this skill never sends on its own.
+send in `drafts` mode, and so a run knows when an email is due in the
+`approve` and `auto` modes (see Sending).
 
 ## Follow-Up Cadence
 Not yet configured. Placeholder default: one follow-up 4 business days

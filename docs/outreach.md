@@ -64,6 +64,61 @@ mailing address in `references/outreach-strategy.md`, and confirm with
 your email provider that SPF, DKIM, and DMARC pass on the sending domain.
 The skill reminds you in every run until both are done.
 
+## Who presses send: three modes
+
+By default nothing is sent for you. You choose, on the `- Sending mode:`
+line of `references/outreach-strategy.md` (or by telling `email-outreach`
+in a conversation):
+
+| Mode | What a run sends | Who reads each email first |
+|---|---|---|
+| `drafts` (default) | Nothing. You send each draft yourself | You |
+| `approve` | The emails you approved by name, each at its send time | You |
+| `auto` | Every email that passes the checks, at its send time | Nobody |
+
+`approve` is the daily routine most people want: a scheduled run finds
+prospects and drafts in the morning, you reply naming the ones to send,
+and later runs send each when its time comes. `auto` takes you out of
+the loop; the skill asks you to confirm it once, in plain words, and a
+scheduled run can never switch it on.
+
+In both sending modes, `scripts/outreach_queue.py` decides what goes, the
+same way every time, and the skill sends only what it lists:
+
+```
+python3 scripts/outreach_queue.py
+```
+
+```
+Sending mode: approve. Sent today: 0 of 10.
+
+Send now (1):
+  SEND  dana@fernbank.example  state/outreach/2026-11-12-dana-kim-fernbank.md  draft:r-1
+
+Waiting (2):
+  wait  lee@quarry.example: not approved yet
+  wait  kit@dune.example: send time hasn't come
+```
+
+An email is sent only to a real address that isn't a role or personal
+one, only if its draft passes `email_check.py` and carries your mailing
+address, only once its send time has come, and never past the daily cap
+(`- Daily send cap:`, default 10). `auto` also needs
+`- Sending domain checked: yes`, and pauses itself when 2 of the last 20
+sends bounced or 2 unsubscribed, until you've looked and set
+`- Auto-send reviewed:` to that day's date.
+
+Timing: there's no schedule-send tool, so an email goes out on the first
+run after its send time. If you want sends close to their times, add a
+second, light scheduled run during your send window with the prompt
+"send due outreach". A scheduled run also needs Gmail connected and
+permission to send without asking; if it has to ask and nobody's there,
+nothing is sent.
+
+Automatic sending is your decision and your risk: the emails go out
+under your name, and the law on cold email depends on where the
+recipient is (see "Opt-out and the law" in `references/cold-email.md`).
+
 ## Outreach log & suppression model
 
 `email-outreach` batch-generates cold emails and queues them in
@@ -74,9 +129,9 @@ unsubscribe request that arrived outside email. Same separation as the
 content calendar: each row's Notes column points at the file under
 `state/outreach/` that holds that email's full content, and Status can
 only reach `Approved` immediately after a human sees the real email in a
-live conversation and says to send it — `email-outreach` itself never
-writes that value, and never calls Gmail's `send_message` on its own,
-even for a scheduled daily run with nobody there to reply. A handful of
+live conversation and names it — never in a scheduled run. Whether a run
+then sends anything is the sending mode above; in the default `drafts`
+mode it never calls Gmail's `send_message`. A handful of
 Status values are permanent suppression, not just history: `Bounced`,
 `Unsubscribed`/`Do-Not-Contact`, and `Replied` all block that person from
 ever being re-queued by this skill again, regardless of how a later
@@ -87,9 +142,10 @@ the suppression list stays accurate without a human having to remember
 to update it (an ambiguous result is reported, never guessed at). Two
 more things ride along in the same table: a `Subject Variant` (A/B) per
 row so reply rates can eventually be attributed to a subject line, and a
-`Recommended Send Time` computed from each prospect's own region — this
-skill still never sends on its own, so that time is either sent manually
-or via Gmail's own native scheduled-send feature. Same numbered-approval
+`Recommended Send Time` computed from each prospect's own region — in
+`drafts` mode you send at that time yourself (or with Gmail's own
+scheduled-send feature); in `approve` and `auto` it's when a run may
+send it. Same numbered-approval
 rule as `publish-pipeline`: an unqualified "send today's batch" doesn't
 count as naming any specific row, and every run reports how many rows in
 the log have sat unapproved for more than 7 days (shorter than the
@@ -123,10 +179,9 @@ image/video-gen connector — it doesn't assume either is present:
   `Replied`/`Bounced`/`Unsubscribed` statuses only change when you (or
   the prospect, via a reply you paste in) update them.
 
-Either way, `email-outreach` only ever creates drafts or queues content —
-actually sending (Gmail's `send_message`) always requires your explicit,
-live go-ahead in that conversation, the same rule `publish-pipeline`
-follows for every other channel in this plugin. It also never has a
+Either way, by default `email-outreach` only creates drafts or queues
+content. It sends (Gmail's `send_message`) only in the `approve` or
+`auto` mode you chose (see "Who presses send"). It never has a
 scheduled-send tool to call: the per-prospect "Recommended Send Time" it
 computes (from the prospect's own region, inside your configured
 send-time window) is there for you to act on manually, or by pointing

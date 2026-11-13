@@ -155,7 +155,7 @@ anything actually publishes.
 | `seo-brief` | "SEO brief," "keyword research," "optimize this for search" | Target/secondary keywords, search intent, suggested outline, meta title/description — never fabricates search-volume numbers |
 | `ad-copy-generator` | "ad copy," "Meta/Google/LinkedIn ad variants," "A/B test copy" | Multiple ad variants per platform, each a distinct hook angle, sized to that platform's character limits |
 | `email-sequence` | "email sequence," "drip campaign," "welcome series" | A multi-email sequence with send timing, subject lines, and a real narrative arc across emails |
-| `email-outreach` | "cold outreach," "prospecting emails," "daily sales outreach," "personalized cold email to [name]" | Researches real prospects against a defined ICP (public-web research by default; a connected prospecting tool only if you ask for verified contact details), checks each one against a permanent contact log so nobody's contacted twice — or ever again once unsubscribed/replied — drafts a short, genuinely personalized email per prospect (one hook from their own research, one ask, follow-ups that say something new), checks every draft with `scripts/email_check.py`, never guesses an email address, re-confirms strategy monthly, and queues everything for approval (or drafts directly in Gmail if connected); never sends |
+| `email-outreach` | "cold outreach," "prospecting emails," "daily sales outreach," "personalized cold email to [name]" | Researches real prospects against a defined ICP (public-web research by default; a connected prospecting tool only if you ask for verified contact details), checks each one against a permanent contact log so nobody's contacted twice — or ever again once unsubscribed/replied — drafts a short, genuinely personalized email per prospect (one hook from their own research, one ask, follow-ups that say something new), checks every draft with `scripts/email_check.py`, never guesses an email address, re-confirms strategy monthly, and queues everything for approval (or drafts directly in Gmail if connected); sends nothing by default, or — if you choose a sending mode — the emails you approved, or all that pass the checks, at their send times |
 | `visual-brief-generator` | "visual brief," "video brief," "shot list," "image prompts for X" | A structured shot list, per-scene prompts, aspect ratios, and style guide; generates the actual asset only if a visual-gen tool is connected |
 | `short-form-video` | "TikTok video," "Instagram Reel script," "YouTube Short," "short-form/vertical video for..." | A hook-first script/shot list plus a ready-to-post package per platform (YouTube Shorts/Instagram Reels/TikTok) — title/caption, sized hashtags, and a best-time-to-post window, shaped to one of 23 marketing video types (testimonial, how-to, announcement, and so on) or 22 everyday FYP formats (POV, tier list, text-message skit, storytime, and so on); if you opt in, makes the actual video too, either with a connected tool (Higgsfield, Figma Weave, Canva, or similar) or by rendering it locally (`scripts/video/`): animated text over stock or AI backgrounds, or a narrated animation starring the brand's 3D mascot, or pixel art, with music in the project's own saved sound; otherwise points to current free tools |
 | `clip-montage` | "make a montage of these videos," "edit these clips into a reel," "recap video from today," "make a montage" | The default for montages, and free: brings in the user's own clips (location data stripped), looks at each one frame by frame to pick its best moment, and renders a 9:16 montage cut on the beat of their own music (or a generated track, or none for an in-app sound), with a clip's own sound where someone talks, their voiceover with synced captions, labels, and the client's contact end card; then edits it on request, saving each version. With only photos it asks for clips first, then hands over to `montage-video` |
@@ -461,7 +461,12 @@ scheduling tool should make for you by default.
 instead of social posts: schedule a daily session to get a consistent
 daily batch (its own "consistent daily outreach" requirement), and it
 queues every draft as `Drafted`/`Ready for Approval` — never `Sent` —
-exactly like `content-calendar` does, for the same reason. Its monthly
+exactly like `content-calendar` does, for the same reason. That's the
+default. If you want the daily run to send too, set a sending mode in
+`references/outreach-strategy.md`: `approve` sends the emails you
+approved by name when their send times come, and `auto` sends without
+anyone reading them, within a daily cap and a set of checks
+(`scripts/outreach_queue.py`; see [Cold outreach](docs/outreach.md)). Its monthly
 strategy refresh doesn't need a separate schedule at all: the skill
 checks `references/outreach-strategy.md`'s own last-refreshed date on
 every run and walks through the refresh conversation itself once 30 days
@@ -509,7 +514,10 @@ Actually sending content needs your own webhook or credentials.
 
 No. Drafts are queued in `state/`, and only `publish-pipeline` sends,
 after you approve specific items in a live conversation.
-`email-outreach` creates drafts and never sends. See
+`email-outreach` creates drafts and sends nothing unless you choose a
+sending mode: `approve` (it sends the emails you approved, at their send
+times) or `auto` (it sends without review, within limits). See
+[Cold outreach](docs/outreach.md) and
 [Content calendar & approval model](#content-calendar--approval-model).
 
 ### Can I use just one skill?
@@ -569,6 +577,7 @@ scripts/
   publish_webhook.py     # stdlib-only webhook sender (see --help)
   publish_direct.py      # stdlib-only direct-to-platform scaffold (LinkedIn/X/Meta/Reddit/Discord/Slack/Telegram/dev.to/YouTube/Instagram/TikTok), needs your own API credentials (see --help); --metrics reads a post's numbers back
   email_check.py         # stdlib-only: checks drafted cold emails (length, subject, filler openers, placeholders, opt-out, address) and email sequences before they're queued
+  outreach_queue.py      # stdlib-only: which queued cold emails may be sent now under your sending mode (drafts / approve / auto), and why the rest wait
   results.py             # stdlib-only: what the logs add up to (removal rates, medians, reply rates, an A/B significance test), or an eval result's table
   video/
     render.js            # animated HTML page -> vertical MP4 with an original soundtrack (needs Node, Playwright, ffmpeg)
