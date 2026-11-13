@@ -43,9 +43,11 @@ command below.
      already has one in mind.
    - If the user references "our product/feature" without describing it,
      check the current project first — Glob for `README*`,
-     `CHANGELOG*`, `docs/**/*.md` at the project root — before asking
-     them to describe it directly. Documentation-oriented files only,
-     never arbitrary source code.
+     `CHANGELOG*`, `docs/**/*.md` at the project root, and the Project
+     section of `references/brand-voice.md` when it's filled in — before
+     asking them to describe it directly, and say in one line what you
+     took the product to be and where you read it. Documentation-oriented
+     files only, never arbitrary source code.
    - Any specific competing pages/URLs they want checked.
 
 3. **Research.**

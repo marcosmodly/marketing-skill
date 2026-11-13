@@ -35,6 +35,7 @@ The repo checks need Python 3.12 and nothing else:
 python3 scripts/ci/lint_repo.py        # skill frontmatter, command size, manifests, paths, links
 bash scripts/ci/smoke_publish.sh       # both publish scripts, dry run only, with fake credentials
 bash scripts/ci/smoke_results.sh       # scripts/results.py's numbers on made-up logs
+bash scripts/ci/smoke_email.sh         # scripts/email_check.py's passes and fails on made-up drafts
 python3 scripts/video/templates/build.py
 git diff --exit-code -- scripts/video/templates   # the built templates must match build.py
 ```
@@ -108,7 +109,8 @@ won't be merged:
   `Ready for Approval`, never `Approved`. Only `publish-pipeline` marks a
   row `Approved`, and only after a person replies in a live conversation.
   See [Content calendar & approval model](README.md#content-calendar--approval-model).
-- `email-outreach` drafts and never sends.
+- `email-outreach` drafts and never sends, never guesses an email
+  address, and queues nothing `scripts/email_check.py` fails.
 - `publish_webhook.py` and `publish_direct.py` refuse to run without
   `--dry-run` or `--confirmed`. Keep them standard-library only.
 - Skills don't make up numbers: no invented search volumes, follower

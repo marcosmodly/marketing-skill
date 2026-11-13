@@ -53,9 +53,15 @@ command below.
    product," "our feature," "our changelog," "our docs," etc. without
    pasting or linking the actual content, look for it in the current
    project before asking them to paste it:
+   - Start with the Project section of `references/brand-voice.md` when
+     it's filled in: it's what the user confirmed the product is, and
+     its Avoid line applies to every format.
    - Use Glob to check for `README*`, `CHANGELOG*`, and `docs/**/*.md` at
      the project root, then Read whichever file(s) look most relevant to
      what the user mentioned.
+   - Say in one line which file(s) the drafts are built from, so the
+     user can tell at a glance if it's the wrong feature or an old
+     release.
    - Also check `package.json` or `pyproject.toml` for the product's
      name/description if identity/positioning is needed.
    - Only look at documentation-oriented files this way — don't scan

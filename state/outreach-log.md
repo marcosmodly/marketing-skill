@@ -18,7 +18,11 @@
 > when one was created (e.g. `draft:r-1234, thread:18c9f...`) — that id
 > is what a future inbox sync uses to check for a reply/bounce without
 > re-searching from scratch. `email-outreach` reads the linked file, not
-> this table, to get the actual drafted/sent content.
+> this table, to get the actual drafted/sent content. One row per
+> person: a follow-up updates the row (its file and `touch:2` are added
+> to Notes) and doesn't add another. `Email` stays blank until a real
+> address is known (published, verified, or given by the user); a
+> guessed one is never written here.
 >
 > **Before drafting anyone, check this file first** — by `Email`, then by
 > `LinkedIn`, then by `Name + Company` (the same identity precedence

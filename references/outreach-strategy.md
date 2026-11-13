@@ -35,22 +35,49 @@ until this is filled in.)
 
 ## Offer & Primary CTA
 Not yet configured. Placeholder default: "ask for a reply, no specific
-offer defined yet."
+offer defined yet." (One ask per email, and a reply-sized one, "worth a
+look?", gets more answers than a calendar-sized one; see
+`references/cold-email.md`.)
+
+## Proof
+Not yet configured. Placeholder default: none, so emails describe how the
+product works and cite no customers or numbers. (The only proof an email
+may use, each with where it's from: customers who've agreed to be named,
+results with their source, numbers someone could check. `email-outreach`
+never writes a customer, a statistic, or a result that isn't listed here
+or in that prospect's own research.)
 
 ## Sender Identity & Compliance
 Not yet configured. Required before any real send, not just a style
 preference:
-- **Physical mailing address** — required on every commercial email
-  under the US CAN-SPAM Act, separate from the unsubscribe line. No
+- Mailing address: Not yet configured
+  (A real physical mailing address, written on the line above, on one
+  line, in place of "Not yet configured". Required on every commercial
+  email under the US CAN-SPAM Act, separate from the unsubscribe line. No
   placeholder default; `email-outreach` must ask for a real one rather
-  than inventing or silently omitting it. Drafting may proceed with this
-  clearly marked missing if the user genuinely wants to fill it in
-  later, but say so plainly every time a draft goes out without one —
-  never let it quietly stay blank.
+  than inventing or silently omitting it, and `scripts/email_check.py`
+  reads that line to check every draft carries it. Drafting may proceed
+  with this clearly marked missing if the user genuinely wants to fill it
+  in later, but say so plainly every time a draft goes out without one —
+  never let it quietly stay blank.)
 - **From name** — placeholder default: the name on the connected Gmail
   account, if any.
 - **Reply-To** (if different from the sending address) — placeholder
   default: none, replies go to the sending address.
+- **Sending domain** — whether SPF, DKIM, and DMARC pass on the domain
+  the emails come from (the email provider's admin page says), and
+  whether cold email goes from the main domain or a separate one. Not
+  yet configured; `email-outreach` asks at setup, can't check it itself,
+  and says so in every run's report until the answer is "they pass".
+
+## Regions
+Not yet configured. Placeholder default: United States only. (Which
+countries' prospects to email, which is the user's decision about the law
+that applies there: the US allows cold B2B email with an opt-out and a
+mailing address; Canada, the UK, and EU countries each have their own
+rules, some requiring consent first. See "Opt-out and the law" in
+`references/cold-email.md`. A prospect outside the regions listed here is
+reported and not drafted.)
 
 ## Daily Outreach Volume
 Not yet configured. Placeholder default: 10 new prospects per day.
@@ -77,6 +104,9 @@ send even though this skill never sends on its own.
 Not yet configured. Placeholder default: one follow-up 4 business days
 after the first email if there's been no reply, then stop — no third
 touch without a deliberate new decision.
+A follow-up goes in the same thread ("Re:" plus the first subject), is
+shorter than the first email, and says one new thing; the last one says
+it's the last (`references/cold-email.md`, "Follow-ups").
 
 ## Suppression Rules
 - Never re-contact anyone logged as `Unsubscribed`, `Do-Not-Contact`,

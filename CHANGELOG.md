@@ -3,6 +3,65 @@
 What changed in each version of the plugin (`.claude-plugin/plugin.json`).
 Skills that read "our changelog" for source material read this file too.
 
+## 0.9.0 (2026-11-13)
+
+- **Cold emails written to get a reply.** `email-outreach` now writes each
+  email from a new guide, `references/cold-email.md`: four parts (why this
+  person and why now, what that usually means, what you do about it, one
+  ask), 50 to 120 words, plain text, and a subject of two to five words
+  that reads like a colleague's. The A/B subject pair now differs in one
+  thing, so a difference in replies means something. The guide also covers
+  the first line, proof, deliverability (SPF, DKIM, DMARC, bounces,
+  complaints), and opt-out rules by region.
+- **A checker for every draft: `scripts/email_check.py`.** Before a batch
+  is queued it fails a draft that's too long, has a subject that shouts or
+  fakes a "Re:", opens with "I hope this finds you well", has a leftover
+  `[First Name]`, uses spam wording or a word banned in `brand-voice.md`,
+  carries more than one link, has no opt-out line, is missing your mailing
+  address, or opens with the same sentence as another draft. A draft that
+  fails isn't marked `Ready for Approval`. Run it on your own drafts too:
+  `python3 scripts/email_check.py state/outreach/`.
+- **Follow-ups that say something.** A follow-up is now a reply in the
+  first email's thread, shorter, with one new thing in it, never "just
+  checking in"; the last one says it's the last. Each is saved as its own
+  file and updates the prospect's row instead of adding one.
+- **No guessed email addresses.** `email-outreach` uses an address only
+  when it's published, verified, or given by you. A prospect without one
+  is still drafted, logged by LinkedIn or name + company, and reported as
+  needing an address, instead of a first.last@ guess that bounces.
+- **Only proof you gave it.** A new Proof section in
+  `outreach-strategy.md` lists the customers and results an email may
+  cite. With none on file, emails explain how the product works and cite
+  nobody.
+- **Regions and sending domain.** `outreach-strategy.md` gains Regions
+  (default: United States; a prospect elsewhere is reported, not drafted)
+  and a sending-domain line; every run reminds you until a mailing address
+  is on file and SPF, DKIM, and DMARC are confirmed.
+- **Outreach setup starts from your project.** First-time setup reads the
+  Project section of `brand-voice.md` or runs `scripts/project.py`, says
+  what it understood, and proposes a first segment and angle for you to
+  correct, instead of a blank list of questions.
+- **Email sequences: an arc per goal, preview text, and a check.**
+  `email-sequence` picks its arc and spacing by goal (welcome, trial to
+  paid, nurture, launch, win-back), asks what starts the sequence and what
+  ends it early, writes preview text for every email, never invents a
+  deadline, and runs `email_check.py --sequence` on the result (missing or
+  repeated subjects, preview text that repeats the subject, a missing
+  CTA).
+- **Fix: battlecards no longer turn silence into "No".**
+  `competitor-research` marks a feature absent only when the source says
+  so; anything a page doesn't mention is "Not listed", including the lower
+  plans when a page says the top plan adds something. This is the check
+  its battlecards failed in the last eval run (`docs/results.md`).
+- **The written skills start from your confirmed project.** Ad copy,
+  repurposed posts, SEO briefs, sequences, community posts, the calendar,
+  and visual briefs now use the Project section of `brand-voice.md` when
+  it's filled in, and say in one line what they took the product to be and
+  where they read it.
+- A new eval, `evals/cold-email-short-honest`, checks that a cold email is
+  short with one ask, invents nothing, has an opt-out line, and flags a
+  missing mailing address. Not run yet.
+
 ## 0.8.0 (2026-11-10)
 
 - **Hooks picked for the video's job.** `hook.js --goal sell` lists the hook

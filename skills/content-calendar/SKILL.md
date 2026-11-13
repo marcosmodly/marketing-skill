@@ -93,7 +93,9 @@ command below.
      or "pull from our own project" (same project-content search as
      `content-repurposer` — Glob for `README*`, `CHANGELOG*`,
      `docs/**/*.md` at the project root before asking the user to supply
-     topics themselves).
+     topics themselves; use the Project section of
+     `references/brand-voice.md` when it's filled in, and name the
+     file(s) the topics came from in the output).
    - Whether visual briefs are wanted per slot — default to yes when the
      slot's content type is video or image; if so, hand off to
      `visual-brief-generator` per slot rather than duplicating its logic
