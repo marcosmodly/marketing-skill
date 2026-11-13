@@ -3,6 +3,27 @@
 What changed in each version of the plugin (`.claude-plugin/plugin.json`).
 Skills that read "our changelog" for source material read this file too.
 
+## 0.10.0 (2026-11-13)
+
+- **You choose who presses send.** A new Sending section in
+  `outreach-strategy.md` sets the mode: `drafts` (the default, nothing is
+  sent for you), `approve` (you name the emails to send and later runs
+  send each at its send time), or `auto` (emails that pass every check go
+  out at their send time with nobody reading them). So a daily scheduled
+  run can now find prospects, write to them, and send. A new script,
+  `scripts/outreach_queue.py`, decides what may go, and the skill sends
+  only what it lists: a real, non-role address, a draft that passes
+  `email_check.py`, your mailing address in it, the send time reached, and
+  a daily cap (default 10). `auto` also needs the sending domain confirmed,
+  asks for a clear yes before it's switched on, can't be switched on by a
+  scheduled run, and pauses itself when 2 of the last 20 sends bounced or
+  2 unsubscribed.
+  There's no schedule-send tool, so an email goes out on the first run
+  after its send time; add a second, light run during your send window if
+  timing matters. If you filled in `outreach-strategy.md` before this
+  version, add its new Sending section and the `- Sending domain checked:`
+  line from the template. More in `docs/outreach.md`.
+
 ## 0.9.0 (2026-11-13)
 
 - **Cold emails written to get a reply.** `email-outreach` now writes each
@@ -37,19 +58,6 @@ Skills that read "our changelog" for source material read this file too.
   (default: United States; a prospect elsewhere is reported, not drafted)
   and a sending-domain line; every run reminds you until a mailing address
   is on file and SPF, DKIM, and DMARC are confirmed.
-- **You choose who presses send.** A new Sending section in
-  `outreach-strategy.md` sets the mode: `drafts` (the default, nothing is
-  sent for you), `approve` (you name the emails to send and later runs
-  send each at its send time), or `auto` (emails that pass every check go
-  out at their send time with nobody reading them). So a daily scheduled
-  run can now find prospects, write to them, and send. A new script,
-  `scripts/outreach_queue.py`, decides what may go, and the skill sends
-  only what it lists: a real, non-role address, a draft that passes
-  `email_check.py`, your mailing address in it, the send time reached, and
-  a daily cap (default 10). `auto` also needs the sending domain confirmed,
-  asks for a clear yes before it's switched on, can't be switched on by a
-  scheduled run, and pauses itself when 2 of the last 20 sends bounced or
-  2 unsubscribed.
 - **Outreach setup starts from your project.** First-time setup reads the
   Project section of `brand-voice.md` or runs `scripts/project.py`, says
   what it understood, and proposes a first segment and angle for you to
