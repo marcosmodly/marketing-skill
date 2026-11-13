@@ -75,3 +75,54 @@ out=$(python3 $c "$tmp/guide-1.md" "$tmp/guide-2.md" --address "$addr")
 expect "cold-email.md's own examples pass" "2 checked, 0 to rewrite."
 out=$(python3 $c --sequence "$tmp/sequence.md")
 expect "email-sequence's own example passes" "3 checked, 0 to rewrite."
+
+# outreach_queue.py: which queued emails may be sent, by the user's sending mode
+qf=scripts/ci/fixtures/queue
+now=2026-11-12T20:00:00+00:00
+with_mode() { rm -rf "$tmp/q"; cp -r $qf "$tmp/q"; sed -i "s/MODE/$1/" "$tmp/q/references/outreach-strategy.md"; }
+
+with_mode drafts
+out=$(python3 scripts/outreach_queue.py --plugin-root "$tmp/q" --now $now)
+expect "drafts mode sends nothing" "Send now (0):"
+expect "drafts mode says why" "sending mode is drafts: runs never send"
+
+with_mode approve
+out=$(python3 scripts/outreach_queue.py --plugin-root "$tmp/q" --now $now)
+expect "approve mode sends only the approved row" "Send now (1):"
+expect "the approved row, with its draft id" "SEND  dana@fernbank.example  state/outreach/a.md  draft:r-1"
+expect "an unapproved row waits" "wait  lee@quarry.example: not approved yet"
+
+with_mode auto
+out=$(python3 scripts/outreach_queue.py --plugin-root "$tmp/q" --now $now)
+expect "auto mode sends up to the daily cap" "Send now (2):"
+expect "the cap holds the next one" "wait  ana@mill.example: today's cap of 2 is reached"
+expect "a later send time waits" "wait  kit@dune.example: send time hasn't come"
+expect "a role address is never sent to" "wait  info@reef.example: a role address (info@)"
+expect "a draft that fails the check is never sent" "wait  max@loch.example: fails email_check.py"
+expect "a draft addressed to someone else is never sent" "not this row's address"
+expect "a row with no address is never sent" "wait  linkedin.com/in/ray-cove: no real email address"
+
+sed -i "s/^- Sending domain checked: yes/- Sending domain checked: no/" "$tmp/q/references/outreach-strategy.md"
+out=$(python3 scripts/outreach_queue.py --plugin-root "$tmp/q" --now $now)
+expect "auto mode needs the sending domain confirmed" "BLOCKED  the sending domain's SPF, DKIM, and DMARC aren't confirmed"
+expect "and then sends nothing" "Send now (0):"
+
+with_mode auto
+sed -i "s/^- Mailing address: .*/- Mailing address: Not yet configured/" "$tmp/q/references/outreach-strategy.md"
+out=$(python3 scripts/outreach_queue.py --plugin-root "$tmp/q" --now $now)
+expect "no mailing address, no sending" "BLOCKED  no mailing address in outreach-strategy.md"
+
+with_mode auto
+sed -i "s/| Sent | A | | | sent:2026-11-10 |/| Bounced | A | | | sent:2026-11-10 |/; s/| Replied | B | | | sent:2026-11-10 |/| Bounced | B | | | sent:2026-11-10 |/" "$tmp/q/state/outreach-log.md"
+out=$(python3 scripts/outreach_queue.py --plugin-root "$tmp/q" --now $now)
+expect "auto mode pauses itself on bounces" "BLOCKED  paused: 2 bounced and 0 unsubscribed among the last 2 sends"
+sed -i "s/^- Auto-send reviewed: none/- Auto-send reviewed: 2026-11-11/" "$tmp/q/references/outreach-strategy.md"
+out=$(python3 scripts/outreach_queue.py --plugin-root "$tmp/q" --now $now)
+expect "and resumes once the user has reviewed" "Send now (2):"
+
+with_mode "send everything now"
+out=$(python3 scripts/outreach_queue.py --plugin-root "$tmp/q" --now $now)
+expect "an unknown mode is drafts" "Sending mode: drafts."
+
+out=$(python3 scripts/outreach_queue.py)
+expect "the shipped strategy file is drafts mode" "Sending mode: drafts."

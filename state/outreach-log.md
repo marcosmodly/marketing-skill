@@ -87,15 +87,21 @@ the start of each run, using the thread/draft id in Notes (or a
 
 ## Separation-of-duties rule (same rule `state/content-calendar.md` uses)
 - `email-outreach` may only ever write `Drafted`, `Ready for Approval`, or
-  `Skipped-Duplicate` to Status for a row it queues. **Never `Approved`.**
+  `Skipped-Duplicate` to Status for a row it queues. **Never `Approved`
+  on its own.**
 - `Approved` is only ever written immediately after a human has seen the
-  actual email in a live conversation and given an explicit affirmative
-  reply — never from silence, a timeout, or a blanket "just send today's
-  batch" authorizing everything in advance. This holds the same way
-  whether the run is interactive or fired by a scheduled daily trigger.
-- Only an actual send (Gmail `send_message`, gated the same way) flips a
-  row to `Sent`. No skill in this plugin sets `Approved` or sends at any
-  other point. (The automatic detection above only ever moves a row
+  actual email in a live conversation and named it — never from silence,
+  a timeout, or a blanket "just send today's batch" authorizing
+  everything in advance, and never in a scheduled run.
+- What gets sent depends on the Sending mode the user set in
+  `references/outreach-strategy.md`: `drafts` (default) — nothing, the
+  human sends; `approve` — `Approved` rows at their send time; `auto` —
+  `Ready for Approval` rows at their send time, with nobody reading
+  them first, which is the user's explicit choice and never a default.
+  In every mode a run sends only the rows `scripts/outreach_queue.py`
+  lists, and a sent row gets `Sent` plus `sent:YYYY-MM-DD` in Notes
+  (`auto` too, when nobody approved it).
+- No skill in this plugin sets `Approved` or sends at any other point. (The automatic detection above only ever moves a row
   *out* of `Sent` toward a terminal outcome — it never sets `Approved` or
   `Sent` themselves.)
 
