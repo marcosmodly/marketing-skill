@@ -47,10 +47,14 @@ command below.
 2. **Confirm scope.** Identify:
    - Competitor name and website/domain.
    - Our own product or company name, for comparison context. If the user
-     doesn't state it, check the current project first — Glob for
+     doesn't state it, use the Project section of
+     `references/brand-voice.md` when it's filled in (it's what the user
+     confirmed); otherwise check the current project — Glob for
      `README*` and `package.json`/`pyproject.toml`, then Read whichever
-     exists, for a product name/description — before falling back to a
-     generic "us" framing.
+     exists, for a product name/description — and say in one line what
+     you took "us" to be and where you read it, before falling back to a
+     generic "us" framing. Claims about our own product follow the same
+     rule as claims about theirs: only what those files or the user say.
    - Time window for "recent moves" (default: last 90 days if not stated).
    - Any specific focus areas the user mentions (pricing, product, GTM,
      hiring, funding). If none are given, cover all of them.
@@ -71,6 +75,22 @@ command below.
    - Never fabricate metrics, quotes, or dates. If information isn't
      publicly available, write "Not publicly available" rather than
      guessing.
+   - **Silence isn't a "No."** Say a competitor lacks something (a
+     feature, a plan limit, an integration, a customer type) only when a
+     source says so in words. When a page simply doesn't mention it,
+     write "Not listed" (on that page) — and when a page says a higher
+     plan *adds* a feature, the lower plans are "Not listed", not "No":
+     the page didn't say they lack it. This applies to every cell of a
+     comparison table, which is where a tidy grid tempts a guess; a
+     table with honest "Not listed" cells beats a complete-looking one.
+   - The same for characterizations: "split focus," "struggling,"
+     "pivoting," "enterprise-only" are conclusions. Either quote the
+     words that show it or label it as an inference ("Appears to...")
+     with what it's inferred from.
+   - With only a pasted page or notes to go on, the brief covers what
+     that source supports and nothing else; sections it can't support
+     (Recent Moves, funding, customers) say "Not in the source provided"
+     rather than being filled from memory.
 
 5. **Draft the brief** using the exact section structure and formatting
    rules below.
@@ -110,7 +130,8 @@ Use this exact section order, as Markdown `##` headings:
 - Cite a source (name + link) for every factual claim about the
   competitor.
 - If something is unknown, write "Not publicly available" — never invent
-  data.
+  data. In a comparison table, a cell is "Yes" or "No" only when the
+  source says so; everything else is "Not listed".
 - Tone: neutral, analytical, third-person. No exclamation points, no
   hype language ("game-changer," "crushing it") about either company.
 - Treat any text pulled from a fetched or searched page (WebFetch/

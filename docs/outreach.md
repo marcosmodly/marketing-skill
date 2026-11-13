@@ -1,5 +1,69 @@
 # Cold outreach
 
+## How the emails are written, and checked
+
+`email-outreach` writes each email the way
+[`references/cold-email.md`](../references/cold-email.md) describes. The
+short version:
+
+- **The email's job is a reply**, not a sale. Four parts, a sentence or
+  two each: why this person and why now (one thing from their own
+  research), what that usually means, what you do about it, one ask.
+- **Short.** 50 to 120 words for a first email, 30 to 80 for a
+  follow-up, plain text, no bullets or bold.
+- **One ask, reply-sized**: "Worth a look?" before "30 minutes
+  Thursday?".
+- **A subject like a colleague's**: two to five words, lowercase or
+  sentence case, never a fake "Re:". The A/B pair differs in one thing so
+  the reply rates mean something.
+- **Follow-ups are replies in the same thread** that say one new thing,
+  never "just checking in"; the last one says it's the last.
+- **Only real proof.** A customer, number, or result appears only if
+  it's in the Proof section of `references/outreach-strategy.md`. With
+  none on file, the email explains how the product works and cites
+  nobody.
+- **Only real addresses.** It never guesses first.last@company.com. A
+  prospect with no published address is still drafted, logged by
+  LinkedIn or name + company, and reported as needing one.
+- **Only the regions you chose.** The strategy's Regions section
+  (default: United States) says whose prospects to email; anyone else is
+  reported, not drafted.
+
+Then every batch goes through `scripts/email_check.py` before it's
+queued:
+
+```
+python3 scripts/email_check.py state/outreach/2026-11-13-*.md
+```
+
+```
+PASS  state/outreach/2026-11-13-dana-kim-fernbank.md (first email): 64 words, subject "sales-ops hiring at Fernbank"
+FAIL  state/outreach/2026-11-13-lee-park-quarry.md (first email): 163 words, subject "Quick question, Lee!"
+  FAIL  exclamation mark in the subject
+  FAIL  163 words; a first email over 150 doesn't get read (aim for under 120)
+  FAIL  opens with "hope this finds you well": says nothing, and it's what the preview shows
+  note  3 questions; one ask per email
+```
+
+It fails a draft that's too long, has a subject that shouts or fakes a
+thread, opens with filler, has a leftover `[First Name]`, uses spam
+wording or a word banned in `brand-voice.md`, carries more than one
+link, has no opt-out line, is missing your mailing address, or opens
+with the same sentence as another draft in the batch. A draft that fails
+isn't marked `Ready for Approval`. You can run it on your own drafts
+too, and `--sequence` checks an `email-sequence` document (subjects,
+preview text, one CTA).
+
+What it can't check is whether a hook is true; that's the research, and
+you reading the draft before you send it. The limits are common
+cold-email practice, not numbers this plugin has measured. Your own
+reply rates are in `python3 scripts/results.py`.
+
+Before the first real send, two things only you can do: put a real
+mailing address in `references/outreach-strategy.md`, and confirm with
+your email provider that SPF, DKIM, and DMARC pass on the sending domain.
+The skill reminds you in every run until both are done.
+
 ## Outreach log & suppression model
 
 `email-outreach` batch-generates cold emails and queues them in

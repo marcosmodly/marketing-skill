@@ -54,8 +54,11 @@ command below.
      a project feature/launch without describing it, look for it first —
      Glob for `README*`, `CHANGELOG*`, and `docs/**/*.md` at the project
      root, then Read whichever look relevant — before asking them to
-     describe it. Only check documentation-oriented files this way, not
-     arbitrary source code. If nothing relevant turns up, ask directly.
+     describe it. Use the Project section of `references/brand-voice.md`
+     when it's filled in (its Material line says which real screenshots
+     and logos exist). Only check documentation-oriented files this way,
+     not arbitrary source code. If nothing relevant turns up, ask
+     directly.
    - Deliverable type: video, image, or both.
    - Target platform(s) — this determines aspect ratio (e.g. Reels/TikTok
      9:16, LinkedIn 1:1 or 16:9, YouTube 16:9).

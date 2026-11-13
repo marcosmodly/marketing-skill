@@ -39,8 +39,12 @@ command below.
 
 2. **Confirm scope.**
    - The offer/product/source content (paste, file, URL, or "our
-     product" — check `README*`/`package.json`/`pyproject.toml` at the
-     project root first if so, same as `content-repurposer`).
+     product" — if so, use the Project section of
+     `references/brand-voice.md` when it's filled in, otherwise check
+     `README*`/`package.json`/`pyproject.toml` at the project root, same
+     as `content-repurposer`, and say in one line what you took the
+     product and offer to be and where you read it, so a wrong guess
+     gets corrected before it's in an ad).
    - Which platform(s): Meta (Facebook/Instagram), Google Search (RSA),
      LinkedIn Ads — default to asking rather than guessing, since limits
      and tone differ a lot by platform.

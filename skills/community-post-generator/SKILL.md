@@ -200,7 +200,10 @@ command below.
    - The underlying content/offer/topic, and any link or CTA (paste, file,
      URL, or "our product" — check `README*`, `CHANGELOG*`, `docs/**/*.md`,
      and `package.json`/`pyproject.toml` at the project root first if so,
-     same as `content-repurposer`, before asking the user to paste it).
+     same as `content-repurposer`, before asking the user to paste it;
+     use the Project section of `references/brand-voice.md` when it's
+     filled in, and say in one line what you took the project to be and
+     where you read it).
    - Single community or a batch across several? If several, treat each
      as a fully separate research-then-draft pass (step 3 onward, per
      target) — never reuse. If the request sounds like "post the same

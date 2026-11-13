@@ -92,8 +92,10 @@ was made with the same renderer.
 - **Email marketing:** drip, nurture, and welcome sequences with timing,
   subject lines, and preview text.
 - **Cold email outreach:** a daily batch of researched, 1:1 personalized
-  prospecting emails, deduplicated against a permanent contact log that
-  syncs replies, bounces, and unsubscribes from Gmail.
+  prospecting emails, written short with one ask and checked by
+  `scripts/email_check.py` before they're queued, deduplicated against a
+  permanent contact log that syncs replies, bounces, and unsubscribes
+  from Gmail.
 - **Short-form video:** it starts by checking your project's own files
   and asking you to confirm what the project is and what the video is
   for, then writes hook-first scripts plus caption, hashtags, and
@@ -153,7 +155,7 @@ anything actually publishes.
 | `seo-brief` | "SEO brief," "keyword research," "optimize this for search" | Target/secondary keywords, search intent, suggested outline, meta title/description — never fabricates search-volume numbers |
 | `ad-copy-generator` | "ad copy," "Meta/Google/LinkedIn ad variants," "A/B test copy" | Multiple ad variants per platform, each a distinct hook angle, sized to that platform's character limits |
 | `email-sequence` | "email sequence," "drip campaign," "welcome series" | A multi-email sequence with send timing, subject lines, and a real narrative arc across emails |
-| `email-outreach` | "cold outreach," "prospecting emails," "daily sales outreach," "personalized cold email to [name]" | Researches real prospects against a defined ICP (public-web research by default; a connected prospecting tool only if you ask for verified contact details), checks each one against a permanent contact log so nobody's contacted twice — or ever again once unsubscribed/replied — drafts a genuinely personalized email per prospect, re-confirms strategy monthly, and queues everything for approval (or drafts directly in Gmail if connected); never sends |
+| `email-outreach` | "cold outreach," "prospecting emails," "daily sales outreach," "personalized cold email to [name]" | Researches real prospects against a defined ICP (public-web research by default; a connected prospecting tool only if you ask for verified contact details), checks each one against a permanent contact log so nobody's contacted twice — or ever again once unsubscribed/replied — drafts a short, genuinely personalized email per prospect (one hook from their own research, one ask, follow-ups that say something new), checks every draft with `scripts/email_check.py`, never guesses an email address, re-confirms strategy monthly, and queues everything for approval (or drafts directly in Gmail if connected); never sends |
 | `visual-brief-generator` | "visual brief," "video brief," "shot list," "image prompts for X" | A structured shot list, per-scene prompts, aspect ratios, and style guide; generates the actual asset only if a visual-gen tool is connected |
 | `short-form-video` | "TikTok video," "Instagram Reel script," "YouTube Short," "short-form/vertical video for..." | A hook-first script/shot list plus a ready-to-post package per platform (YouTube Shorts/Instagram Reels/TikTok) — title/caption, sized hashtags, and a best-time-to-post window, shaped to one of 23 marketing video types (testimonial, how-to, announcement, and so on) or 22 everyday FYP formats (POV, tier list, text-message skit, storytime, and so on); if you opt in, makes the actual video too, either with a connected tool (Higgsfield, Figma Weave, Canva, or similar) or by rendering it locally (`scripts/video/`): animated text over stock or AI backgrounds, or a narrated animation starring the brand's 3D mascot, or pixel art, with music in the project's own saved sound; otherwise points to current free tools |
 | `clip-montage` | "make a montage of these videos," "edit these clips into a reel," "recap video from today," "make a montage" | The default for montages, and free: brings in the user's own clips (location data stripped), looks at each one frame by frame to pick its best moment, and renders a 9:16 montage cut on the beat of their own music (or a generated track, or none for an in-app sound), with a clip's own sound where someone talks, their voiceover with synced captions, labels, and the client's contact end card; then edits it on request, saving each version. With only photos it asks for clips first, then hands over to `montage-video` |
@@ -291,8 +293,9 @@ words, and formatting constraints, defined once and reused everywhere.
 
 `email-outreach` additionally reads its own
 `references/outreach-strategy.md` — ICP/target segment(s), value
-proposition and angle per segment, offer and primary CTA, daily volume,
-follow-up cadence, and suppression window. It's configured the same way:
+proposition and angle per segment, offer and primary CTA, the proof it
+may cite, sender identity, regions, daily volume, follow-up cadence, and
+suppression window. It's configured the same way:
 guided setup the first time `email-outreach` runs, or hand-edit directly.
 Unlike `brand-voice.md`, it also re-opens itself automatically — the
 skill checks its "last refreshed" date on every run and walks you through
@@ -477,7 +480,8 @@ have passed, so the one daily trigger alone covers both cadences.
   `community-post-generator` researches each subreddit's, Product Hunt's,
   Hacker News's, Indie Hackers', dev.to's, or a Telegram channel's actual
   rules before drafting, and asks you for Discord's and Slack's.
-- **[Cold outreach](docs/outreach.md):** the contact log that keeps
+- **[Cold outreach](docs/outreach.md):** how the emails are written and
+  checked, the contact log that keeps
   anyone who replied, bounced, or unsubscribed from ever being emailed
   again, and how Gmail and prospecting tools plug in.
 
@@ -543,7 +547,8 @@ commands/
   marketing-setup.md    # the /marketing-skill:marketing-setup command
 references/
   brand-voice.md         # shared config every skill reads (hand-edited)
-  outreach-strategy.md   # email-outreach's own config: ICP, angle, offer, cadence (hand-edited or guided setup)
+  outreach-strategy.md   # email-outreach's own config: ICP, angle, offer, proof, regions, cadence (hand-edited or guided setup)
+  cold-email.md          # how a cold email is written: the four parts, length, subject lines, follow-ups, deliverability, opt-out
   video-types.md         # 23 marketing video types: goal, short-form beats, and how each gets made (hand-editable)
   sound-guide.md         # music genres, sound effects, how to pick a project's sonic identity, a hook library, licensed tracks
   hooks.md               # hook patterns by goal, written to work with the sound off, and how to test them
@@ -563,6 +568,7 @@ state/
 scripts/
   publish_webhook.py     # stdlib-only webhook sender (see --help)
   publish_direct.py      # stdlib-only direct-to-platform scaffold (LinkedIn/X/Meta/Reddit/Discord/Slack/Telegram/dev.to/YouTube/Instagram/TikTok), needs your own API credentials (see --help); --metrics reads a post's numbers back
+  email_check.py         # stdlib-only: checks drafted cold emails (length, subject, filler openers, placeholders, opt-out, address) and email sequences before they're queued
   results.py             # stdlib-only: what the logs add up to (removal rates, medians, reply rates, an A/B significance test), or an eval result's table
   video/
     render.js            # animated HTML page -> vertical MP4 with an original soundtrack (needs Node, Playwright, ffmpeg)
