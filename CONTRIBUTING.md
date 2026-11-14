@@ -29,13 +29,14 @@ it may wait a little.
 
 ## Running the checks
 
-The repo checks need Python 3.12 and nothing else:
+The repo checks need Python 3.12 (and Node for one of them) and nothing else:
 
 ```
 python3 scripts/ci/lint_repo.py        # skill frontmatter, command size, manifests, paths, links
 bash scripts/ci/smoke_publish.sh       # both publish scripts, dry run only, with fake credentials
 bash scripts/ci/smoke_results.sh       # scripts/results.py's numbers on made-up logs
 bash scripts/ci/smoke_email.sh         # email_check.py's passes and fails, and what outreach_queue.py would send, on made-up drafts
+node scripts/ci/smoke_voice.js         # voice.js's Voicebox path (cloning, voicing, sentence times) against a stand-in for the app; needs Node 18+
 python3 scripts/video/templates/build.py
 git diff --exit-code -- scripts/video/templates   # the built templates must match build.py
 ```

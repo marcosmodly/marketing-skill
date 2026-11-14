@@ -18,7 +18,8 @@
  *   title: three invoice mistakes
  *   hook: you're losing money on every late invoice     # on screen from the first frame
  *   cta: one money habit a week                         # on screen in the last scene
- *   voice: af_heart                                     # a voice.js voice, or:
+ *   voice: am_michael                                   # a voice.js voice (voicebox:<profile> for a Voicebox one; left out,
+ *                                                       # the Voice saved under Video Setup in brand-voice.md), or:
  *   recordings: assets/invoices-{n}.m4a                 # the user's own takes, one per line, instead
  *   bg: freelancer desk                                 # for lines without their own [bg: ...]
  *   bg-type: photo                                      # or video (needs a Pexels or Pixabay key)
@@ -96,8 +97,9 @@
  * four corners in the photo's pixels (top left, top right, bottom right, bottom left), moving
  * with the photo's zoom. Check the fit with render.js --stills.
  *
- * Voices come from voice.js (Kokoro, free and local; `npm install kokoro-js` once) unless
- * `recordings` points at the user's own files. The music follows the Sonic Identity saved in
+ * Voices come from voice.js (Kokoro, free and local; `npm install kokoro-js` once; or the user's
+ * own cloned voice from the Voicebox app, `voice: voicebox:<profile>`) unless `recordings` points
+ * at the user's own files. The music follows the Sonic Identity saved in
  * references/brand-voice.md, one energy step lower so it sits under the voice, with scene
  * changes moved onto its beat, and the look follows its Visual Identity (brand.js), end card
  * included. Without --out, the page goes to state/videos/<date>-<slug>.html,
@@ -243,6 +245,20 @@ function sonicIdentity(file = path.join(ROOT, 'references', 'brand-voice.md')) {
   };
   return id.music ? id : null;
 }
+
+// The voice saved under Video Setup in brand-voice.md ("- Voice: Kokoro am_michael", "- Voice: voicebox:Maya"),
+// or null: not set yet, or something voice.js can't speak (the user's recordings, a paid service).
+function savedVoice(file = path.join(ROOT, 'references', 'brand-voice.md')) {
+  if (!fs.existsSync(file)) return null;
+  const section = (/^## Video Setup\n([\s\S]*?)(?=^## |$(?![\s\S]))/m.exec(fs.readFileSync(file, 'utf8')) || [])[1] || '';
+  if (/not yet configured/i.test(section)) return null;
+  const line = ((/^-\s*Voice:\s*(.+)$/mi).exec(section) || [])[1] || '';
+  const box = /voicebox:\s*([^,;(]+)/i.exec(line);
+  if (box) return `voicebox:${box[1].trim()}`;
+  return (/\b([a-z]{2}_[a-z]+)\b/.exec(line) || [])[1] || null;
+}
+const NO_VOICE_CHOSEN = 'No voice was chosen, so this is af_heart, the stock default every video gets. Pick one that fits the brand first: audition a few\n' +
+  '(voice.js --audition, men\'s and British voices included), or the user\'s own or a designed voice through Voicebox (sound-guide.md), and save it as "- Voice:" under Video Setup.';
 
 // The template's own body settings, as the fallback for anything the identity doesn't set.
 function templateDefaults(html) {
@@ -454,7 +470,8 @@ async function main() {
     const missing = clips.filter((c) => !fs.existsSync(path.join(dir, c)));
     if (missing.length) fail(`Recordings not found (relative to ${dir}):\n${missing.map((m) => `- ${m}`).join('\n')}`);
   } else {
-    const voice = args.voice || meta.voice || 'af_heart';
+    const voice = args.voice || meta.voice || savedVoice() || 'af_heart';
+    if (!args.voice && !meta.voice && !savedVoice()) console.warn(`Note: ${NO_VOICE_CHOSEN}`);
     const speed = String(args.speed || meta.speed || 1);
     const prefix = `${slug}-`;
     clips = lines.map((l) => `assets/${prefix}${l.n}.wav`);
@@ -789,4 +806,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { parseFrontmatter, sonicIdentity };
+module.exports = { parseFrontmatter, sonicIdentity, savedVoice, NO_VOICE_CHOSEN };

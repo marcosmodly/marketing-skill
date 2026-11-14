@@ -34,7 +34,7 @@ numbered lines, one per scene, and let `compose.js` build the page:
 title: late invoices
 hook: you're losing money on every late invoice
 cta: one money habit a week
-voice: af_heart
+voice: am_michael
 bg: freelancer desk morning
 ---
 1. Most freelancers lose money on invoices they send late. [bg: stressed laptop night]
@@ -484,12 +484,20 @@ Set the `<body>` music attributes from the Sonic Identity in
 
 ## A voiceover
 
+Choose the voice with the user before the first narrated video
+("Choosing the voice" in `sound-guide.md`): never leave it to the default,
+`af_heart`, which makes every video sound the same. Once picked it's the
+`- Voice:` line of Video Setup, and `compose.js` uses it when the script
+has no `voice:`. The options:
+
 The user's own recording, a free generated voice from
 `${CLAUDE_PLUGIN_ROOT}/scripts/video/voice.js` (Kokoro, runs locally, no
 key or cost; see "A free generated voice" in `sound-guide.md` for setup,
 and send the user `--audition` samples to pick a voice, since you can't
-hear them), or a voice they generate with a service they have their own
-key for.
+hear them), their own voice cloned for free by the Voicebox app on their
+machine (`--voice "voicebox:<profile>"`, any of 23 languages; see "The
+user's own voice, cloned, also free" there), or a voice they generate
+with a service they have their own key for.
 
 Write the script line by line, ask them to record each line as its own
 file (`voice-1.m4a`, `voice-2.m4a`, ...), and put the files in `assets/`.

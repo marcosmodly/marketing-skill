@@ -278,6 +278,34 @@ AI-content label.
   by word, timed to the clip (see `video-rendering.md`), and the render
   writes an `.srt` file for the platforms' own caption tracks.
 
+### Choosing the voice (never just the default)
+
+`af_heart` is what a video gets when nobody chose, so every video made
+that way sounds the same, and like everyone else's. Don't use it because
+it's the default. Before the first narrated video, and whenever Video
+Setup has no `- Voice:` line, choose with the user:
+
+1. **Say the options in one line:** their own voice (recorded line by
+   line, or cloned once through Voicebox), a brand voice designed from a
+   description (Voicebox), or a stock voice.
+2. **Shortlist to fit the brand**, not the top of the list: who the
+   audience is, who presents (a man's voice for a male founder or
+   character, a British voice for a UK brand), and the tone in
+   `brand-voice.md` (calm and low for finance, bright and quick for a
+   consumer app). `voice.js --voices` lists all 28 stock voices, men's
+   and British ones included.
+3. **Audition three or four that differ** on the video's own first line,
+   at the pace it'll run (`--speed 1.05` to `1.15` suits short-form),
+   send the files, and let the user pick. You can't hear them.
+4. **Save the pick** as `- Voice:` under Video Setup in `brand-voice.md`.
+   `compose.js` and `montage.js` read it, so every later video uses it
+   without `voice:` in the script. Both print a note when they fall back
+   to `af_heart`; treat that note as a step you skipped.
+
+If the user says the voice sounds generic, robotic, or like every other
+video, that's this step: offer their own voice or a designed one first,
+then a different stock voice.
+
 ### A free generated voice
 
 When the user would rather not record, `scripts/video/voice.js` reads the
@@ -299,3 +327,85 @@ sets the pace (1 is normal). You can't hear the result, so send the
 audition files to the user and let them pick. These are synthetic stock
 voices, so if a platform asks whether a video uses AI-generated audio, the
 answer is yes.
+
+### The user's own voice, cloned, also free
+
+Kokoro's voices are stock voices in English. When the user wants the
+video in their own voice without recording every line, or in another
+language, `voice.js` can speak through
+[Voicebox](https://github.com/jamiepine/voicebox) (MIT), a free desktop
+app that runs open voice models (Qwen3-TTS, Chatterbox, LuxTTS, and
+others, 23 languages) on the user's own machine and clones a voice from a
+few seconds of speech. No account, no API key, no per-use cost, and the
+recording never leaves their computer. Claude does the rest through the
+app's local address (`http://127.0.0.1:17493`), so the user only installs
+it and records one sample.
+
+It works when Voicebox runs on the machine these commands run on: Claude
+Code on the user's computer, not a cloud session (there, or without the
+app, use Kokoro or their recordings). Check first, and offer it rather
+than assume it:
+
+```
+node scripts/video/voice.js --voices voicebox      # is it running, and the voice profiles in it
+```
+
+If it isn't answering, and the user wants it: they download the app from
+the project's GitHub releases (macOS and Windows; Linux builds from
+source or runs its Docker image, which answers on port 17600, so set
+`VOICEBOX_URL=http://127.0.0.1:17600`), open it, and download one voice
+model in its Models tab. The app has to stay open while voices are made.
+
+**Making their voice.** Ask for one clean recording of them talking, 2 to
+30 seconds (10 to 20 is best), in a quiet room, no music, in the language
+the videos are in; a phone voice memo is fine. Ask whose voice it is: a
+clone is only ever of the user, or of someone who told them yes, and
+`--my-voice` is how the command records that they said so. Never clone a
+voice from a clip of someone else (a celebrity, a competitor, a customer's
+testimonial).
+
+```
+node scripts/video/voice.js --clone "Maya" --sample me.m4a --my-voice --transcript "What the recording says, word for word."
+node scripts/video/voice.js --audition samples "The first line of the script." --voices "voicebox:Maya,af_heart"
+node scripts/video/voice.js script.md --out assets --voice "voicebox:Maya"
+```
+
+Without `--transcript`, Voicebox transcribes the recording itself; show
+the user what it heard. A second `--clone` with the same name adds
+another sample to the profile. `--language` takes the language's
+two-letter code (`es`, `fr`, `de`, `pt`, `ja`, ...) when it isn't English.
+
+**Creating a voice instead.** When the user has no recording to give, or
+wants a brand voice that is nobody's, make one from a description. You
+write the description: read `brand-voice.md` (tone, audience, the
+presenter) and describe who is speaking, their age, pitch, pace, mood,
+and accent, in a sentence or two. It makes a new synthetic voice, so
+describe a kind of voice, never a real person ("sounds like" a named
+actor or creator is imitation).
+
+```
+node scripts/video/voice.js --design "Juno" --describe "a warm woman in her thirties, low and unhurried, a slight smile, neutral American accent"
+node scripts/video/voice.js --audition samples "The first line of the script." --voices "voicebox:Juno"
+```
+
+Send the audition; if the user wants it different, design another under a
+new name with a changed description, and keep the one they pick. It
+speaks with the Qwen VoiceDesign model, which the user downloads once in
+the app's Models tab (10 languages). The app also has ready-made voices:
+`--presets kokoro` or `--presets qwen_custom_voice` lists them, and
+`--preset "Aiden" --from qwen_custom_voice:Aiden` makes one a profile.
+
+**Using it.** `voicebox:<profile name>` works anywhere a voice name does:
+`--voice` here, `voice:` in a `compose.js` or `montage.js` script, and
+the Voice line of Video Setup. A profile the user made in the app
+themselves works the same way, including its preset and designed voices.
+`--model chatterbox` (or `qwen`, `luxtts`, `kokoro`, ...) picks another
+of the app's engines for a profile, and `--instructions "calm, a little
+slower"` is a delivery note for the engines that take one (Qwen). Each
+sentence is one request, so the captions get exact sentence times as they
+do with Kokoro. On a computer with no GPU a line can take a minute; say so
+before a long script.
+
+You still can't hear it: send the audition file and let the user judge
+whether it sounds like them. A cloned voice is AI-generated audio, so the
+platform's AI-content label applies to it as well.

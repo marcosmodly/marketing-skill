@@ -25,6 +25,8 @@ jobs:
         run: bash scripts/ci/smoke_results.sh
       - name: Email checker (email_check.py on made-up drafts)
         run: bash scripts/ci/smoke_email.sh
+      - name: Voicebox voices (voice.js against a stand-in for the app)
+        run: node scripts/ci/smoke_voice.js
       - name: The release this would publish (release_notes.py)
         run: python3 scripts/ci/release_notes.py --out "$RUNNER_TEMP/notes.md"
       - name: Templates are in sync with build.py

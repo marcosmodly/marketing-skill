@@ -3,6 +3,42 @@
 What changed in each version of the plugin (`.claude-plugin/plugin.json`).
 Skills that read "our changelog" for source material read this file too.
 
+## 0.10.1 (2026-11-14)
+
+- **Videos in your own voice, cloned for free on your computer.** The
+  voiceover could already be a free stock voice (Kokoro) or your own
+  recordings. Now it can also be your own voice without recording every
+  line: install [Voicebox](https://github.com/jamiepine/voicebox), a free
+  open-source desktop app that runs open voice models on your machine,
+  keep it open, and give Claude one recording of you talking for 10 to 20
+  seconds. `scripts/video/voice.js --clone "Maya" --sample me.m4a
+  --my-voice` makes the voice, and `voicebox:Maya` then works anywhere a
+  voice name does (`--voice`, `voice:` in a narrated video or montage
+  script, the Voice line of Video Setup), with captions synced to it as
+  before. No account, no API key, no per-use cost, and the recording
+  stays on your computer.
+- **A brand voice made from a description.** No recording at all: say
+  how the voice should sound, Claude writes the description, and
+  `voice.js --design "Juno" --describe "..."` makes a new voice in
+  Voicebox that is nobody's. You hear a sample, ask for changes, and the
+  one you pick is saved as your brand's voice. `--presets` and `--preset`
+  do the same with the app's ready-made voices.
+- **Videos stop defaulting to the same stock voice.** Until now a
+  narrated video got `af_heart` unless you said otherwise, so they all
+  sounded alike. Claude now chooses the voice with you before the first
+  one (your own, a designed one, or a shortlist of stock voices that fit
+  the brand, with samples to hear), saves it as `- Voice:` under Video
+  Setup, and `compose.js` and `montage.js` use the saved voice on their
+  own, with a note when none was chosen.
+- **A free voice in other languages.** Kokoro's voices here are English.
+  Through Voicebox the voiceover can be in any of the 23 languages its
+  models speak, in your cloned voice or one of the app's preset voices.
+- Voicebox has to run on the same computer as Claude Code, so this
+  doesn't work in a cloud session; Kokoro and your own recordings work as
+  before. A cloned voice is only for your own voice or someone who
+  agreed: `--clone` stops until `--my-voice` says so. Setup is in
+  `docs/video.md` under "Sound".
+
 ## 0.10.0 (2026-11-13)
 
 - **You choose who presses send.** A new Sending section in
