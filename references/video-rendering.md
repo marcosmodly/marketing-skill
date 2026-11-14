@@ -488,8 +488,10 @@ The user's own recording, a free generated voice from
 `${CLAUDE_PLUGIN_ROOT}/scripts/video/voice.js` (Kokoro, runs locally, no
 key or cost; see "A free generated voice" in `sound-guide.md` for setup,
 and send the user `--audition` samples to pick a voice, since you can't
-hear them), or a voice they generate with a service they have their own
-key for.
+hear them), their own voice cloned for free by the Voicebox app on their
+machine (`--voice "voicebox:<profile>"`, any of 23 languages; see "The
+user's own voice, cloned, also free" there), or a voice they generate
+with a service they have their own key for.
 
 Write the script line by line, ask them to record each line as its own
 file (`voice-1.m4a`, `voice-2.m4a`, ...), and put the files in `assets/`.

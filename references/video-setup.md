@@ -96,8 +96,11 @@ take their defaults):
    without asking first for that video, with the cost when the tool
    gives one.
 5. **Whose voice?** The free local AI voice (Kokoro, a few to pick from),
-   their own recordings (one file per line), or a paid or cloned voice
-   from question 4.
+   their own recordings (one file per line), their own voice cloned for
+   free on their computer (the Voicebox app, from one short recording of
+   them; also the free way to a voice in a language other than English;
+   `sound-guide.md` has the setup), or a paid or cloned voice from
+   question 4.
 
 ## Saving the answers
 
@@ -111,6 +114,8 @@ placeholder:
 - Paid tools: HeyGen (avatars), Epidemic Sound (music)
 - Voice: Kokoro af_heart
 ```
+
+A Voicebox voice is saved as `- Voice: voicebox:<profile name>`.
 
 A skipped question stays out of the list. The character's path goes under
 Visual Identity as `Character:` (so `brand.js` puts it in every 3D video),

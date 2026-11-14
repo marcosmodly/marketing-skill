@@ -163,8 +163,10 @@ command below. `VIDEO` below means `${CLAUDE_PLUGIN_ROOT}/scripts/video`.
      user has a license for. Send any track to listen to before using it.
    - **Voice:** none (music only, the default for most listings), a free
      local voice (`node VIDEO/voice.js --audition <dir> "<a line from the
-     script>"` makes samples to pick from; English voices), or the user's
-     own recordings, one file per voiced line, in any language.
+     script>"` makes samples to pick from; English voices), the user's own
+     voice cloned for free by the Voicebox app if it's on their machine
+     (`voice: voicebox:<profile>`, 23 languages; `sound-guide.md`), or the
+     user's own recordings, one file per voiced line, in any language.
    - **The words on screen:** the hook (three options from
      `${CLAUDE_PLUGIN_ROOT}/references/hooks.md`, each from a different
      pattern, checked with `node VIDEO/hook.js "one" "two" "three"`; its

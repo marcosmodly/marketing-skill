@@ -299,3 +299,65 @@ sets the pace (1 is normal). You can't hear the result, so send the
 audition files to the user and let them pick. These are synthetic stock
 voices, so if a platform asks whether a video uses AI-generated audio, the
 answer is yes.
+
+### The user's own voice, cloned, also free
+
+Kokoro's voices are stock voices in English. When the user wants the
+video in their own voice without recording every line, or in another
+language, `voice.js` can speak through
+[Voicebox](https://github.com/jamiepine/voicebox) (MIT), a free desktop
+app that runs open voice models (Qwen3-TTS, Chatterbox, LuxTTS, and
+others, 23 languages) on the user's own machine and clones a voice from a
+few seconds of speech. No account, no API key, no per-use cost, and the
+recording never leaves their computer. Claude does the rest through the
+app's local address (`http://127.0.0.1:17493`), so the user only installs
+it and records one sample.
+
+It works when Voicebox runs on the machine these commands run on: Claude
+Code on the user's computer, not a cloud session (there, or without the
+app, use Kokoro or their recordings). Check first, and offer it rather
+than assume it:
+
+```
+node scripts/video/voice.js --voices voicebox      # is it running, and the voice profiles in it
+```
+
+If it isn't answering, and the user wants it: they download the app from
+the project's GitHub releases (macOS and Windows; Linux builds from
+source or runs its Docker image, which answers on port 17600, so set
+`VOICEBOX_URL=http://127.0.0.1:17600`), open it, and download one voice
+model in its Models tab. The app has to stay open while voices are made.
+
+**Making their voice.** Ask for one clean recording of them talking, 2 to
+30 seconds (10 to 20 is best), in a quiet room, no music, in the language
+the videos are in; a phone voice memo is fine. Ask whose voice it is: a
+clone is only ever of the user, or of someone who told them yes, and
+`--my-voice` is how the command records that they said so. Never clone a
+voice from a clip of someone else (a celebrity, a competitor, a customer's
+testimonial).
+
+```
+node scripts/video/voice.js --clone "Maya" --sample me.m4a --my-voice --transcript "What the recording says, word for word."
+node scripts/video/voice.js --audition samples "The first line of the script." --voices "voicebox:Maya,af_heart"
+node scripts/video/voice.js script.md --out assets --voice "voicebox:Maya"
+```
+
+Without `--transcript`, Voicebox transcribes the recording itself; show
+the user what it heard. A second `--clone` with the same name adds
+another sample to the profile. `--language` takes the language's
+two-letter code (`es`, `fr`, `de`, `pt`, `ja`, ...) when it isn't English.
+
+**Using it.** `voicebox:<profile name>` works anywhere a voice name does:
+`--voice` here, `voice:` in a `compose.js` or `montage.js` script, and
+the Voice line of Video Setup. A profile the user made in the app
+themselves works the same way, including its preset and designed voices.
+`--model chatterbox` (or `qwen`, `luxtts`, `kokoro`, ...) picks another
+of the app's engines for a profile, and `--instructions "calm, a little
+slower"` is a delivery note for the engines that take one (Qwen). Each
+sentence is one request, so the captions get exact sentence times as they
+do with Kokoro. On a computer with no GPU a line can take a minute; say so
+before a long script.
+
+You still can't hear it: send the audition file and let the user judge
+whether it sounds like them. A cloned voice is AI-generated audio, so the
+platform's AI-content label applies to it as well.

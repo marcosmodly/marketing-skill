@@ -11,6 +11,18 @@
  *   node voice.js --audition <dir> "a line" [--voices af_heart,af_bella,am_michael,am_fenrir]
  *                                                           # the same line in several voices, to pick one
  *
+ * The user's own voice, cloned, also free and local, through Voicebox (github.com/jamiepine/voicebox,
+ * MIT), a desktop app that runs open voice models on their machine and answers on
+ * http://127.0.0.1:17493 while it's open. A voice named "voicebox:<profile>" is spoken by it:
+ *   node voice.js --voices voicebox                         # is it running, and the voice profiles in it
+ *   node voice.js --clone "Maya" --sample me.m4a --my-voice [--transcript "what the sample says"] [--language en]
+ *                                                           # a profile from 2 to 30 seconds of the user's speech
+ *   node voice.js <script> --out <dir> --voice voicebox:Maya
+ *   node voice.js --audition <dir> "a line" --voices voicebox:Maya,af_heart
+ * [--model chatterbox] picks one of Voicebox's engines instead of the profile's own, and
+ * [--instructions "calm, a little slower"] is a delivery note for the engines that take one (Qwen).
+ * VOICEBOX_URL points somewhere else (its Docker image answers on http://127.0.0.1:17600).
+ *
  * <script> is a text or Markdown file. Numbered lines ("1. ...") become voice-1.wav,
  * voice-2.wav, ...; with no numbered lines, each paragraph is a line. Anything after the
  * first "## " heading is ignored, so notes can follow the script. Each WAV gets a .json next
@@ -20,15 +32,20 @@
  * runtime). The first run also downloads the model (about 90 MB) from Hugging Face and
  * caches it; after that it works offline.
  *
- * These are synthetic stock voices, not clones of anyone. If a platform asks whether a
- * video uses AI-generated audio, say yes.
+ * Kokoro's are synthetic stock voices, not clones of anyone. A Voicebox profile can be a
+ * clone: only of the user, or of someone who agreed to it (--clone asks for --my-voice to say
+ * so). Either way, if a platform asks whether a video uses AI-generated audio, say yes.
  */
 const fs = require('fs');
 const path = require('path');
+const http = require('http');
+const https = require('https');
 
 const MODEL = 'onnx-community/Kokoro-82M-v1.0-ONNX';
 const DEFAULT_VOICE = 'af_heart';
 const SENTENCE_GAP = 0.12; // seconds of silence between sentences of one line
+const VOICEBOX_URL = (process.env.VOICEBOX_URL || 'http://127.0.0.1:17493').replace(/\/+$/, '');
+const SAMPLE_TYPES = ['.wav', '.mp3', '.m4a', '.ogg', '.flac', '.aac', '.webm', '.opus'];
 
 function fail(message) {
   console.error(message);
@@ -40,7 +57,9 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--voices' && (argv[i + 1] === undefined || argv[i + 1].startsWith('--'))) args.listVoices = true;
-    else if (['--out', '--voice', '--speed', '--line', '--prefix', '--audition', '--voices', '--quality'].includes(a)) args[a.slice(2)] = argv[++i];
+    else if (a === '--voices' && argv[i + 1].toLowerCase() === 'voicebox') { args.listVoices = 'voicebox'; i++; }
+    else if (a === '--my-voice') args.myVoice = true;
+    else if (['--out', '--voice', '--speed', '--line', '--prefix', '--audition', '--voices', '--quality', '--clone', '--sample', '--transcript', '--language', '--model', '--instructions'].includes(a)) args[a.slice(2)] = argv[++i];
     else if (a === '-h' || a === '--help') args.help = true;
     else args.positional.push(a);
   }
@@ -115,6 +134,122 @@ async function speak(tts, text, voice, speed) {
     chunks.push(audio.audio);
     texts.push(typeof said === 'string' ? said.trim() : null);
   }
+  return joinSentences(chunks, texts, rate);
+}
+
+// ---- Voicebox: the user's own (cloned) voice, from the Voicebox app running on this machine
+
+// "voicebox:Maya" -> "Maya"; "voicebox:" -> "" (Voicebox's own default voice); anything else -> null.
+function voiceboxProfile(voice) {
+  const m = /^voicebox:(.*)$/i.exec(String(voice || '').trim());
+  return m ? m[1].trim() : null;
+}
+
+// One request to the Voicebox app. Plain http, not fetch: a first line on a slow machine can
+// take minutes while the model loads, and fetch gives up after five.
+function voicebox(method, route, { json, body, headers } = {}) {
+  const url = new URL(VOICEBOX_URL + route);
+  const data = json !== undefined ? Buffer.from(JSON.stringify(json)) : body;
+  const head = { 'X-Voicebox-Client-Id': 'marketing-skill', ...(json !== undefined ? { 'Content-Type': 'application/json' } : {}), ...headers };
+  if (data) head['Content-Length'] = data.length;
+  return new Promise((resolve) => {
+    const req = (url.protocol === 'https:' ? https : http).request(url, { method, headers: head }, (res) => {
+      const chunks = [];
+      res.on('data', (c) => chunks.push(c));
+      res.on('end', () => {
+        const buf = Buffer.concat(chunks);
+        if (res.statusCode >= 200 && res.statusCode < 300) return resolve(buf);
+        let why = buf.toString('utf8').slice(0, 400);
+        try {
+          const j = JSON.parse(buf.toString('utf8'));
+          why = (j.error && j.error.message) || (typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail || j));
+        } catch (e) { /* not JSON: the text as it is */ }
+        fail(`Voicebox said no (${res.statusCode}, ${method} ${route}): ${why}`);
+      });
+    });
+    req.on('error', (e) => fail(`Voicebox isn't answering at ${VOICEBOX_URL} (${e.code || e.message}).\n` +
+      'It\'s a free desktop app (github.com/jamiepine/voicebox) and serves voices only while it\'s open, on the machine this runs on:\n' +
+      'install it, open it, download a voice model in it (Models), and try again. If it runs somewhere else\n' +
+      '(its Docker image answers on http://127.0.0.1:17600), set VOICEBOX_URL. Or use a Kokoro voice: node voice.js --voices'));
+    if (data) req.write(data);
+    req.end();
+  });
+}
+
+async function voiceboxProfiles() {
+  return JSON.parse((await voicebox('GET', '/profiles')).toString('utf8'));
+}
+
+// The profile a "voicebox:<name>" voice means (by name, any case, or by id), or a stop that lists the ones there are.
+async function findProfile(name) {
+  const profiles = await voiceboxProfiles();
+  const hit = profiles.find((p) => p.id === name || p.name.toLowerCase() === name.toLowerCase());
+  if (hit) return hit;
+  fail(`No voice profile "${name}" in Voicebox. ${profiles.length ? `It has: ${profiles.map((p) => p.name).join(', ')}.` : 'It has none yet.'}\n` +
+    'Make one from a recording of the user: node voice.js --clone "<name>" --sample <recording> --my-voice');
+}
+
+// Float samples from a WAV file's bytes: 16-, 24- or 32-bit PCM or 32-bit float, any channel count (mixed to mono).
+function decodeWav(buf) {
+  if (buf.length < 12 || buf.toString('latin1', 0, 4) !== 'RIFF' || buf.toString('latin1', 8, 12) !== 'WAVE') throw new Error('not a WAV file');
+  let fmt = null;
+  let at = 12;
+  while (at + 8 <= buf.length) {
+    const id = buf.toString('latin1', at, at + 4);
+    let size = buf.readUInt32LE(at + 4);
+    const start = at + 8;
+    if (id === 'fmt ') {
+      fmt = { code: buf.readUInt16LE(start), channels: buf.readUInt16LE(start + 2), rate: buf.readUInt32LE(start + 4), bits: buf.readUInt16LE(start + 14) };
+      if (fmt.code === 0xfffe && size >= 26) fmt.code = buf.readUInt16LE(start + 24); // WAVE_FORMAT_EXTENSIBLE: the real format is in the subformat
+    } else if (id === 'data') {
+      if (!fmt) throw new Error('WAV data before its format');
+      if (start + size > buf.length) size = buf.length - start; // a streamed file that never wrote its length
+      const bytes = fmt.bits / 8;
+      const read = fmt.code === 3 && fmt.bits === 32 ? (o) => buf.readFloatLE(o)
+        : fmt.code === 1 && fmt.bits === 16 ? (o) => buf.readInt16LE(o) / 32768
+          : fmt.code === 1 && fmt.bits === 24 ? (o) => buf.readIntLE(o, 3) / 8388608
+            : fmt.code === 1 && fmt.bits === 32 ? (o) => buf.readInt32LE(o) / 2147483648
+              : null;
+      if (!read || !fmt.channels) throw new Error(`a WAV encoding this doesn't read (format ${fmt.code}, ${fmt.bits}-bit)`);
+      const frames = Math.floor(size / (bytes * fmt.channels));
+      const samples = new Float32Array(frames);
+      for (let i = 0; i < frames; i++) {
+        let sum = 0;
+        for (let c = 0; c < fmt.channels; c++) sum += read(start + (i * fmt.channels + c) * bytes);
+        samples[i] = sum / fmt.channels;
+      }
+      return { samples, rate: fmt.rate };
+    }
+    at = start + size + (size % 2);
+  }
+  throw new Error('WAV file with no audio in it');
+}
+
+// A line's sentences, so each can be timed. "Dr. Lee", "3.5 seconds", and '"Yes!" she said' stay whole.
+function splitSentences(text) {
+  const parts = text.trim().split(/(?<=[.!?…]["')\]]?)\s+(?=[^\p{Ll}\s])/u);
+  const out = [];
+  for (const p of parts) {
+    if (out.length && /(?:^|\s)(?:Mr|Mrs|Ms|Dr|Prof|St|vs|etc|No|e\.g|i\.e)\.$/i.test(out[out.length - 1])) out[out.length - 1] += ` ${p}`;
+    else out.push(p);
+  }
+  return out.filter(Boolean);
+}
+
+// The quiet a model leaves before and after a sentence, cut to 20 ms, so the sentence times are the speech's.
+function trimQuiet(samples, rate) {
+  const floor = 0.01;
+  let a = 0;
+  let b = samples.length;
+  while (a < b && Math.abs(samples[a]) < floor) a++;
+  while (b > a && Math.abs(samples[b - 1]) < floor) b--;
+  if (a === b) return samples;
+  const pad = Math.round(0.02 * rate);
+  return samples.subarray(Math.max(0, a - pad), Math.min(samples.length, b + pad));
+}
+
+// Chunks of samples joined with a pause between them, and where each one starts and ends.
+function joinSentences(chunks, texts, rate) {
   const gap = Math.round(SENTENCE_GAP * rate);
   const total = chunks.reduce((n, c) => n + c.length, 0) + gap * Math.max(0, chunks.length - 1);
   const samples = new Float32Array(total);
@@ -128,11 +263,88 @@ async function speak(tts, text, voice, speed) {
   return { samples, rate, sentences: sentences.every((x) => x.text) ? sentences : [] };
 }
 
+// One line in a Voicebox voice, a sentence per request, in the same shape speak() returns.
+async function speakVoicebox(profile, text, speed, { model, instructions } = {}) {
+  const texts = splitSentences(text);
+  const chunks = [];
+  let rate = 0;
+  for (const input of texts) {
+    const body = { model: model || 'tts-1', input, response_format: 'wav', speed };
+    if (profile) body.voice = profile;
+    if (instructions) body.instructions = instructions;
+    const got = await voicebox('POST', '/v1/audio/speech', { json: body });
+    let audio;
+    try {
+      audio = decodeWav(got);
+    } catch (e) {
+      fail(`Voicebox answered with something that isn't speech (${e.message}).`);
+    }
+    if (rate && audio.rate !== rate) fail(`Voicebox changed its sample rate mid-line (${rate} then ${audio.rate} Hz).`);
+    rate = audio.rate;
+    chunks.push(trimQuiet(audio.samples, rate));
+  }
+  return joinSentences(chunks, texts, rate);
+}
+
+function multipart(fields, file) {
+  const boundary = `----marketing-skill-${Date.now().toString(16)}`;
+  const parts = [];
+  for (const [k, v] of Object.entries(fields)) parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${k}"\r\n\r\n${v}\r\n`));
+  parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="sample${path.extname(file).toLowerCase()}"\r\nContent-Type: application/octet-stream\r\n\r\n`));
+  parts.push(fs.readFileSync(file), Buffer.from(`\r\n--${boundary}--\r\n`));
+  return { body: Buffer.concat(parts), headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` } };
+}
+
+// A voice profile in Voicebox from a recording of the user (or one more sample for a profile that's there).
+async function clone(args) {
+  const name = String(args.clone || '').trim();
+  const usage = 'node voice.js --clone "<name>" --sample <recording> --my-voice [--transcript "what the recording says"] [--language en]';
+  if (!name || !args.sample) fail(`Usage: ${usage}`);
+  if (!args.myVoice) {
+    fail('A cloned voice is only for the user\'s own voice, or the voice of someone who agreed to it.\n' +
+      `Ask whose voice the recording is. If it's theirs or they have that person's permission, add --my-voice:\n  ${usage}`);
+  }
+  if (!fs.existsSync(args.sample)) fail(`No recording at ${args.sample}`);
+  if (!SAMPLE_TYPES.includes(path.extname(args.sample).toLowerCase())) fail(`${args.sample}: Voicebox takes ${SAMPLE_TYPES.join(', ')}. Convert it first, e.g. ffmpeg -i ${args.sample} sample.wav`);
+  const profiles = await voiceboxProfiles();
+  let transcript = String(args.transcript || '').trim();
+  if (!transcript) {
+    console.log('No --transcript, so Voicebox is transcribing the recording (Whisper)...');
+    const form = multipart(args.language ? { language: args.language } : {}, args.sample);
+    transcript = JSON.parse((await voicebox('POST', '/transcribe', form)).toString('utf8')).text.trim();
+    if (!transcript) fail('Voicebox heard no words in the recording. Pass them with --transcript "..."');
+    console.log(`Heard: "${transcript}"\nIf that's not what was said, delete the profile in Voicebox and run this again with --transcript.`);
+  }
+  if (transcript.length > 1000) fail('The transcript is over 1,000 characters; use a shorter recording (2 to 30 seconds).');
+  let profile = profiles.find((p) => p.name.toLowerCase() === name.toLowerCase());
+  if (profile && profile.voice_type !== 'cloned') fail(`"${profile.name}" in Voicebox is a ${profile.voice_type} voice, not a cloned one; pick another name.`);
+  if (!profile) {
+    profile = JSON.parse((await voicebox('POST', '/profiles', { json: { name, language: args.language || 'en', voice_type: 'cloned', description: 'Made by marketing-skill from the user\'s own recording.' } })).toString('utf8'));
+    console.log(`Made the voice profile "${profile.name}" in Voicebox.`);
+  }
+  await voicebox('POST', `/profiles/${encodeURIComponent(profile.id)}/samples`, multipart({ reference_text: transcript }, args.sample));
+  console.log(`Added ${args.sample} to "${profile.name}". Use it as:  --voice "voicebox:${profile.name}"  (or voice: voicebox:${profile.name} in a script)\n` +
+    `Hear it first:  node voice.js --audition samples "A line from the script." --voices "voicebox:${profile.name}"`);
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  if (args.help || (!args.listVoices && !args.audition && !args.positional.length)) {
+  if (args.help || (!args.listVoices && !args.audition && !args.clone && !args.positional.length)) {
     console.log(fs.readFileSync(__filename, 'utf8').split('*/')[0].replace(/^[\s\S]*?\/\*/, '').replace(/^ \* ?/gm, ''));
     process.exit(args.help ? 0 : 2);
+  }
+
+  if (args.clone) return clone(args);
+
+  if (args.listVoices === 'voicebox') {
+    const profiles = await voiceboxProfiles();
+    console.log(`Voicebox is running at ${VOICEBOX_URL}.`);
+    if (!profiles.length) console.log('No voice profiles in it yet. Make one from a recording of the user:\n  node voice.js --clone "<name>" --sample <recording> --my-voice');
+    for (const p of profiles) {
+      const kind = p.voice_type === 'cloned' ? `cloned, ${p.sample_count} sample${p.sample_count === 1 ? '' : 's'}` : p.voice_type;
+      console.log(`${`voicebox:${p.name}`.padEnd(28)} ${p.language.padEnd(4)} ${kind}${p.default_engine || p.preset_engine ? `, ${p.default_engine || p.preset_engine}` : ''}`);
+    }
+    return;
   }
 
   if (args.listVoices) {
@@ -145,18 +357,22 @@ async function main() {
 
   const speed = args.speed ? Number(args.speed) : 1;
   if (!(speed > 0.5 && speed < 2)) fail('--speed should be between 0.5 and 2.');
+  const how = { model: args.model, instructions: args.instructions };
 
   if (args.audition) {
     const text = args.positional.join(' ').trim();
     if (!text) fail('Give the line to audition, e.g. node voice.js --audition samples "Here is how it works."');
     const ids = (args.voices || 'af_heart,af_bella,am_michael,am_fenrir').split(',').map((v) => v.trim()).filter(Boolean);
-    const known = await voiceList();
-    for (const id of ids) if (!known[id]) fail(`Unknown voice "${id}"; node voice.js --voices lists them.`);
-    const tts = await loadModel(args.quality);
+    const stock = ids.filter((id) => voiceboxProfile(id) === null);
+    const known = stock.length ? await voiceList() : {};
+    for (const id of stock) if (!known[id]) fail(`Unknown voice "${id}"; node voice.js --voices lists them.`);
+    for (const id of ids) if (voiceboxProfile(id)) await findProfile(voiceboxProfile(id));
+    const tts = stock.length ? await loadModel(args.quality) : null;
     fs.mkdirSync(args.audition, { recursive: true });
     for (const id of ids) {
-      const { samples, rate } = await speak(tts, text, id, speed);
-      const file = path.join(args.audition, `${id}.wav`);
+      const profile = voiceboxProfile(id);
+      const { samples, rate } = profile === null ? await speak(tts, text, id, speed) : await speakVoicebox(profile, text, speed, how);
+      const file = path.join(args.audition, `${id.replace(/[^\w.-]+/g, '-')}.wav`);
       fs.writeFileSync(file, wav(samples, rate));
       console.log(`${file}: ${(samples.length / rate).toFixed(2)}s`);
     }
@@ -169,11 +385,13 @@ async function main() {
   const lines = parseScript(fs.readFileSync(scriptFile, 'utf8')).filter((l) => !args.line || l.n === Number(args.line));
   if (!lines.length) fail(args.line ? `No line ${args.line} in ${scriptFile}` : `No lines found in ${scriptFile}`);
   const voice = args.voice || DEFAULT_VOICE;
-  if (!(await voiceList())[voice]) fail(`Unknown voice "${voice}"; node voice.js --voices lists them.`);
-  const tts = await loadModel(args.quality);
+  const profile = voiceboxProfile(voice);
+  if (profile) await findProfile(profile);
+  else if (profile === null && !(await voiceList())[voice]) fail(`Unknown voice "${voice}"; node voice.js --voices lists them.`);
+  const tts = profile === null ? await loadModel(args.quality) : null;
   fs.mkdirSync(args.out, { recursive: true });
   for (const { n, text } of lines) {
-    const { samples, rate, sentences } = await speak(tts, text, voice, speed);
+    const { samples, rate, sentences } = profile === null ? await speak(tts, text, voice, speed) : await speakVoicebox(profile, text, speed, how);
     const file = path.join(args.out, `${args.prefix || 'voice-'}${n}.wav`);
     fs.writeFileSync(file, wav(samples, rate));
     // sentence timings for captions.js, next to the clip
@@ -189,4 +407,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { parseScript, wav, speak };
+module.exports = { parseScript, wav, speak, decodeWav, splitSentences, voiceboxProfile };

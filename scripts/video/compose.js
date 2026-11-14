@@ -18,7 +18,7 @@
  *   title: three invoice mistakes
  *   hook: you're losing money on every late invoice     # on screen from the first frame
  *   cta: one money habit a week                         # on screen in the last scene
- *   voice: af_heart                                     # a voice.js voice, or:
+ *   voice: af_heart                                     # a voice.js voice (voicebox:<profile> for a Voicebox one), or:
  *   recordings: assets/invoices-{n}.m4a                 # the user's own takes, one per line, instead
  *   bg: freelancer desk                                 # for lines without their own [bg: ...]
  *   bg-type: photo                                      # or video (needs a Pexels or Pixabay key)
@@ -96,8 +96,9 @@
  * four corners in the photo's pixels (top left, top right, bottom right, bottom left), moving
  * with the photo's zoom. Check the fit with render.js --stills.
  *
- * Voices come from voice.js (Kokoro, free and local; `npm install kokoro-js` once) unless
- * `recordings` points at the user's own files. The music follows the Sonic Identity saved in
+ * Voices come from voice.js (Kokoro, free and local; `npm install kokoro-js` once; or the user's
+ * own cloned voice from the Voicebox app, `voice: voicebox:<profile>`) unless `recordings` points
+ * at the user's own files. The music follows the Sonic Identity saved in
  * references/brand-voice.md, one energy step lower so it sits under the voice, with scene
  * changes moved onto its beat, and the look follows its Visual Identity (brand.js), end card
  * included. Without --out, the page goes to state/videos/<date>-<slug>.html,

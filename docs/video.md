@@ -293,6 +293,17 @@ How a video's soundtrack is put together:
   kokoro-js`; the first run downloads the model (about 90 MB) and then
   works offline. If a platform asks whether a video uses AI-generated
   audio, say yes.
+- **Your own voice, cloned, also free:** install
+  [Voicebox](https://github.com/jamiepine/voicebox), a free open-source
+  (MIT) desktop app that runs open voice models on your own machine, keep
+  it open, and give Claude one recording of you talking for 10 to 20
+  seconds. `voice.js --clone "Maya" --sample me.m4a --my-voice` makes the
+  voice, and `voice: voicebox:Maya` in a script (or "use my voice") reads
+  every line in it, in any of the 23 languages its models speak. No
+  account, no key, no cost, and the recording stays on your computer.
+  It needs Claude Code running on the same computer as the app, so not a
+  cloud session. Clone only your own voice, or the voice of someone who
+  agreed.
 - **Captions synced to the voice:** most people watch muted. A line in
   `<div class="say auto" data-voice="...">` is shown word by word in short
   chunks, the word being said highlighted, timed to the clip by

@@ -432,7 +432,7 @@ kind: property                 # property or product
 hook:                          # on screen from the first frame; under about 8 words
 cta:                           # on the last shot
 music: identity                # identity, none, a genre, or assets/track.mp3
-voice: none                    # none, or a voice.js voice for [say: ...] lines
+voice: none                    # none, or a voice.js voice (af_heart, voicebox:<profile>) for [say: ...] lines
 transition: fade               # fade, cut, flash, slide, whip, zoom, punch, wipe, glitch, spin, blur, mask, leak, or burn
 ---
 ${items.map((it) => `${it.n}. ${rel(it.file)}`).join('\n')}

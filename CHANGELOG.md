@@ -3,6 +3,29 @@
 What changed in each version of the plugin (`.claude-plugin/plugin.json`).
 Skills that read "our changelog" for source material read this file too.
 
+## 0.11.0 (2026-11-14)
+
+- **Videos in your own voice, cloned for free on your computer.** The
+  voiceover could already be a free stock voice (Kokoro) or your own
+  recordings. Now it can also be your own voice without recording every
+  line: install [Voicebox](https://github.com/jamiepine/voicebox), a free
+  open-source desktop app that runs open voice models on your machine,
+  keep it open, and give Claude one recording of you talking for 10 to 20
+  seconds. `scripts/video/voice.js --clone "Maya" --sample me.m4a
+  --my-voice` makes the voice, and `voicebox:Maya` then works anywhere a
+  voice name does (`--voice`, `voice:` in a narrated video or montage
+  script, the Voice line of Video Setup), with captions synced to it as
+  before. No account, no API key, no per-use cost, and the recording
+  stays on your computer.
+- **A free voice in other languages.** Kokoro's voices here are English.
+  Through Voicebox the voiceover can be in any of the 23 languages its
+  models speak, in your cloned voice or one of the app's preset voices.
+- Voicebox has to run on the same computer as Claude Code, so this
+  doesn't work in a cloud session; Kokoro and your own recordings work as
+  before. A cloned voice is only for your own voice or someone who
+  agreed: `--clone` stops until `--my-voice` says so. Setup is in
+  `docs/video.md` under "Sound".
+
 ## 0.10.0 (2026-11-13)
 
 - **You choose who presses send.** A new Sending section in

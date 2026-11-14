@@ -584,7 +584,7 @@ scripts/
     soundtrack.js        # the music and sound-effects synthesizer render.js uses (no dependencies)
     media.js             # finds stock photos and clips (Pexels, Pixabay, Openverse) and writes their credits
     check.js             # QA pass over templates: layout lint, cues, fonts, loudness, contact sheets
-    voice.js             # free local voiceover (Kokoro): a script -> one WAV per line
+    voice.js             # free local voiceover: a script -> one WAV per line, in a Kokoro stock voice or your own voice cloned by the Voicebox app
     captions.js          # word timing for a voice line, caption chunks, and .srt files
     compose.js           # a narrated video page from a script: voice, backgrounds (photos, the 3D mascot, or pixel art), synced captions, the bold look
     montage.js           # a montage page from a client's clips or photos: intake, clip moments and sound, moves, beat-synced cuts, labels, contact end card
