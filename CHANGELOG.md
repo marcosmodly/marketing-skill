@@ -3,7 +3,7 @@
 What changed in each version of the plugin (`.claude-plugin/plugin.json`).
 Skills that read "our changelog" for source material read this file too.
 
-## 0.11.0 (2026-11-14)
+## 0.10.1 (2026-11-14)
 
 - **Videos in your own voice, cloned for free on your computer.** The
   voiceover could already be a free stock voice (Kokoro) or your own
