@@ -111,7 +111,9 @@ command below.
      to skip"): where it'll be posted (9:16 or 16:9), who presents it
      (them on camera, their own 3D character, the plugin's robot, a
      realistic AI avatar from a paid tool, or no presenter), a video whose
-     style to follow, and any paid tool they want used for this one. Say
+     style to follow, any paid tool they want used for this one, and
+     whose voice narrates it (never the default stock voice unasked: see
+     "Choosing the voice" in `references/sound-guide.md`). Say
      which choices are free and which spend their credits. Use what they
      already said in the request rather than asking again, and offer to
      save new answers to Video Setup. Before using an answer, check it as

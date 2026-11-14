@@ -23,6 +23,13 @@ Skills that read "our changelog" for source material read this file too.
   Voicebox that is nobody's. You hear a sample, ask for changes, and the
   one you pick is saved as your brand's voice. `--presets` and `--preset`
   do the same with the app's ready-made voices.
+- **Videos stop defaulting to the same stock voice.** Until now a
+  narrated video got `af_heart` unless you said otherwise, so they all
+  sounded alike. Claude now chooses the voice with you before the first
+  one (your own, a designed one, or a shortlist of stock voices that fit
+  the brand, with samples to hear), saves it as `- Voice:` under Video
+  Setup, and `compose.js` and `montage.js` use the saved voice on their
+  own, with a note when none was chosen.
 - **A free voice in other languages.** Kokoro's voices here are English.
   Through Voicebox the voiceover can be in any of the 23 languages its
   models speak, in your cloned voice or one of the app's preset voices.

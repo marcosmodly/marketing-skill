@@ -95,7 +95,11 @@ take their defaults):
    Every one of these spends the user's credits or plan: never use one
    without asking first for that video, with the cost when the tool
    gives one.
-5. **Whose voice?** The free local AI voice (Kokoro, a few to pick from),
+5. **Whose voice?** This one has no silent default: without an answer
+   every video gets the same stock voice (`af_heart`), which is why they
+   sound generic. Offer the choices and send samples to pick from
+   ("Choosing the voice" in `sound-guide.md`). The free local AI voice
+   (Kokoro, 28 stock voices, men's and British ones included),
    their own recordings (one file per line), their own voice cloned for
    free on their computer (the Voicebox app, from one short recording of
    them, or a new voice made from a description you write, with no
@@ -113,7 +117,7 @@ placeholder:
 - Presenter: own character (see Character under Visual Identity)
 - Style reference: /Users/me/Videos/launch-we-like.mp4
 - Paid tools: HeyGen (avatars), Epidemic Sound (music)
-- Voice: Kokoro af_heart
+- Voice: Kokoro am_michael
 ```
 
 A Voicebox voice is saved as `- Voice: voicebox:<profile name>`.

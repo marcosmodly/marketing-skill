@@ -278,6 +278,34 @@ AI-content label.
   by word, timed to the clip (see `video-rendering.md`), and the render
   writes an `.srt` file for the platforms' own caption tracks.
 
+### Choosing the voice (never just the default)
+
+`af_heart` is what a video gets when nobody chose, so every video made
+that way sounds the same, and like everyone else's. Don't use it because
+it's the default. Before the first narrated video, and whenever Video
+Setup has no `- Voice:` line, choose with the user:
+
+1. **Say the options in one line:** their own voice (recorded line by
+   line, or cloned once through Voicebox), a brand voice designed from a
+   description (Voicebox), or a stock voice.
+2. **Shortlist to fit the brand**, not the top of the list: who the
+   audience is, who presents (a man's voice for a male founder or
+   character, a British voice for a UK brand), and the tone in
+   `brand-voice.md` (calm and low for finance, bright and quick for a
+   consumer app). `voice.js --voices` lists all 28 stock voices, men's
+   and British ones included.
+3. **Audition three or four that differ** on the video's own first line,
+   at the pace it'll run (`--speed 1.05` to `1.15` suits short-form),
+   send the files, and let the user pick. You can't hear them.
+4. **Save the pick** as `- Voice:` under Video Setup in `brand-voice.md`.
+   `compose.js` and `montage.js` read it, so every later video uses it
+   without `voice:` in the script. Both print a note when they fall back
+   to `af_heart`; treat that note as a step you skipped.
+
+If the user says the voice sounds generic, robotic, or like every other
+video, that's this step: offer their own voice or a designed one first,
+then a different stock voice.
+
 ### A free generated voice
 
 When the user would rather not record, `scripts/video/voice.js` reads the

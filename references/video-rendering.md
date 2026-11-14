@@ -34,7 +34,7 @@ numbered lines, one per scene, and let `compose.js` build the page:
 title: late invoices
 hook: you're losing money on every late invoice
 cta: one money habit a week
-voice: af_heart
+voice: am_michael
 bg: freelancer desk morning
 ---
 1. Most freelancers lose money on invoices they send late. [bg: stressed laptop night]
@@ -483,6 +483,12 @@ Set the `<body>` music attributes from the Sonic Identity in
   renderer warns about it.
 
 ## A voiceover
+
+Choose the voice with the user before the first narrated video
+("Choosing the voice" in `sound-guide.md`): never leave it to the default,
+`af_heart`, which makes every video sound the same. Once picked it's the
+`- Voice:` line of Video Setup, and `compose.js` uses it when the script
+has no `voice:`. The options:
 
 The user's own recording, a free generated voice from
 `${CLAUDE_PLUGIN_ROOT}/scripts/video/voice.js` (Kokoro, runs locally, no

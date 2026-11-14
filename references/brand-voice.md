@@ -121,4 +121,4 @@ set, it looks like:
 - Presenter: own character (see Character under Visual Identity)
 - Style reference: /Users/me/Videos/launch-we-like.mp4
 - Paid tools: HeyGen (avatars), Epidemic Sound (music)
-- Voice: Kokoro af_heart
+- Voice: Kokoro am_michael

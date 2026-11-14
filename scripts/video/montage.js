@@ -117,7 +117,7 @@ const { parseScript } = require('./voice');
 const { prepareVoice, prepareVoiceFiles, meanLuma, launchBrowser } = require('./render');
 const captions = require('./captions');
 const { visualIdentity, applyIdentity } = require('./brand');
-const { parseFrontmatter, sonicIdentity } = require('./compose');
+const { parseFrontmatter, sonicIdentity, savedVoice, NO_VOICE_CHOSEN } = require('./compose');
 const { analyseTrack, alignTrack } = require('./beats');
 const { GENRES } = require('./soundtrack');
 const depthMaps = require('./depth');
@@ -731,7 +731,7 @@ async function build(args) {
   // clip that keeps its own sound, [say: ...] is what's said in it: captions, not a line to voice)
   for (const s of shots) if (s.sound && typeof s.tags.say === 'string' && s.tags.say) s.clipSay = s.tags.say;
   let said = shots.filter((s) => typeof s.tags.say === 'string' && s.tags.say && !s.sound);
-  const voiceName = String(meta.voice || '').trim();
+  let voiceName = String(meta.voice || '').trim();
   if (said.length && !meta.recordings && voiceName.toLowerCase() === 'none') {
     notes.push('voice: none, so the [say: ...] lines are left out; set a voice (or recordings:) to voice them');
     said = [];
@@ -744,6 +744,8 @@ async function build(args) {
     const gone = said.filter((s) => !fs.existsSync(path.join(dir, s.clipFile)));
     if (gone.length) fail(`Recordings not found (relative to ${dir}):\n${gone.map((s) => `- ${s.clipFile}`).join('\n')}`);
   } else if (said.length) {
+    if (!voiceName) voiceName = savedVoice() || '';
+    if (!voiceName) notes.push(NO_VOICE_CHOSEN);
     const voice = voiceName || 'af_heart';
     const speed = String(meta.speed || 1);
     const prefix = `${slug}-say-`;
