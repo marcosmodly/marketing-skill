@@ -2,7 +2,7 @@
 'use strict';
 /*
  * Checks voice.js's Voicebox path against a stand-in for the Voicebox app: the same routes
- * and answers (GET /profiles, POST /profiles, POST /profiles/<id>/samples, POST /transcribe,
+ * and answers (GET /profiles, GET /profiles/presets/<engine>, POST /profiles, POST /profiles/<id>/samples, POST /transcribe,
  * POST /v1/audio/speech), with a tone where the speech would be. No model, no network.
  *   node scripts/ci/smoke_voice.js
  */
@@ -40,7 +40,13 @@ const server = http.createServer((req, res) => {
     const json = (code, o) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(o)); };
     seen.push({ method: req.method, url: req.url, type: req.headers['content-type'] || '', client: req.headers['x-voicebox-client-id'], body });
     if (req.method === 'GET' && req.url === '/profiles') return json(200, profiles);
+    if (req.method === 'GET' && req.url === '/profiles/presets/qwen_custom_voice') {
+      return json(200, { engine: 'qwen_custom_voice', voices: [{ voice_id: 'Aiden', name: 'Aiden', gender: 'male', language: 'en' }, { voice_id: 'Sohee', name: 'Sohee', gender: 'female', language: 'ko' }] });
+    }
     if (req.method === 'POST' && req.url === '/profiles') {
+      const q = JSON.parse(body);
+      if (profiles.some((p) => p.name === q.name)) return json(400, { detail: `A profile with the name '${q.name}' already exists. Please choose a different name.` });
+      if (q.voice_type === 'designed' && !q.design_prompt) return json(400, { detail: 'Designed profiles require a design_prompt' });
       const p = { id: `p${profiles.length + 1}`, sample_count: 0, default_engine: null, preset_engine: null, ...JSON.parse(body) };
       profiles.push(p);
       return json(200, p);
@@ -133,6 +139,23 @@ function run(args, url) {
 
   r = await run([script, '--out', out, '--voice', 'voicebox:Nobody'], url);
   check('an unknown profile stops with the ones there are', r.code === 2 && /No voice profile "Nobody" in Voicebox. It has: Morgan, Maya\./.test(r.out), r.out);
+
+  r = await run(['--design', 'Juno', '--describe', 'a warm woman in her thirties, low and unhurried'], url);
+  const juno = profiles.find((p) => p.name === 'Juno') || {};
+  check('designs a voice from a description', r.code === 0 && juno.voice_type === 'designed' && juno.design_prompt === 'a warm woman in her thirties, low and unhurried' && /voicebox:Juno/.test(r.out), r.out);
+
+  r = await run(['--design', 'juno', '--describe', 'another'], url);
+  check('a taken name stops before anything is made', r.code === 2 && /already has a voice called "Juno"/.test(r.out) && profiles.filter((p) => /juno/i.test(p.name)).length === 1, r.out);
+
+  r = await run(['--presets', 'qwen_custom_voice'], url);
+  check('lists the ready-made voices', r.code === 0 && /qwen_custom_voice:Sohee\s+Sohee\s+ko\s+female/.test(r.out), r.out);
+
+  r = await run(['--preset', 'Seoul', '--from', 'qwen_custom_voice:sohee'], url);
+  const seoul = profiles.find((p) => p.name === 'Seoul') || {};
+  check('makes a profile from a ready-made voice, in its language', r.code === 0 && seoul.voice_type === 'preset' && seoul.preset_engine === 'qwen_custom_voice' && seoul.preset_voice_id === 'Sohee' && seoul.language === 'ko', r.out);
+
+  r = await run(['--preset', 'X', '--from', 'qwen_custom_voice:Nope'], url);
+  check('an unknown ready-made voice stops', r.code === 2 && /No ready-made voice "Nope"/.test(r.out), r.out);
 
   await new Promise((res) => server.close(res));
   r = await run([script, '--out', out, '--voice', 'voicebox:Maya'], url);

@@ -347,6 +347,26 @@ the user what it heard. A second `--clone` with the same name adds
 another sample to the profile. `--language` takes the language's
 two-letter code (`es`, `fr`, `de`, `pt`, `ja`, ...) when it isn't English.
 
+**Creating a voice instead.** When the user has no recording to give, or
+wants a brand voice that is nobody's, make one from a description. You
+write the description: read `brand-voice.md` (tone, audience, the
+presenter) and describe who is speaking, their age, pitch, pace, mood,
+and accent, in a sentence or two. It makes a new synthetic voice, so
+describe a kind of voice, never a real person ("sounds like" a named
+actor or creator is imitation).
+
+```
+node scripts/video/voice.js --design "Juno" --describe "a warm woman in her thirties, low and unhurried, a slight smile, neutral American accent"
+node scripts/video/voice.js --audition samples "The first line of the script." --voices "voicebox:Juno"
+```
+
+Send the audition; if the user wants it different, design another under a
+new name with a changed description, and keep the one they pick. It
+speaks with the Qwen VoiceDesign model, which the user downloads once in
+the app's Models tab (10 languages). The app also has ready-made voices:
+`--presets kokoro` or `--presets qwen_custom_voice` lists them, and
+`--preset "Aiden" --from qwen_custom_voice:Aiden` makes one a profile.
+
 **Using it.** `voicebox:<profile name>` works anywhere a voice name does:
 `--voice` here, `voice:` in a `compose.js` or `montage.js` script, and
 the Voice line of Video Setup. A profile the user made in the app

@@ -17,6 +17,10 @@
  *   node voice.js --voices voicebox                         # is it running, and the voice profiles in it
  *   node voice.js --clone "Maya" --sample me.m4a --my-voice [--transcript "what the sample says"] [--language en]
  *                                                           # a profile from 2 to 30 seconds of the user's speech
+ *   node voice.js --design "Juno" --describe "a warm woman in her thirties, low and unhurried, a slight smile"
+ *                                                           # a new voice that is nobody's, from a description (Qwen VoiceDesign)
+ *   node voice.js --presets kokoro                          # Voicebox's ready-made voices (kokoro, qwen_custom_voice)
+ *   node voice.js --preset "Aiden" --from qwen_custom_voice:Aiden   # one of them as a profile
  *   node voice.js <script> --out <dir> --voice voicebox:Maya
  *   node voice.js --audition <dir> "a line" --voices voicebox:Maya,af_heart
  * [--model chatterbox] picks one of Voicebox's engines instead of the profile's own, and
@@ -59,7 +63,7 @@ function parseArgs(argv) {
     if (a === '--voices' && (argv[i + 1] === undefined || argv[i + 1].startsWith('--'))) args.listVoices = true;
     else if (a === '--voices' && argv[i + 1].toLowerCase() === 'voicebox') { args.listVoices = 'voicebox'; i++; }
     else if (a === '--my-voice') args.myVoice = true;
-    else if (['--out', '--voice', '--speed', '--line', '--prefix', '--audition', '--voices', '--quality', '--clone', '--sample', '--transcript', '--language', '--model', '--instructions'].includes(a)) args[a.slice(2)] = argv[++i];
+    else if (['--out', '--voice', '--speed', '--line', '--prefix', '--audition', '--voices', '--quality', '--clone', '--sample', '--design', '--describe', '--presets', '--preset', '--from', '--transcript', '--language', '--model', '--instructions'].includes(a)) args[a.slice(2)] = argv[++i];
     else if (a === '-h' || a === '--help') args.help = true;
     else args.positional.push(a);
   }
@@ -327,14 +331,60 @@ async function clone(args) {
     `Hear it first:  node voice.js --audition samples "A line from the script." --voices "voicebox:${profile.name}"`);
 }
 
+const PRESET_ENGINES = ['kokoro', 'qwen_custom_voice'];
+
+async function presetVoices(engine) {
+  if (!PRESET_ENGINES.includes(engine)) fail(`Voicebox's ready-made voices come from: ${PRESET_ENGINES.join(', ')}. e.g. node voice.js --presets kokoro`);
+  return JSON.parse((await voicebox('GET', `/profiles/presets/${engine}`)).toString('utf8')).voices || [];
+}
+
+// A new profile, unless the name is taken (Voicebox keeps names unique).
+async function newProfile(name, fields) {
+  const taken = (await voiceboxProfiles()).find((p) => p.name.toLowerCase() === name.toLowerCase());
+  if (taken) fail(`Voicebox already has a voice called "${taken.name}" (${taken.voice_type}). Use it as voicebox:${taken.name}, pick another name, or delete it in the app first.`);
+  const profile = JSON.parse((await voicebox('POST', '/profiles', { json: { name, ...fields } })).toString('utf8'));
+  console.log(`Made the voice "${profile.name}" in Voicebox. Use it as:  --voice "voicebox:${profile.name}"  (or voice: voicebox:${profile.name} in a script)\n` +
+    `Hear it first:  node voice.js --audition samples "A line from the script." --voices "voicebox:${profile.name}"`);
+  return profile;
+}
+
+// A voice that is nobody's, made from a description of how it should sound.
+async function design(args) {
+  const name = String(args.design || '').trim();
+  const describe = String(args.describe || '').trim();
+  if (!name || !describe) fail('Usage: node voice.js --design "<name>" --describe "<how the voice sounds: who, age, pitch, pace, mood, accent>" [--language en]');
+  if (describe.length > 2000) fail('Keep the description under 2,000 characters.');
+  await newProfile(name, { language: args.language || 'en', voice_type: 'designed', design_prompt: describe, description: describe.slice(0, 500) });
+  console.log('It speaks with the Qwen VoiceDesign model: download it in Voicebox (Models) if the first line says it isn\'t there.\n' +
+    'To change how it sounds, make another under a new name with a different description.');
+}
+
+async function presets(engine) {
+  const voices = await presetVoices(String(engine).toLowerCase());
+  for (const v of voices) console.log(`${`${String(engine).toLowerCase()}:${v.voice_id}`.padEnd(30)} ${String(v.name).padEnd(12)} ${String(v.language).padEnd(4)} ${v.gender}`);
+}
+
+async function preset(args) {
+  const name = String(args.preset || '').trim();
+  const m = /^([a-z_]+):(.+)$/i.exec(String(args.from || '').trim());
+  if (!name || !m) fail('Usage: node voice.js --preset "<name>" --from <engine>:<voice id>   (node voice.js --presets kokoro lists them)');
+  const engine = m[1].toLowerCase();
+  const voice = (await presetVoices(engine)).find((v) => v.voice_id.toLowerCase() === m[2].trim().toLowerCase());
+  if (!voice) fail(`No ready-made voice "${m[2]}" in ${engine}; node voice.js --presets ${engine} lists them.`);
+  await newProfile(name, { language: args.language || voice.language || 'en', voice_type: 'preset', preset_engine: engine, preset_voice_id: voice.voice_id });
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  if (args.help || (!args.listVoices && !args.audition && !args.clone && !args.positional.length)) {
+  if (args.help || (!args.listVoices && !args.audition && !args.clone && !args.design && !args.preset && !args.presets && !args.positional.length)) {
     console.log(fs.readFileSync(__filename, 'utf8').split('*/')[0].replace(/^[\s\S]*?\/\*/, '').replace(/^ \* ?/gm, ''));
     process.exit(args.help ? 0 : 2);
   }
 
   if (args.clone) return clone(args);
+  if (args.design) return design(args);
+  if (args.presets) return presets(args.presets);
+  if (args.preset) return preset(args);
 
   if (args.listVoices === 'voicebox') {
     const profiles = await voiceboxProfiles();

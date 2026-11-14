@@ -304,6 +304,11 @@ How a video's soundtrack is put together:
   It needs Claude Code running on the same computer as the app, so not a
   cloud session. Clone only your own voice, or the voice of someone who
   agreed.
+- **Or a new voice from a description:** no recording needed. Ask for "a
+  warm, low, unhurried voice for the brand" and Claude writes the
+  description and makes it in Voicebox (`voice.js --design "Juno"
+  --describe "..."`), sends you a sample, and keeps the one you pick as
+  your brand's voice. It belongs to nobody, so there's no one to ask.
 - **Captions synced to the voice:** most people watch muted. A line in
   `<div class="say auto" data-voice="...">` is shown word by word in short
   chunks, the word being said highlighted, timed to the clip by

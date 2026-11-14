@@ -98,8 +98,9 @@ take their defaults):
 5. **Whose voice?** The free local AI voice (Kokoro, a few to pick from),
    their own recordings (one file per line), their own voice cloned for
    free on their computer (the Voicebox app, from one short recording of
-   them; also the free way to a voice in a language other than English;
-   `sound-guide.md` has the setup), or a paid or cloned voice from
+   them, or a new voice made from a description you write, with no
+   recording; also the free way to a voice in a language other than
+   English; `sound-guide.md` has the setup), or a paid or cloned voice from
    question 4.
 
 ## Saving the answers

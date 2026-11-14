@@ -17,6 +17,12 @@ Skills that read "our changelog" for source material read this file too.
   script, the Voice line of Video Setup), with captions synced to it as
   before. No account, no API key, no per-use cost, and the recording
   stays on your computer.
+- **A brand voice made from a description.** No recording at all: say
+  how the voice should sound, Claude writes the description, and
+  `voice.js --design "Juno" --describe "..."` makes a new voice in
+  Voicebox that is nobody's. You hear a sample, ask for changes, and the
+  one you pick is saved as your brand's voice. `--presets` and `--preset`
+  do the same with the app's ready-made voices.
 - **A free voice in other languages.** Kokoro's voices here are English.
   Through Voicebox the voiceover can be in any of the 23 languages its
   models speak, in your cloned voice or one of the app's preset voices.
