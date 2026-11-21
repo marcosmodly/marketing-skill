@@ -111,6 +111,7 @@ one step.
 | B-roll | `[bg: a \| b \| c]` on a line, or `max-hold` fetching more for a long line; `--broll` on a filmed take |
 | Montage | `clip-montage` (the user's clips) and `montage-video` (their photos); `hook-fx: montage` opens a narrated video on a burst of quick cuts |
 | Split screen | The `expectation-reality` (two panes), `before-after` (a wipe), and `this-or-that` templates. Not in `compose.js` |
+| Widescreen to vertical | `card.js`: a 16:9 demo, screen recording, or explainer plays as a card in the vertical frame, cut into beats that each zoom into the part that matters (sharp, from the full-resolution source), with its lines big above it and graphics over it ([video-rendering.md](video-rendering.md), "A widescreen video, vertical") |
 | Freeze frame | `[ramp: 1.5:0,2.3:1]` on a montage clip (or `data-ramp` on any clip): it freezes at 1.5s for 0.8s. Pair it with a `scratch` sound for the meme freeze |
 
 ### Camera movement and zoom
@@ -167,14 +168,14 @@ one step.
 
 | Technique | How here |
 |---|---|
-| UI animation | The 3D `terminal`, `agent`, and `button` shots; the how-to phone with taps; the chat, notification, and post mockups in the everyday templates |
+| UI animation | `cursor` (a tap on the real UI in a recording), `notify` (a notification sliding in); the 3D `terminal`, `agent`, and `button` shots; the how-to phone with taps; the chat, notification, and post mockups in the everyday templates |
 | Screen replacement | `[bg: assets/me-laptop.jpg screen=assets/app.png at=...]` puts the user's screenshot on the screen in their photo; 3D props hold it (`prop=phone`, `laptop`, `desk src=`) |
 | Device mockup animation | The how-to template's phone, the 3D `hero` (a phone), `desk`, and the mascot holding a laptop or phone |
 | Shape animation | `shapes burst`, `rings`, `lines` (speed lines), and `dots` over any picture; the 3D `shapes` and `rings` shots |
 | Icon animation | `icon check 78%,30% @done` (an icon drawn on a badge with a burst; or any emoji); the 3D `icons` shot (app tiles dropping into a grid) |
 | Logo animation | The end card (`brand.js`): the logo pops in on the sonic logo; the 3D `coin` with the logo on it |
 | Lower thirds | `lower "Maya Lopez" "Founder, Juniper"` over any picture, set as a bar, a box, a line, or a tech panel; a montage shot's label (`.lt`); the team template |
-| Infographic animation | `hud data` (a panel whose numbers count up, a percentage as a filling bar) and `text "$12,400" anim=count`; the 3D `chart`; `.count` count-ups, `.poll`, `.progress`. The user's real numbers only |
+| Infographic animation | `hud data` (a panel whose numbers count up, a percentage as a filling bar), `ticker` (a price or count moving from one value to another), `measure` (a dimension counting up as its line draws), `chips` (facts popping in), and `text "$12,400" anim=count`; the 3D `chart`; `.count` count-ups, `.poll`, `.progress`. The user's real numbers only |
 | Callout animation | `arrow`, `circle`, `box`, `highlight`, `spot`, and `pin` ([graphics](#graphics)), each drawn in; `[callout: ...]`, the tap ring |
 | HUD / UI elements | `hud lock` (a targeting reticle locking on, with a readout), `hud frame` (corner brackets, a blinking REC, a ruler, a scan line), `hud data` (a data panel), `hud scan` (a scan line sweeping a region over a grid) |
 | Particle animation | `shapes confetti`; confetti on the mascot's `cheer` and the `button` shot; pixel `coins`; film `grain` |
@@ -253,6 +254,12 @@ way in all three, and `scripts/video/graphics.js` has the full list:
 | | `hud frame "CAM 01" +6` | Corner brackets around the picture, a blinking REC dot and label, a ruler, one scan line |
 | | `hud data "This week" "Users" "1,920" "Churn" "2%"` | A data panel: label and value pairs, numbers counting up, a percentage as a filling bar; an odd first text is its title |
 | | `hud scan 10%,30%,80%,30% "SCANNING"` | A scan line sweeping a region over a grid |
+| Measure | `measure 12%,47% 54%,47% "88″ wide"` | A dimension line drawn from one point to the other, its ends ticked, its label above the middle; a number at the label's start counts up (`count=no` keeps it still) |
+| Cursor | `cursor 30%,40%` | A pointer gliding in and tapping the point, a ring spreading from the tap, with a click (`from=dr\|dl\|ur\|ul`) |
+| Stamp | `stamp "✓ Fits your wall"` | A verdict slammed on at an angle, green unless `color=` says otherwise |
+| Notification | `notify "New quote request" "Sand · Linen · $1,679" app="ModlyAI · now" img=assets/logo.png` | A notification card sliding down into place, with a ping |
+| Chips | `chips "88″ W" "38″ D" "33″ H"` | Pills popping in one after another; `style=check` puts a green check on each, ticking as it lands (a checklist) |
+| Ticker | `ticker "$1,599" "$1,679"` | A number counting from one value to the other, commas held |
 
 **When:** `@2.5` is seconds (into the cut take for `cut.js`, into the line or
 shot for `compose.js` and `montage.js`); `@button` or `@"the new button"`

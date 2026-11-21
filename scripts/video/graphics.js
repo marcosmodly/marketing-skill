@@ -33,6 +33,16 @@
  *   hud data "Weekly users" "1,920" "Churn" "2%" @3      a data panel: label/value pairs, numbers
  *        counting up, a percentage as a filling bar (an odd first text is the panel's title)
  *   hud scan 20%,20%,60%,40% "SCANNING" @1              a scan line sweeping a region (default the frame)
+ *   measure 12%,47% 54%,47% "88″ wide" @1               a dimension line from one point to the other, its
+ *        ends ticked, its label above the middle (a number at the label's start counts up; count=no)
+ *   cursor 30%,40% @2                                    a pointer gliding in and tapping the point, a ring
+ *        spreading from the tap (from=dr|dl|ur|ul: where it comes from)
+ *   stamp "✓ Fits your wall" @2                          a verdict slammed on at an angle (green; color=)
+ *   notify "New quote request" "Sand · Linen" @2 app="ModlyAI · now" img=assets/logo.png
+ *        a notification card sliding down near the top (x%,y% moves it)
+ *   chips "88″ W" "38″ D" "33″ H" @2                    pills popping in one after another; style=check puts
+ *        a green check on each, ticking as it lands (a checklist)
+ *   ticker "$1,599" "$1,679" @2                          a number counting from one value to the other
  *
  * @when is seconds (into the take for cut.js, into the line or shot for compose.js and
  * montage.js) or a word or "a phrase" that's said: the graphic comes in as it's first said
@@ -60,6 +70,12 @@ const KINDS = {
   shapes: { dur: 1.2, usage: 'shapes burst 50%,40% @2 (burst, rings, lines, dots, confetti)' },
   text: { dur: 2, usage: 'text "10x *faster*" @2 [anim=pop|slam|type|rise|wave|stretch|glitch|count] [size=s|m|l|xl] [style=plain|box|outline]' },
   hud: { dur: 3, usage: 'hud lock 50%,32% "LABEL" @2 | hud frame "REC" @0 | hud data "Label" "Value" ... @2 | hud scan [x%,y%,w%,h%] "SCANNING" @2' },
+  measure: { dur: 2.5, sfx: '', usage: 'measure 12%,47% 54%,47% "88″ wide" @1 (from one point to the other; a number at the label\'s start counts up)' },
+  cursor: { dur: 1.6, sfx: 'click', pos: 'point', usage: 'cursor 30%,40% @2 [from=dr|dl|ur|ul] (glides in and taps the point)' },
+  stamp: { dur: 1.8, sfx: 'impact', usage: 'stamp "✓ Fits your wall" [50%,46%] @2 [color=green]' },
+  notify: { dur: 2.5, sfx: 'ping', usage: 'notify "New quote request" "Sand · Linen · $1,679" [47%,26%] @2 [app="ModlyAI · now"] [img=assets/logo.png]' },
+  chips: { dur: 2.5, sfx: 'pop', usage: 'chips "88″ W" "38″ D" "33″ H" [47%,56%] @2 [style=check]' },
+  ticker: { dur: 3, sfx: 'tick', usage: 'ticker "$1,599" "$1,679" [47%,56%] @2 (counts from one to the other)' },
 };
 const ALIASES = {
   'lower-third': 'lower', lowerthird: 'lower', l3: 'lower', title: 'text', kinetic: 'text', label: 'pin', callout: 'pin',
@@ -139,7 +155,8 @@ function tokenize(spec) {
       continue;
     }
     let j = i;
-    while (j < s.length && !/\s/.test(s[j]) && !(j > i && QUOTES[s[j]] && s[j - 1] !== '=')) j++;
+    // a key="quoted value" stops at its quote, which is read below
+    while (j < s.length && !/\s/.test(s[j]) && !(j > i && QUOTES[s[j]] && s[j - 1] === '=')) j++;
     // key="a value with spaces"
     if (s[j - 1] === '=' && QUOTES[s[j]]) {
       const end = s.indexOf(QUOTES[s[j]], j + 1);
@@ -183,7 +200,13 @@ function parse(spec) {
     if (t.q) { g.texts.push(t.v); continue; }
     let m;
     if ((m = /^\+(\d+(?:\.\d+)?)s?$/.exec(t.v))) { g.dur = parseFloat(m[1]); continue; }
-    if ((m = POS.exec(t.v))) { g.pos = m.slice(1).filter((v) => v !== undefined).map(Number); continue; }
+    if ((m = POS.exec(t.v))) {
+      const xy = m.slice(1).filter((v) => v !== undefined).map(Number);
+      // a measure runs from its first point to a second one
+      if (kind === 'measure' && g.pos) g.pos2 = xy;
+      else g.pos = xy;
+      continue;
+    }
     if ((m = /^([a-z][\w-]*)=(.*)$/i.exec(t.v))) { g.opts[m[1].toLowerCase()] = m[2]; continue; }
     return fail(`"${t.v}"? Put text in "double quotes", a point as x%,y%, the time as @seconds or @word, and how long as +seconds.`, kind);
   }
@@ -207,7 +230,13 @@ function parse(spec) {
   if (g.pos && g.pos.some((v) => v < 0 || v > 100)) return fail('a point or region is in percent of the frame, 0 to 100.', kind);
   if (g.pos && g.pos.length === 4 && (g.pos[2] <= 0 || g.pos[3] <= 0)) return fail('a region needs a width and a height.', kind);
   if (kind === 'hud' && g.variant === 'scan' && g.pos && g.pos.length !== 4) return fail('a scan region is x%,y%,w%,h%.', kind);
-  if ((kind === 'lower' || kind === 'text' || kind === 'pin') && !g.texts[0]) return fail('it needs its text in "double quotes".', kind);
+  if (['lower', 'text', 'pin', 'stamp', 'notify'].includes(kind) && !g.texts[0]) return fail('it needs its text in "double quotes".', kind);
+  if (kind === 'measure' && (!g.pos || !g.pos2 || g.pos.length !== 2 || g.pos2.length !== 2)) return fail('it needs the two points it measures between, x%,y% x%,y%.', kind);
+  if (kind === 'measure' && g.pos2.some((v) => v < 0 || v > 100)) return fail('a point is in percent of the frame, 0 to 100.', kind);
+  if (kind === 'chips' && !g.texts.length) return fail('it needs at least one "chip" in double quotes.', kind);
+  if (kind === 'chips' && g.opts.style && g.opts.style !== 'check') return fail('style=check is the only chips style (a check on each).', kind);
+  if (kind === 'ticker' && (g.texts.length !== 2 || !countable(g.texts[0]) && g.texts[0].trim() !== '0' || !countable(g.texts[1]))) return fail('a ticker counts from one whole number to another: ticker "$1,599" "$1,679".', kind);
+  if (kind === 'cursor' && g.opts.from && !['ul', 'ur', 'dl', 'dr'].includes(g.opts.from)) return fail('from= is where the cursor comes from: ul, ur, dl, or dr.', kind);
   if (kind === 'hud' && g.variant === 'data' && g.texts.length < 2) return fail('a data panel needs at least one "label" "value" pair.', kind);
   if (kind === 'lower' && g.opts.style && !LOWER_STYLES.includes(g.opts.style)) return fail(`style=${g.opts.style}? Use ${LOWER_STYLES.join(', ')}.`);
   if (kind === 'text') {
@@ -276,6 +305,20 @@ function countHtml(v, d = 0) {
 
 // Kinetic type's words: *highlighted* ones flagged, with the punctuation right before or after a
 // highlight kept on its word ("(*fit*)." is one word, "(fit).", with only "fit" highlighted).
+// A number counting from one value to the other. When both share their thousands ("$1,599" to
+// "$1,679"), those stay put and the last three digits tick, so the commas hold; otherwise the plain
+// number ticks and lands on the figure as written.
+function tickerHtml(fromText, toText) {
+  const a = countable(fromText) || { pre: '', digits: '0', n: 0, suf: '' };
+  const b = countable(toText);
+  const thousands = (c) => c.digits.split(',').slice(0, -1).join(',');
+  if (a.pre === b.pre && a.suf === b.suf && b.digits.includes(',') && thousands(a) === thousands(b)) {
+    return `<span class="gx-tk">${esc(b.pre)}${esc(thousands(b))},<span class="gx-tn pad" style="--from:${a.n % 1000}; --to:${b.n % 1000}"></span>${esc(b.suf)}</span>`;
+  }
+  return `<span class="gx-tk">${esc(b.pre)}<span class="gx-tswap"><span class="gx-tn" style="--from:${a.n}; --to:${b.n}"></span>`
+    + `<span class="gx-tfin">${esc(b.digits)}</span></span>${esc(b.suf)}</span>`;
+}
+
 function wordsOf(text) {
   const out = [];
   for (const m of String(text).matchAll(/([^\s*]*)\*([^*]+)\*([^\s*]*)|[^\s*]+/g)) {
@@ -538,12 +581,65 @@ function markup(g, { W = 1080, H = 1920, sounds = false, defaults = {} } = {}) {
       }
       break;
     }
+    case 'measure': {
+      // a dimension line from one point to the other, its ends ticked, its label above the middle
+      const [x2, y2] = [g.pos2[0] / 100 * W, g.pos2[1] / 100 * H];
+      const ang = Math.atan2(y2 - y, x2 - x) * 180 / Math.PI;
+      style = `${at(x, y)}; width:${px(Math.hypot(x2 - x, y2 - y))}; --ang:${ang.toFixed(1)}deg`;
+      const label = g.texts[0] ? (countable(g.texts[0]) && g.opts.count !== 'no' ? countHtml(g.texts[0], 0.4) : lit(g.texts[0])) : '';
+      inner = `<i class="gx-ml"></i><i class="gx-mt a"></i><i class="gx-mt b"></i>${label ? `<span class="gx-mlab">${label}</span>` : ''}`;
+      break;
+    }
+    case 'cursor': {
+      const d = g.opts.from || 'dr';
+      style = `${at(x, y)}; --dx:${d[1] === 'r' ? 300 : -300}px; --dy:${d[0] === 'd' ? 360 : -360}px; --clk:${r2(g.in + 0.62)}s`;
+      inner = '<i class="gx-tap"></i><svg width="44" height="58" viewBox="0 0 44 58"><path class="gx-ptr" d="M2 2 L2 44 L13 34 L21 52 L29 48 L21 31 L36 31 Z"/></svg>';
+      lint = false;
+      break;
+    }
+    case 'stamp': {
+      const [sx, sy] = g.pos ? [x, y] : portrait ? [W / 2, H * 0.46] : [W / 2, H * 0.5];
+      style = at(sx, sy);
+      inner = `<span class="gx-st">${lit(g.texts[0])}</span>`;
+      break;
+    }
+    case 'notify': {
+      // a notification card sliding down from above, centered on its point (by default near the top)
+      // by default just under where a hook sits
+      const [nx, ny] = g.pos ? [x, y] : portrait ? [510, H * 0.255] : [W / 2, H * 0.1];
+      style = `${at(nx, ny)}; width:${portrait ? 820 : 900}px`;
+      const icon = g.opts.img ? `<img class="gx-nimg" src="${esc(g.opts.img)}" alt="">`
+        : `<i class="gx-nicon"><svg viewBox="0 0 48 48"><path class="gx-draw" pathLength="1" d="${ICONS.bell}"/></svg></i>`;
+      inner = `${icon}<div class="gx-ntext"><small>${esc(g.opts.app || 'now')}</small><b>${lit(g.texts[0])}</b>${g.texts[1] ? `<span>${lit(g.texts[1])}</span>` : ''}</div>`;
+      break;
+    }
+    case 'chips': {
+      // by default above where captions sit
+      const [cx, cy] = g.pos ? [x, y] : portrait ? [510, H * 0.56] : [W / 2, H * 0.68];
+      const check = g.opts.style === 'check';
+      if (check) mods.push('gx-checks');
+      // as wide as its chips (up to the safe area's width), centered on the point
+      style = `${at(cx, cy)}; width:max-content; max-width:${portrait ? 840 : 1400}px`;
+      // a checklist ticks as each item lands (a sound per item, at its own time)
+      const ticks = check && !g.anchor && (g.opts.sfx ? g.opts.sfx !== 'none' : sounds);
+      inner = g.texts.map((t, k) => `<span class="gx-chip" style="--k:${k}${ticks ? `; --t:${r2(g.in + k * 0.28)}s` : ''}"${ticks ? ` data-sfx="${g.opts.sfx && g.opts.sfx !== 'none' ? g.opts.sfx : 'tick'}:t"` : ''}>`
+        + `${check ? '<i>✓</i>' : ''}${lit(t)}</span>`).join('');
+      break;
+    }
+    case 'ticker': {
+      const [tx, ty] = g.pos ? [x, y] : portrait ? [510, H * 0.56] : [W / 2, H * 0.68];
+      style = `${at(tx, ty)}; --for:${r2(Math.max(0.6, Math.min(2.2, g.dur - 0.8)))}s`;
+      inner = tickerHtml(g.texts[0], g.texts[1]);
+      break;
+    }
     default: break;
   }
   const color = g.opts.color ? `; --gc:${COLORS[g.opts.color.toLowerCase()] || g.opts.color}` : '';
-  const sound = soundOf({ ...g, anim: g.opts.anim || defaults.textAnim }, sounds);
-  // a graphic timed to a word later (render.js) carries its sound aside, so it plays at the word
-  const sfx = sound ? (g.anchor ? ` data-gx-sfx="${sound}"` : ` data-sfx="${sound}"`) : '';
+  const checklist = g.kind === 'chips' && g.opts.style === 'check' && !g.anchor;
+  const sound = checklist ? '' : soundOf({ ...g, anim: g.opts.anim || defaults.textAnim }, sounds);
+  // a graphic timed to a word later (render.js) carries its sound aside, so it plays at the word;
+  // a cursor's click lands as it taps
+  const sfx = !sound ? '' : g.anchor ? ` data-gx-sfx="${sound}"` : ` data-sfx="${sound}${g.kind === 'cursor' ? ':clk' : ''}"`;
   const anchor = g.anchor ? ` data-word="${esc(g.word)}" data-for="${g.dur}"` : '';
   return `    <div class="gx gx-${g.kind}${mods.length ? ` ${mods.join(' ')}` : ''}"`
     + ` style="--in:${g.in}s; --out:${g.out}s; ${style}${color}"${anchor}${sfx}${lint ? '' : ' data-lint="off"'}>${inner}</div>`;

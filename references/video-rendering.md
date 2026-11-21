@@ -179,6 +179,57 @@ the hook's type and checks its three layers (the words on screen, the first
 spoken line, the visual hook), a number promise's payoff, a single call to
 action, and a re-hook in a longer video (`hooks.md`).
 
+## A widescreen video, vertical: card.js
+
+When the user has a 16:9 video (a product demo, a screen recording, an
+explainer, a webinar clip) and wants a vertical short from it, cropping it
+to 9:16 throws most of the picture away. `scripts/video/card.js` plays it
+as a card in the middle of the frame instead, and cuts it into beats:
+
+1. **Get the video onto disk** in `state/videos/assets/`: the user's file,
+   or one their own site serves (download it; never rip someone else's
+   video off a platform). Ask what it's for and who it's for, as for any
+   video.
+2. **Watch it:** `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/montage.js frames
+   assets/<video> --every 1` (each second's frame with its time), and
+   where it has sound, when the voice pauses (`ffmpeg -af
+   silencedetect=noise=-26dB:d=0.18`): a stretch that starts and ends on a
+   pause cuts cleanly, music and all. If it has on-screen captions, line
+   up each beat with them. You can't hear it: ask for the voiceover's
+   script if the lines should quote it.
+3. **Write the script** (`state/videos/<date>-<slug>.md`; the top of
+   `card.js` has every setting): `video:`, the stretch (`from:`/`to:`), an
+   `outro:` stretch whose sound plays under the end card, `crop-top:` to
+   leave off the video's own caption bar, the `hook:`, and the end card's
+   `brand:`, `logo:`, `tagline:`, `cta:`, and `url:`. Then one numbered beat
+   per idea: when it starts, its line (set big above the card; `*words*`
+   take the accent), `[zoom: x,y,w,h]` on the part that matters in the
+   video's pixels (cut sharp from the full-resolution source), and its
+   `[gfx: ...]` graphics, timed from the beat's start
+   (`editing-techniques.md`, "Graphics"): a `measure` across what has a
+   size, a `cursor` tapping the button that's used, a `stamp` on the
+   verdict, a `notify` when something arrives, `chips` or a checklist of
+   the facts, a `ticker` on a number that changes. Use the video's own
+   facts only.
+4. **Place the graphics:** `node card.js where <script> <beat> <x> <y>`
+   turns a pixel of the video, in that beat's zoom, into the `x%,y%` a
+   graphic takes. Under the card (about `47%,68%`) is room for chips and a
+   ticker; above it is the line.
+5. Run `node ${CLAUDE_PLUGIN_ROOT}/scripts/video/card.js <script>`. It cuts
+   the clips into `assets/`, writes the page next to the script, prints
+   each beat and graphic, and runs `--check`. Look at `render.js <page>
+   --stills ...` at each beat, fix what's off, and render.
+
+The video's own sound plays throughout (leveled like a voiceover); a
+silent screen recording gets the Sonic Identity's music instead
+(`music:` to choose). The card floats, punches in with a flash on every
+new zoom, shakes on `[shake]`, and gets a light leak on `[leak]`; the
+background drifts in the accent, a progress bar fills under the brand's
+chip, and the end card brings in the logo, the tagline word by word, and a
+pulsing call to action with a cursor tapping it. `theme: dark` for a dark
+frame, `font:` for the headlines (a Google Fonts family, or the brand's own
+font file).
+
 ## A montage of the user's clips or photos: montage.js
 
 When the user's own clips of a place, a product, or an event are the

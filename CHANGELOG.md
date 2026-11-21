@@ -3,11 +3,39 @@
 What changed in each version of the plugin (`.claude-plugin/plugin.json`).
 Skills that read "our changelog" for source material read this file too.
 
-## Unreleased
+## 0.11.1 (2026-11-21)
 
+- **Widescreen videos made vertical.** A product demo, a screen recording,
+  or your site's explainer becomes a vertical short without cropping its
+  picture away. A new script, `scripts/video/card.js`, plays the video as
+  a floating card in the middle of the frame and cuts it into beats you
+  write one per line: each zooms into the part that matters (cut sharp
+  from the full-resolution original, with a punch-in and a flash), sets
+  its line big above the card in your headline font with a marker swiping
+  under the key words, and carries its own graphics. Around it, a
+  background drifts in your accent, a progress bar fills under your
+  brand's chip, and an end card brings in your logo, your tagline word by
+  word, and a pulsing call to action with a cursor tapping it. The video's
+  own voice and music play throughout, with a later stretch of it under
+  the end card; a silent screen recording gets your brand's music instead.
+  `node card.js where` turns a point of the video into the spot a graphic
+  takes. Light or dark, in your colors.
+- **Six new graphics** for any video, each one line like the rest:
+  - `measure`: a dimension line drawn between two points, its number
+    counting up ("88″ wide").
+  - `cursor`: a pointer gliding in and tapping a button, with a ring and a
+    click.
+  - `stamp`: a verdict slammed on at an angle ("✓ Fits your wall").
+  - `notify`: a notification card sliding down, with your logo and a ping.
+  - `chips`: facts popping in as pills, or with `style=check` a checklist
+    that ticks item by item.
+  - `ticker`: a number counting from one value to another, commas held
+    ("$1,599" to "$1,679").
 - Kinetic type keeps punctuation on a highlighted word: `text "Right on
   your *product page*."` now reads "product page." instead of "product
   page ." with a stray space.
+- A graphic's option can take a quoted value with spaces
+  (`app="ModlyAI · now"`), which it couldn't before.
 
 ## 0.11.0 (2026-11-21)
 
