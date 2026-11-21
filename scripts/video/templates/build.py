@@ -114,6 +114,7 @@ HEAD = """<!doctype html>
 {kit}
 {edit}
 {looks}
+{graphics}
 {css}
 </style>
 {fx_script}{head_extra}</head>
@@ -426,6 +427,21 @@ EDIT = """
   .burn { background: radial-gradient(55% 45% at 50% 52%, #fff 0%, rgba(255,226,170,.98) 30%, rgba(255,120,40,.85) 55%, rgba(160,20,0,.4) 72%, transparent 82%);
           animation: burn .75s ease-in-out var(--in) both; }
   @keyframes burn { 0% { opacity: 0; scale: .4; } 38% { opacity: 1; scale: 1.5; } 100% { opacity: 0; scale: 2.2; } }
+  /* graphic transitions: shapes in the brand's colors cover the frame and hide the cut under them.
+     .bars: three slanted bands sweep across; .blocks: tiles pop in and out in a diagonal wave.
+     Each is dropped before the cut (edit.js overlayAt) so it covers the frame as the cut happens. */
+  .bars, .blocks { position: absolute; inset: 0; z-index: 20; pointer-events: none; overflow: hidden; }
+  .bars i { position: absolute; left: -30%; width: 160%; height: 35%; top: calc(var(--k) * 33%); background: var(--accent); transform: skewX(-14deg);
+            animation: barSweep .6s cubic-bezier(.7,0,.3,1) calc(var(--in) + var(--k) * .03s) both; }
+  .bars i:nth-child(2) { background: color-mix(in srgb, var(--accent) 45%, #fff); }
+  .bars i:nth-child(3) { background: var(--bg); }
+  @keyframes barSweep { from { translate: -110% 0; } 40%, 60% { translate: 0 0; } to { translate: 110% 0; } }
+  .blocks i { position: absolute; width: calc(100% / 6 + 1px); height: calc(100% / 10 + 1px); left: calc(var(--c) * 100% / 6); top: calc(var(--r) * 100% / 10);
+              background: var(--accent); animation: blockPop .8s cubic-bezier(.5,0,.5,1) calc(var(--in) + (var(--c) + var(--r)) * .02s) both; }
+  body[data-size="1920x1080"] .blocks i { width: calc(100% / 10 + 1px); height: calc(100% / 6 + 1px); left: calc(var(--lc) * 10%); top: calc(var(--lr) * 100% / 6);
+                                          animation-delay: calc(var(--in) + (var(--lc) + var(--lr)) * .02s); }
+  .blocks i:nth-child(even) { background: color-mix(in srgb, var(--accent) 78%, #000); }
+  @keyframes blockPop { from { scale: 0; rotate: 45deg; } 30%, 70% { scale: 1.04; rotate: 0deg; } to { scale: 0; rotate: -45deg; } }
 
   /* Ken Burns moves on a still, beside kbIn/kbOut/kbLeft/kbRight: kbDyn zooms with changing speed
      (slow, fast, slow), kbDynOut the reverse, kbUp and kbDown tilt */
@@ -529,6 +545,234 @@ LOOKS = """
   /* color roles: *keywords* (the key, the accent) and ~wrong~ (the wrong way, struck through in the caution color, so it doesn't rest on color alone) */
   .no { color: var(--bad); text-decoration: line-through .08em var(--bad); }
   .hook .no { text-decoration-thickness: .07em; }
+"""
+
+# Graphics over the picture, shared by every page: lower thirds, callouts, motion graphics,
+# kinetic type, and HUD elements. scripts/video/graphics.js writes the markup (from cut.js --gfx
+# and [gfx: ...] in compose.js and montage.js); references/editing-techniques.md, "Graphics".
+GRAPHICS = """
+  /* ---- graphics over the picture (graphics.js): one layer above the backgrounds and below the
+     captions. Each .gx shows from its --in and fades at its --out, placed in the frame's pixels;
+     --gc is its color (the accent unless color= says otherwise). ---- */
+  .gx-layer { position: absolute; inset: 0; pointer-events: none; }
+  .gx { position: absolute; --gc: var(--accent); text-shadow: none;
+        animation: gxShow .01s linear var(--in, 0s) both, gxOut .3s ease-in var(--out, 999s) forwards; }
+  @keyframes gxShow { from { visibility: hidden; } to { visibility: visible; } }
+  @keyframes gxOut { to { opacity: 0; } }
+  @keyframes gxFade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes gxPop { from { opacity: 0; scale: .5; } 70% { opacity: 1; scale: 1.06; } to { opacity: 1; scale: 1; } }
+  @keyframes gxDraw { to { stroke-dashoffset: 0; } }
+  @keyframes gxGrowX { from { scale: 0 1; } to { scale: 1 1; } }
+  @keyframes gxGrowY { from { scale: 1 0; } to { scale: 1 1; } }
+  @keyframes gxWipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+  @keyframes gxRise { from { opacity: 0; translate: 0 30px; } to { opacity: 1; translate: 0 0; } }
+  @keyframes gxSpin { to { rotate: 360deg; } }
+  @keyframes gxBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+  .gx svg { position: absolute; overflow: visible; filter: drop-shadow(0 4px 10px rgba(0,0,0,.45)); }
+  /* a stroke that draws itself (pathLength="1" on the shape) */
+  .gx-draw { fill: none; stroke: var(--gc); stroke-width: 12; stroke-linecap: round; stroke-linejoin: round;
+             stroke-dasharray: 1 1; stroke-dashoffset: 1; animation: gxDraw .45s cubic-bezier(.6,0,.3,1) var(--in) both; }
+  .gx-hi { color: var(--gc); }
+  /* a callout's label: white, bold, popping in once its mark is drawn */
+  .gx-tag { position: absolute; white-space: nowrap; padding: 12px 26px 14px; border-radius: 18px; background: #fff; color: #121212;
+            font-size: 42px; font-weight: 800; line-height: 1.15; box-shadow: 0 14px 40px rgba(0,0,0,.3);
+            animation: gxPop .4s cubic-bezier(.2,.9,.3,1.25) calc(var(--in) + .4s) both; }
+  /* a *keyword* in a label: a marker stroke in the graphic's color under dark ink, readable whatever the color */
+  .gx-tag .gx-hi { color: inherit; background: linear-gradient(transparent 60%, color-mix(in srgb, var(--gc) 60%, transparent) 60%); }
+  .gx-tag.gx-up { translate: -50% calc(-100% - 14px); }
+  .gx-tag.gx-down { translate: -50% 14px; }
+  .gx-tag.gx-side { translate: 0 -50%; }
+  .gx-tag.gx-side.gx-flip { translate: -100% -50%; }
+  .gx-tag.gx-tab { translate: 0 calc(-100% - 14px); }
+  .gx-tag.gx-tab.gx-below { translate: 0 14px; }
+
+  /* lower third: a name and a title near the bottom of the picture, above the captions.
+     bar (default): an accent bar and a dark panel; box: the name on the accent, the title on white;
+     line: no panel, a rule drawn under the name; tech: a HUD panel with a monospace title */
+  .gx-lower { left: 90px; bottom: 790px; display: flex; align-items: stretch; max-width: 820px; }
+  .gx-lower.ls-right { left: auto; right: 150px; flex-direction: row-reverse; text-align: right; }
+  body[data-size="1920x1080"] .gx-lower { left: 110px; bottom: 230px; max-width: 1100px; }
+  body[data-size="1920x1080"] .gx-lower.ls-right { left: auto; right: 110px; }
+  .gx-bar { flex: none; width: 14px; border-radius: 7px; background: var(--gc); transform-origin: 50% 100%;
+            animation: gxGrowY .32s cubic-bezier(.2,.8,.2,1) var(--in) both; }
+  .gx-lt { margin-left: 12px; padding: 16px 34px 20px 26px; border-radius: 0 20px 20px 0; background: rgba(12,12,16,.74);
+           animation: gxWipe .5s cubic-bezier(.7,0,.25,1) calc(var(--in) + .12s) both; }
+  .ls-right .gx-lt { margin: 0 12px 0 0; border-radius: 20px 0 0 20px; }
+  .gx-lt b { display: block; font-size: 60px; font-weight: 800; line-height: 1.12; letter-spacing: -1px; color: #fff; }
+  .gx-lt small { display: block; margin-top: 6px; font-size: 36px; font-weight: 600; line-height: 1.25; color: #e2e1e8;
+                 animation: gxRise .4s cubic-bezier(.2,.8,.2,1) calc(var(--in) + .4s) both; }
+  .ls-box .gx-bar, .ls-line .gx-bar, .ls-tech .gx-bar { display: none; }
+  .ls-box .gx-lt { margin: 0; padding: 0; border-radius: 0; background: none; animation: none; display: flex; flex-direction: column; align-items: flex-start; }
+  .ls-box.ls-right .gx-lt { align-items: flex-end; }
+  .ls-box .gx-lt b { padding: 10px 26px 14px; background: var(--gc); color: var(--on-accent); animation: gxWipe .45s cubic-bezier(.7,0,.25,1) var(--in) both; }
+  .ls-box .gx-lt b .gx-hi { color: inherit; }
+  .ls-box .gx-lt small { margin-top: 0; padding: 8px 26px 10px; background: #fff; color: #121212; animation: gxWipe .45s cubic-bezier(.7,0,.25,1) calc(var(--in) + .18s) both; }
+  .ls-line .gx-lt { margin: 0; padding: 0; border-radius: 0; background: none; text-shadow: 0 2px 6px rgba(0,0,0,.5), 0 6px 30px rgba(0,0,0,.5);
+                    animation: gxFade .5s ease-out var(--in) both; }
+  .ls-line .gx-lt b::after { content: ''; display: block; height: 6px; margin-top: 14px; border-radius: 3px; background: var(--gc); transform-origin: 0 50%;
+                             animation: gxGrowX .6s cubic-bezier(.7,0,.25,1) calc(var(--in) + .1s) both; }
+  .ls-line.ls-right .gx-lt b::after { transform-origin: 100% 50%; }
+  .ls-tech .gx-lt { margin: 0; padding: 18px 34px 20px; border-radius: 4px; background: rgba(6,14,20,.82);
+                    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--gc) 60%, transparent), 0 0 30px color-mix(in srgb, var(--gc) 30%, transparent); }
+  .ls-tech .gx-lt b { color: #eafcff; }
+  .ls-tech .gx-lt small { font-family: "JetBrains Mono", "Liberation Mono", monospace; font-size: 30px; font-weight: 500; letter-spacing: .12em;
+                          text-transform: uppercase; color: #bfe3ea; }
+
+  /* callouts: an arrow drawn in to a point, a ring around it, a box around a region, a marker
+     swipe, a spotlight, a pin. Their marks sit on a zero-size box at the point. */
+  .gx-arrow, .gx-circle, .gx-pin, .gx-icon, .gx-shapes, .hv-lock { width: 0; height: 0; }
+  .gx-arrow svg { transform-origin: 26px 200px; }
+  .gx-arrow svg.a-ul { scale: -1 1; }
+  .gx-arrow svg.a-dr { scale: 1 -1; }
+  .gx-arrow svg.a-dl { scale: -1 -1; }
+  .gx-arrow .gx-head { animation-duration: .16s; animation-delay: calc(var(--in) + .36s); }
+  .gx-circle .gx-draw { stroke-width: 10; animation-duration: .6s; }
+  .gx-box .gx-draw { stroke-width: 9; animation-duration: .6s; }
+  .gx-highlight { --gc: #ffd84d; }
+  .gx-mark { position: absolute; inset: 0; border-radius: 10px; background: color-mix(in srgb, var(--gc) 42%, transparent);
+             box-shadow: 0 0 0 3px color-mix(in srgb, var(--gc) 70%, transparent); transform-origin: 0 50%;
+             animation: gxGrowX .45s cubic-bezier(.6,0,.3,1) var(--in) both; }
+  @property --sr { syntax: '<length>'; inherits: false; initial-value: 0px; }
+  .gx-dim { position: absolute; inset: 0; --sr: var(--r);
+            background: radial-gradient(circle at var(--px) var(--py), transparent calc(var(--sr) - 2px), rgba(4,4,8,.66) var(--sr));
+            animation: gxSpot .6s cubic-bezier(.6,0,.3,1) var(--in) both; }
+  @keyframes gxSpot { from { --sr: 1800px; opacity: 0; } 30% { opacity: 1; } to { --sr: var(--r); opacity: 1; } }
+  .gx-dot { position: absolute; left: -20px; top: -20px; width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 10px solid var(--gc);
+            animation: gxPop .35s cubic-bezier(.2,.9,.3,1.3) var(--in) both; }
+  .gx-dot::after { content: ''; position: absolute; inset: -24px; border-radius: 50%; border: 6px solid #fff; opacity: 0;
+                   animation: gxPing 1.1s ease-out calc(var(--in) + .2s) 2; }
+  @keyframes gxPing { from { opacity: .9; scale: .5; } to { opacity: 0; scale: 1.6; } }
+  .gx-tag.gx-pintag { left: 40px; top: -100px; }
+  .gx-tag.gx-pintag.gx-flip { left: auto; right: 40px; }
+  .gx-tag.gx-pintag.gx-below { top: 40px; }
+
+  /* motion graphics: an icon on a badge with a burst, and accents (a burst, rings, speed lines, dots, confetti) */
+  .gx-badge { position: absolute; display: grid; place-items: center; border-radius: 50%; background: var(--gc); box-shadow: 0 16px 44px rgba(0,0,0,.35);
+              animation: gxPop .45s cubic-bezier(.2,.9,.3,1.3) var(--in) both; }
+  .gx .gx-badge svg { position: static; width: 58%; height: 58%; filter: none; }
+  .gx-badge .gx-draw { stroke: var(--on-accent); stroke-width: 4.5; animation-duration: .4s; animation-delay: calc(var(--in) + .2s); }
+  .gx-glyph { line-height: 1; font-family: "Noto Color Emoji", "Inter", sans-serif; font-weight: 800; color: var(--on-accent); }
+  .ic-plain .gx-badge { background: none; box-shadow: none; }
+  .gx.ic-plain .gx-badge svg { filter: drop-shadow(0 4px 12px rgba(0,0,0,.5)); }
+  .ic-plain .gx-badge .gx-draw { stroke: #fff; stroke-width: 5.5; }
+  .ic-plain .gx-glyph { color: #fff; }
+  .gx-rays line { fill: none; stroke: var(--gc); stroke-width: 9; stroke-linecap: round; stroke-dasharray: 1 1; stroke-dashoffset: 1;
+                  animation: gxRay .55s cubic-bezier(.2,.8,.2,1) calc(var(--in) + var(--ray-at, 0s)) both; }
+  @keyframes gxRay { from { stroke-dashoffset: 1; } 45% { stroke-dashoffset: 0; } to { stroke-dashoffset: -1; } }
+  .gx-ring { position: absolute; border-radius: 50%; border: 7px solid var(--gc);
+             animation: gxRingOut .9s cubic-bezier(.2,.8,.2,1) calc(var(--in) + var(--k) * .14s) both; }
+  @keyframes gxRingOut { from { opacity: 0; scale: .1; } 8% { opacity: 1; } 70% { opacity: .8; } to { opacity: 0; scale: 1; } }
+  .sh-lines, .sh-confetti { overflow: hidden; }
+  .sh-lines i { position: absolute; left: 0; width: 70%; height: var(--t, 10px); border-radius: 99px; rotate: -12deg;
+                background: linear-gradient(90deg, transparent, var(--gc) 35%, #fff 70%, transparent);
+                animation: gxSweep .55s cubic-bezier(.5,0,.3,1) calc(var(--in) + var(--d)) both; }
+  @keyframes gxSweep { from { translate: -110% 0; opacity: 0; } 15% { opacity: 1; } to { translate: 160% 0; opacity: 0; } }
+  .sh-dots i { position: absolute; width: 20px; height: 20px; margin: -10px; border-radius: 50%; background: var(--gc);
+               animation: gxDot .9s cubic-bezier(.2,.9,.3,1.3) calc(var(--in) + var(--d)) both; }
+  @keyframes gxDot { from { opacity: 0; scale: 0; } 25% { opacity: 1; scale: 1.2; } 70% { opacity: 1; scale: 1; } to { opacity: 0; scale: 0; } }
+  .sh-confetti i { position: absolute; top: -50px; width: var(--w); height: calc(var(--w) * .45); border-radius: 3px; background: var(--c);
+                   animation: gxFall var(--t, 1.8s) cubic-bezier(.3,.1,.6,1) calc(var(--in) + var(--d)) both; }
+  @keyframes gxFall { from { translate: 0 0; rotate: 0deg; } to { translate: var(--dx) var(--fall); rotate: var(--rot); } }
+
+  /* kinetic type: big words animated in, in sync with the video. ta-<anim> sets how they come in,
+     ts-<size> how big; gt-box sets each word on a white box, gt-outline in outline */
+  .gx-text { translate: -50% -50%; text-align: center; }
+  .gx-tx { font-weight: var(--head-weight, 900); line-height: 1.06; letter-spacing: -.02em; color: #fff; text-wrap: balance;
+           text-shadow: 0 3px 8px rgba(0,0,0,.45), 0 10px 50px rgba(0,0,0,.55); }
+  .has-head .gx-tx { font-family: var(--font-head); }
+  .ts-s .gx-tx { font-size: 72px; }
+  .ts-m .gx-tx { font-size: 100px; }
+  .ts-l .gx-tx { font-size: 132px; }
+  .ts-xl .gx-tx { font-size: 172px; }
+  body[data-size="1920x1080"] .ts-l .gx-tx { font-size: 116px; }
+  body[data-size="1920x1080"] .ts-xl .gx-tx { font-size: 150px; }
+  .gx-w { display: inline-block; white-space: nowrap; margin: .02em .1em; }
+  .gt-box .gx-w { padding: .02em .16em .08em; border-radius: .12em; background: #fff; color: #121212; text-shadow: none; }
+  .gt-box .gx-w.gx-hi { background: var(--gc); color: var(--on-accent); }
+  .gt-outline { color: transparent; -webkit-text-stroke: .035em #fff; text-shadow: none; }
+  .gt-outline .gx-hi { color: transparent; -webkit-text-stroke-color: var(--gc); }
+  .ta-pop .gx-w { animation: gxPop .4s cubic-bezier(.2,.9,.3,1.3) calc(var(--in) + var(--k) * .12s) both; }
+  .ta-slam .gx-w { animation: gxSlam .3s cubic-bezier(.3,.7,.3,1) calc(var(--in) + var(--k) * .14s) both; }
+  @keyframes gxSlam { from { opacity: 0; scale: 2.8; filter: blur(8px); } 65% { opacity: 1; scale: .95; filter: blur(0); } to { opacity: 1; scale: 1; filter: none; } }
+  .ta-slam .gx-tx { animation: hkJolt .4s linear calc(var(--in) + .24s) both; }
+  .ta-type .gx-c { animation: gxFade .01s linear calc(var(--in) + var(--c) * .045s) both; }
+  .ta-rise .gx-w { overflow: hidden; padding: 0 .02em .1em; vertical-align: top; }
+  .ta-rise .gx-c { display: inline-block; animation: gxUp .5s cubic-bezier(.2,.8,.2,1) calc(var(--in) + var(--c) * .028s) both; }
+  @keyframes gxUp { from { translate: 0 110%; opacity: 0; } 30% { opacity: 1; } to { translate: 0 0; opacity: 1; } }
+  .ta-wave .gx-c { display: inline-block; animation: gxWave .5s cubic-bezier(.3,1.4,.5,1) calc(var(--in) + var(--c) * .035s) both; }
+  @keyframes gxWave { from { opacity: 0; translate: 0 60px; scale: .6; } to { opacity: 1; translate: 0 0; scale: 1; } }
+  .ta-stretch .gx-tx { animation: gxStretch .6s cubic-bezier(.2,.9,.3,1.15) var(--in) both; }
+  @keyframes gxStretch { from { opacity: 0; scale: .15 1.5; letter-spacing: .5em; } to { opacity: 1; scale: 1 1; letter-spacing: -.02em; } }
+  .ta-glitch .gx-tx { animation: gxFade .01s linear var(--in) both, hkGlitch .5s steps(1, end) var(--in) both; }
+  .ta-count .gx-tx { animation: gxPop .4s cubic-bezier(.2,.9,.3,1.3) var(--in) both; }
+  /* a number counting up (graphics.js countHtml): the count, then the figure as written, commas and all */
+  .gx-num { display: inline-grid; font-variant-numeric: tabular-nums; }
+  .gx-num > * { grid-area: 1 / 1; text-align: left; }
+  .gx-num .count { animation: countUp var(--for, 1.2s) cubic-bezier(.2,.8,.2,1) calc(var(--in) + var(--d, 0s)) both,
+                               fadeOut .01s linear calc(var(--in) + var(--d, 0s) + var(--for, 1.2s)) forwards; }
+  .gx-num .gx-final { animation: gxFade .01s linear calc(var(--in) + var(--d, 0s) + var(--for, 1.2s)) both; }
+
+  /* HUD: a targeting reticle locking on (hv-lock), a frame around the picture (hv-frame), a data
+     panel (hv-data), and a scan over a region (hv-scan), in light monospace with accent lines */
+  .gx-hud { color: #eafcff; font-family: "JetBrains Mono", "Liberation Mono", monospace; }
+  .gx-hb { position: absolute; width: 46px; height: 46px; border: 0 solid var(--gc);
+           animation: gxClose .5s cubic-bezier(.2,.8,.2,1) var(--in) both; }
+  .gx-hb.c-tl { border-width: 7px 0 0 7px; }
+  .gx-hb.c-tr { border-width: 7px 7px 0 0; }
+  .gx-hb.c-bl { border-width: 0 0 7px 7px; }
+  .gx-hb.c-br { border-width: 0 7px 7px 0; }
+  @keyframes gxClose { from { opacity: 0; translate: calc(var(--sx) * 110px) calc(var(--sy) * 110px); } 50% { opacity: 1; } to { opacity: 1; translate: 0 0; } }
+  .gx-orbit { animation: gxFade .3s ease-out calc(var(--in) + .3s) both, gxSpin 7s linear var(--in) infinite; }
+  .gx-orbit circle { fill: none; stroke: var(--gc); stroke-width: 4; stroke-dasharray: 18 12; opacity: .85; }
+  .gx-cross { animation: gxFade .2s linear calc(var(--in) + .45s) both; }
+  .gx-cross line { stroke: var(--gc); stroke-width: 4; stroke-linecap: round; }
+  .gx-pip { position: absolute; left: -7px; top: -7px; width: 14px; height: 14px; border-radius: 50%; background: var(--gc);
+            animation: gxFade .01s linear calc(var(--in) + .45s) both, gxBlink .7s steps(1) calc(var(--in) + .45s) infinite; }
+  .gx-read { position: absolute; white-space: nowrap; padding: 10px 20px 12px; background: rgba(6,12,18,.74); border-left: 6px solid var(--gc);
+             animation: gxWipe .4s steps(12, end) calc(var(--in) + .5s) both; }
+  .gx-read.gx-flip { border-left: 0; border-right: 6px solid var(--gc); text-align: right; }
+  .gx-read b { display: block; font-size: 34px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; }
+  .gx-read small { display: block; margin-top: 4px; font-size: 24px; letter-spacing: .14em; color: #a9c4cc; }
+  .gx-deco { position: absolute; inset: 0; }
+  .hv-frame .gx-hb, .hv-scan .gx-hb { width: 90px; height: 90px; }
+  .hv-scan .gx-hb { width: 60px; height: 60px; }
+  .hv-frame .gx-hb.c-tl, .hv-scan .gx-hb.c-tl { left: 0; top: 0; }
+  .hv-frame .gx-hb.c-tr, .hv-scan .gx-hb.c-tr { right: 0; top: 0; }
+  .hv-frame .gx-hb.c-bl, .hv-scan .gx-hb.c-bl { left: 0; bottom: 0; }
+  .hv-frame .gx-hb.c-br, .hv-scan .gx-hb.c-br { right: 0; bottom: 0; }
+  .gx-ruler { position: absolute; left: 26px; top: 22%; bottom: 22%; width: 26px; opacity: .8;
+              background: repeating-linear-gradient(to bottom, var(--gc) 0 3px, transparent 3px 30px);
+              -webkit-mask-image: linear-gradient(transparent, #000 15%, #000 85%, transparent); mask-image: linear-gradient(transparent, #000 15%, #000 85%, transparent);
+              animation: gxFade .5s ease-out calc(var(--in) + .3s) both; }
+  .gx-sweep { position: absolute; left: 0; right: 0; top: 0; height: 4px; background: var(--gc); opacity: 0;
+              box-shadow: 0 0 24px 6px color-mix(in srgb, var(--gc) 60%, transparent);
+              animation: gxScan 1.2s cubic-bezier(.4,0,.6,1) calc(var(--in) + .1s) both; }
+  @keyframes gxScan { from { top: 0%; opacity: 0; } 10%, 90% { opacity: 1; } to { top: 100%; opacity: 0; } }
+  .gx-htop { position: absolute; left: 30px; top: 26px; display: flex; align-items: center; gap: 16px;
+             font-size: 32px; letter-spacing: .14em; text-transform: uppercase; text-shadow: 0 2px 8px rgba(0,0,0,.6);
+             animation: gxWipe .5s steps(14, end) calc(var(--in) + .3s) both; }
+  .gx-htop b { font-weight: 500; }
+  .gx-rec { width: 22px; height: 22px; border-radius: 50%; background: #ff3b3b; animation: gxBlink 1s steps(1) var(--in) infinite; }
+  .hv-data { min-width: 440px; max-width: 760px; padding: 26px 32px 28px; border-radius: 6px; background: rgba(6,12,18,.78);
+             box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--gc) 50%, transparent), 0 20px 50px rgba(0,0,0,.35);
+             animation: gxShow .01s linear var(--in) both, gxPanel .4s cubic-bezier(.2,.8,.2,1) var(--in) both, gxOut .3s ease-in var(--out, 999s) forwards; }
+  @keyframes gxPanel { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+  .hv-data h6 { margin-bottom: 14px; font-size: 26px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; color: #bfe3ea; }
+  .gx-row { animation: gxRise .4s cubic-bezier(.2,.8,.2,1) calc(var(--in) + .25s + var(--k) * .22s) both; }
+  .gx-row + .gx-row { margin-top: 18px; }
+  .gx-k { display: block; font-size: 26px; letter-spacing: .14em; text-transform: uppercase; color: #a9c4cc; }
+  .gx-v { display: block; font-family: "Inter", "Liberation Sans", sans-serif; font-size: 64px; font-weight: 800; line-height: 1.08; color: #fff; }
+  .gx-meter { display: block; height: 12px; margin-top: 10px; border-radius: 6px; background: rgba(255,255,255,.14); overflow: hidden; }
+  .gx-meter i { display: block; width: var(--pct); height: 100%; background: var(--gc); transform-origin: 0 50%;
+                animation: gxGrowX .9s cubic-bezier(.2,.8,.2,1) calc(var(--in) + .35s + var(--k) * .22s) both; }
+  .hv-scan { overflow: hidden; }
+  .gx-grid { position: absolute; inset: 0; opacity: .45;
+             background-image: linear-gradient(color-mix(in srgb, var(--gc) 60%, transparent) 2px, transparent 2px),
+                               linear-gradient(90deg, color-mix(in srgb, var(--gc) 60%, transparent) 2px, transparent 2px);
+             background-size: 60px 60px;
+             animation: gxReveal 1.2s cubic-bezier(.4,0,.6,1) calc(var(--in) + .1s) both, fadeOut .6s ease-in calc(var(--in) + 1.4s) forwards; }
+  @keyframes gxReveal { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+  .gx-read.gx-inset { left: 24px; top: 24px; }
 """
 
 # The SVG filters behind the RGB split (the glitch transition, the glitch hook): a CSS filter can
@@ -931,7 +1175,7 @@ TEMPLATES["team.html"] = dict(
 TEMPLATES["promo.html"] = dict(
     bgs=[(0, 3), (3, 12.5), (12.5, 17.5), (17.5, 20.7), (20.7, 24)],
     g1="#6b2f1c", g2="#1d2a52",
-    doc='  Template: promo, ad, brand profile, explainer, or educational list (see\n  references/video-types.md). This one is the 24-second marketing-skill\n  promo. Copy it as the starting point for a new video and rewrite the\n  scenes.\n\n  How every template page works (render.js reads all of this):\n  - The canvas is 1080x1920 (9:16). Keep text inside the .scene box: TikTok,\n    Reels, and Shorts cover the bottom ~25% and the right edge with their UI.\n  - Animate with CSS animations only. render.js pauses and seeks every\n    animation frame by frame, so time each one with animation-delay. Here the\n    delays come from per-element custom properties like style="--in:3.4s".\n    (3d.html and pixel.html draw their backgrounds with a script instead,\n    through window.renderFrame(t); their own comments explain how.)\n  - Backgrounds: every scene has an empty <div class="bg"> slot already timed\n    to it. Put one photo or clip inside and it fills the frame with a slow\n    zoom, a scrim that keeps text readable, and one shared color grade:\n      <img class="bg-media" src="assets/office-1.jpg" alt="">\n      <video class="bg-media" src="assets/city-1.mp4" data-offset="2"></video>\n    data-offset starts a clip that many seconds in; clips loop unless\n    data-loop="false". On the slot, --kb picks the motion (kbIn, kbOut,\n    kbLeft, kbRight, or none), --shade the darkness (default .35), class\n    "blur" softens a busy image, and class "tint" washes it in the accent\n    color. An empty slot shows the gradient glow instead. scripts/video/\n    media.js finds stock photos and clips and writes their credits.\n  - Music comes from <body data-*>: data-music is the genre (pop, house,\n    hiphop, acoustic, cinematic, tech, lofi, calm, phonk, jersey, funk,\n    chiptune) or none; data-bpm, data-key (C, F#, ...), data-mode (major or minor),\n    data-energy (1-5), and data-motif, the project\'s signature hook in\n    scale degrees, e.g. "1 3 5 6 | 5 3 2 -" (references/sound-guide.md).\n    data-drop is when the beat comes in; data-break="8.5-13.5" thins it\n    out under quieter scenes.\n    data-music-src="assets/track.mp3" (with data-music-start, in seconds)\n    uses a licensed track instead; data-music-at brings it in later than 0s.\n    data-duration sets the length.\n  - data-voice="assets/voice-1.m4a" on any element adds a voiceover line at\n    that element\'s --voice time (or --in); <body data-voice-src="..."\n    data-voice-start="..."> takes one continuous take instead. The music and\n    effects duck under the voice (references/sound-guide.md).\n  - data-sfx="sound:var" plays a sound effect at the time in that element\'s\n    --var (default --in). Several can be listed: data-sfx="swish:in tick:tick".\n    Sounds: pop (a note that climbs the chord when words land in quick\n    succession), swish, tick (climbs a scale across a run of ticks), whoosh,\n    click, chime, and the meme cues: boom, scratch (record scratch), horn\n    (air horn), rimshot, fail (sad trombone, 2s), drumroll (1.5s, so cue it\n    1.5s before the hit), ding (right answer), buzzer (wrong), ping (a\n    message), typing, shutter, cash (ka-ching), glitch, and bass (sub drop);\n    the edit\'s: impact (a tight hit), and riser and reverse, which build\n    into the time they\'re cued on; and 8-bit ones for pixel art: coin,\n    jump, powerup, blip, and hurt.\n  - Everyday / FYP pieces (every page has them; the templates in\n    references/fyp-formats.md show each one in use). <body class="fyp">\n    switches to TikTok Sans, the platform\'s own caption font.\n      .cap: a caption in the platform\'s style, each wrapped line boxed:\n        <div class="cap pop" style="--in:1s"><span>pov: ...</span></div>\n        Variants: .dark, .hl (accent), .out (white, black outline), .left.\n      .say: word-by-word captions, one <i style="--in:2.1s"> per word.\n      .sticker: a tilted label (.yellow, .light, .dark). .stamp: a score\n        slammed on at --in (.ok, .bad). .emoji: a big emoji that bounces\n        in and sways.\n      .ring: a 3-2-1 countdown, <div class="ring"><b></b></div>. .timerbar\n        drains and .progress fills (to --pct), both over --for.\n      .poll with .opt bars growing to --pct (show real poll numbers only).\n      .stack piles its children in one spot; .swap pops one in at --in and\n        out at --out, so items replace each other in place.\n      .split with two .pane (expectation / reality); .grid of .cell\n        (starter pack); .tiers of .tier.s/.a/.b/.c/.d holding .item chips.\n      Generic, clearly fictional mockups: .chat (.msg.them / .msg.me, each\n        with a .bub; .typing dots show between --in and --out), a .lock\n        screen with .notif cards stacking in, a .post with a .heart that\n        fills at --like and .reply comments, and a .popup dialog.\n      .wipe: its second .side wipes over the first at --at (before/after).\n      .flash whites out the frame at --in; .hit zooms and shakes what it\n        wraps at --hit.\n  - Editing (scripts/video/edit.js writes these; references/\n    editing-techniques.md maps each to its name): a class on a .bg slot\n    sets how it comes in (t-cut, t-punch, t-whip, t-slide, t-zoom, t-wipe,\n    t-glitch, t-spin, t-blur, t-mask, t-leak); .flash, .leak, and .burn\n    are overlays dropped on a cut; --kb also takes kbDyn, kbDynOut, kbUp,\n    and kbDown. <div class="cam"> around the backgrounds is the camera:\n    data-punch="1.08" punches in on each *keyword* (render.js), and its\n    animations shake (camShake), punch (camPunch), or glitch (camGlitch).\n    hk-zoom on the first slot, and hk-glitch, hk-shake, or hk-bounce on\n    the hook, are the visual hook. <body class="fx-grain fx-vignette">\n    adds film grain and a vignette; cap-bounce, cap-kinetic, and cap-fade\n    animate the synced captions.\n    A photo or clip can go in a .pane, .side, or .cell too, as\n    <img class="bg-media" src="...">.\n  - The hook: give the first thing on screen class "now" instead of an\n    entrance (pop, rise, ...), so it shows on frame 0, which is the default\n    cover and the moment a viewer decides to stay. render.js --check warns\n    when the first frame has no text.\n  - Hook variants: data-variant="a" (or "b", "c") on the elements that\n    differ; render.js --variants a,b,c renders one video per variant.\n  - Captions synced to a voice line: <div class="say auto"\n    data-voice="assets/voice-2.wav" style="--voice:3.4s">The line.</div>\n    (render.js times them to the clip; see captions.js).\n  - Filmed clips with their own sound: <video class="bg-media" id="take"\n    src="assets/take.mp4" data-audio> plays the clip\'s sound in sync with\n    it, and <div class="say auto" data-clip="take">what\'s said</div>\n    captions it. scripts/video/cut.js cuts the pauses out of a take and\n    writes a page like this. A clip in a smaller box (a screen recording in\n    a phone frame) is cut to that box\'s shape.\n  - .endcard: the logo and handle at the end, added by brand.js from the\n    Visual Identity in references/brand-voice.md.\n  - Images (screenshots, photos, logos) go in an assets/ folder next to the\n    page and load with a relative src. People, products, and results must be\n    real ones the user supplied; stock and AI images are only for settings\n    and mood.',
+    doc='  Template: promo, ad, brand profile, explainer, or educational list (see\n  references/video-types.md). This one is the 24-second marketing-skill\n  promo. Copy it as the starting point for a new video and rewrite the\n  scenes.\n\n  How every template page works (render.js reads all of this):\n  - The canvas is 1080x1920 (9:16). Keep text inside the .scene box: TikTok,\n    Reels, and Shorts cover the bottom ~25% and the right edge with their UI.\n  - Animate with CSS animations only. render.js pauses and seeks every\n    animation frame by frame, so time each one with animation-delay. Here the\n    delays come from per-element custom properties like style="--in:3.4s".\n    (3d.html and pixel.html draw their backgrounds with a script instead,\n    through window.renderFrame(t); their own comments explain how.)\n  - Backgrounds: every scene has an empty <div class="bg"> slot already timed\n    to it. Put one photo or clip inside and it fills the frame with a slow\n    zoom, a scrim that keeps text readable, and one shared color grade:\n      <img class="bg-media" src="assets/office-1.jpg" alt="">\n      <video class="bg-media" src="assets/city-1.mp4" data-offset="2"></video>\n    data-offset starts a clip that many seconds in; clips loop unless\n    data-loop="false". On the slot, --kb picks the motion (kbIn, kbOut,\n    kbLeft, kbRight, or none), --shade the darkness (default .35), class\n    "blur" softens a busy image, and class "tint" washes it in the accent\n    color. An empty slot shows the gradient glow instead. scripts/video/\n    media.js finds stock photos and clips and writes their credits.\n  - Music comes from <body data-*>: data-music is the genre (pop, house,\n    hiphop, acoustic, cinematic, tech, lofi, calm, phonk, jersey, funk,\n    chiptune) or none; data-bpm, data-key (C, F#, ...), data-mode (major or minor),\n    data-energy (1-5), and data-motif, the project\'s signature hook in\n    scale degrees, e.g. "1 3 5 6 | 5 3 2 -" (references/sound-guide.md).\n    data-drop is when the beat comes in; data-break="8.5-13.5" thins it\n    out under quieter scenes.\n    data-music-src="assets/track.mp3" (with data-music-start, in seconds)\n    uses a licensed track instead; data-music-at brings it in later than 0s.\n    data-duration sets the length.\n  - data-voice="assets/voice-1.m4a" on any element adds a voiceover line at\n    that element\'s --voice time (or --in); <body data-voice-src="..."\n    data-voice-start="..."> takes one continuous take instead. The music and\n    effects duck under the voice (references/sound-guide.md).\n  - data-sfx="sound:var" plays a sound effect at the time in that element\'s\n    --var (default --in). Several can be listed: data-sfx="swish:in tick:tick".\n    Sounds: pop (a note that climbs the chord when words land in quick\n    succession), swish, tick (climbs a scale across a run of ticks), whoosh,\n    click, chime, and the meme cues: boom, scratch (record scratch), horn\n    (air horn), rimshot, fail (sad trombone, 2s), drumroll (1.5s, so cue it\n    1.5s before the hit), ding (right answer), buzzer (wrong), ping (a\n    message), typing, shutter, cash (ka-ching), glitch, and bass (sub drop);\n    the edit\'s: impact (a tight hit), and riser and reverse, which build\n    into the time they\'re cued on; and 8-bit ones for pixel art: coin,\n    jump, powerup, blip, and hurt.\n  - Everyday / FYP pieces (every page has them; the templates in\n    references/fyp-formats.md show each one in use). <body class="fyp">\n    switches to TikTok Sans, the platform\'s own caption font.\n      .cap: a caption in the platform\'s style, each wrapped line boxed:\n        <div class="cap pop" style="--in:1s"><span>pov: ...</span></div>\n        Variants: .dark, .hl (accent), .out (white, black outline), .left.\n      .say: word-by-word captions, one <i style="--in:2.1s"> per word.\n      .sticker: a tilted label (.yellow, .light, .dark). .stamp: a score\n        slammed on at --in (.ok, .bad). .emoji: a big emoji that bounces\n        in and sways.\n      .ring: a 3-2-1 countdown, <div class="ring"><b></b></div>. .timerbar\n        drains and .progress fills (to --pct), both over --for.\n      .poll with .opt bars growing to --pct (show real poll numbers only).\n      .stack piles its children in one spot; .swap pops one in at --in and\n        out at --out, so items replace each other in place.\n      .split with two .pane (expectation / reality); .grid of .cell\n        (starter pack); .tiers of .tier.s/.a/.b/.c/.d holding .item chips.\n      Generic, clearly fictional mockups: .chat (.msg.them / .msg.me, each\n        with a .bub; .typing dots show between --in and --out), a .lock\n        screen with .notif cards stacking in, a .post with a .heart that\n        fills at --like and .reply comments, and a .popup dialog.\n      .wipe: its second .side wipes over the first at --at (before/after).\n      .flash whites out the frame at --in; .hit zooms and shakes what it\n        wraps at --hit.\n  - Editing (scripts/video/edit.js writes these; references/\n    editing-techniques.md maps each to its name): a class on a .bg slot\n    sets how it comes in (t-cut, t-punch, t-whip, t-slide, t-zoom, t-wipe,\n    t-glitch, t-spin, t-blur, t-mask, t-leak); .flash, .leak, and .burn\n    are overlays dropped on a cut, and .bars and .blocks are graphic\n    transitions that cover the frame as the cut happens (edit.js overlayAt); --kb also takes kbDyn, kbDynOut, kbUp,\n    and kbDown. <div class="cam"> around the backgrounds is the camera:\n    data-punch="1.08" punches in on each *keyword* (render.js), and its\n    animations shake (camShake), punch (camPunch), or glitch (camGlitch).\n    hk-zoom on the first slot, and hk-glitch, hk-shake, or hk-bounce on\n    the hook, are the visual hook. <body class="fx-grain fx-vignette">\n    adds film grain and a vignette; cap-bounce, cap-kinetic, and cap-fade\n    animate the synced captions.\n    A photo or clip can go in a .pane, .side, or .cell too, as\n    <img class="bg-media" src="...">.\n  - Graphics over the picture (scripts/video/graphics.js writes them, one\n    line each: lower thirds, arrows, circles, boxes, highlights, spotlights,\n    pins, icons, bursts, kinetic type, and HUD elements): a <div\n    class="gx-layer"> after the camera holds one .gx per graphic, timed by\n    its --in and --out and placed in the frame\'s pixels. data-word="..."\n    on one has render.js move it to when that word is said, once the\n    captions are timed.\n  - The hook: give the first thing on screen class "now" instead of an\n    entrance (pop, rise, ...), so it shows on frame 0, which is the default\n    cover and the moment a viewer decides to stay. render.js --check warns\n    when the first frame has no text.\n  - Hook variants: data-variant="a" (or "b", "c") on the elements that\n    differ; render.js --variants a,b,c renders one video per variant.\n  - Captions synced to a voice line: <div class="say auto"\n    data-voice="assets/voice-2.wav" style="--voice:3.4s">The line.</div>\n    (render.js times them to the clip; see captions.js).\n  - Filmed clips with their own sound: <video class="bg-media" id="take"\n    src="assets/take.mp4" data-audio> plays the clip\'s sound in sync with\n    it, and <div class="say auto" data-clip="take">what\'s said</div>\n    captions it. scripts/video/cut.js cuts the pauses out of a take and\n    writes a page like this. A clip in a smaller box (a screen recording in\n    a phone frame) is cut to that box\'s shape.\n  - .endcard: the logo and handle at the end, added by brand.js from the\n    Visual Identity in references/brand-voice.md.\n  - Images (screenshots, photos, logos) go in an assets/ folder next to the\n    page and load with a relative src. People, products, and results must be\n    real ones the user supplied; stock and AI images are only for settings\n    and mood.',
     body_attrs='data-duration="24" data-drop="3" data-music="tech" data-bpm="120" data-key="C" data-mode="major" data-energy="3" data-motif="1 5 3 5 | 6 5 3 2"',
     css='  /* scene 2/3: the to-do list */\n  .listhead { position: relative; height: 180px; margin-bottom: 28px; }\n  .listhead > div { position: absolute; left: 0; bottom: 0; }\n  .chips { display: flex; flex-direction: column; gap: 18px; }\n  .chip { display: flex; align-items: center; gap: 26px; align-self: flex-start;\n          background: var(--card); border: 2px solid var(--line); border-radius: 22px;\n          padding: 20px 34px 20px 24px; font-size: 46px; font-weight: 600;\n          animation: slideIn .4s cubic-bezier(.2,.8,.2,1) var(--in) both,\n                     dim .3s ease-out var(--tick) forwards; }\n  .chip:nth-child(even) { margin-left: 34px; }\n  @keyframes dim { to { color: var(--muted); border-color: #3a2a24; } }\n  .box { width: 52px; height: 52px; border-radius: 12px; border: 4px solid #5a5966; flex: none;\n         display: grid; place-items: center;\n         animation: tick .25s ease-out var(--tick) forwards; }\n  @keyframes tick { to { background: var(--accent); border-color: var(--accent); } }\n  .box svg { width: 34px; height: 34px; animation: checkIn .3s cubic-bezier(.2,.9,.3,1.4) var(--tick) both; }\n  @keyframes checkIn { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: none; } }\n  .tag { display: inline-block; font-size: 40px; font-weight: 600; color: var(--muted); margin-top: 10px; }\n\n  /* scene 4: approval card */\n  .card { background: var(--card); border: 2px solid var(--line); border-radius: 32px; padding: 40px; margin-top: 56px; position: relative; }\n  .cardtop { display: flex; justify-content: space-between; align-items: center; font-size: 36px; color: var(--muted); font-weight: 600; }\n  .pill { position: relative; height: 62px; width: 330px; }\n  .pill span { position: absolute; right: 0; top: 0; height: 62px; padding: 0 26px; border-radius: 31px;\n               display: flex; align-items: center; font-size: 32px; font-weight: 700; white-space: nowrap; }\n  .p1 { background: #3a2f17; color: var(--warn); animation: fadeOut .2s linear var(--flip) forwards; }\n  .p2 { background: #163626; color: var(--ok); animation: popIn .4s cubic-bezier(.2,.9,.3,1.3) var(--flip) both; }\n  .posttext { font-size: 44px; font-weight: 600; line-height: 1.3; margin: 34px 0 26px; }\n  .bar { height: 26px; border-radius: 13px; background: #2a2a33; margin-bottom: 18px; }\n  .btn { margin-top: 26px; height: 108px; border-radius: 24px; background: var(--accent); color: var(--on-accent);\n         display: grid; place-items: center; font-size: 46px; font-weight: 800;\n         animation: press .3s ease-in-out var(--press) both, done .3s ease-out var(--flip) forwards; }\n  @keyframes press { 0% { transform: none; } 40% { transform: scale(.94); } 100% { transform: none; } }\n  @keyframes done { to { background: #2a2a33; color: var(--muted); } }\n  .cursor { position: absolute; width: 90px; height: 90px; left: 520px; top: 440px;\n            animation: fadeIn .2s ease-out var(--cin) both, cursorMove .6s cubic-bezier(.3,.7,.2,1) var(--cin) both; }\n  @keyframes cursorMove { from { transform: translate(260px, 380px); } to { transform: none; } }\n\n  /* scene 6: terminal */\n  .term { margin-top: 56px; background: #08080b; border: 2px solid var(--line); border-radius: 28px; overflow: hidden; }\n  .termbar { height: 58px; background: #16161c; display: flex; align-items: center; gap: 14px; padding-left: 26px; }\n  .termbar i { width: 20px; height: 20px; border-radius: 50%; background: #3a3a44; display: block; }\n  .termbody { padding: 30px 34px 34px; font-family: "JetBrains Mono", "DejaVu Sans Mono", monospace; font-size: 36px; line-height: 1.5; color: #d9d8d2; }\n  .termbody .dollar { color: var(--accent); }\n  .caret { display: inline-block; width: 20px; height: 40px; background: #d9d8d2; vertical-align: -6px; animation: blink 1s steps(1) 0s infinite; }\n  @keyframes blink { 50% { opacity: 0; } }\n',
     body='  <!-- Scene 1 (0–3s): hook, readable sound-off -->\n  <div class="scene" style="--out:2.75s">\n    <div class="huge now" style="--in:.05s" data-sfx="pop">Stop writing</div>\n    <div class="huge pop" style="--in:.4s" data-sfx="pop">marketing</div>\n    <div class="huge pop" style="--in:.75s" data-sfx="pop">posts</div>\n    <div class="huge pop accent" style="--in:1.1s" data-sfx="pop">by hand.</div>\n  </div>\n\n  <!-- Scenes 2+3 (3–12.5s): the week\'s list, then it gets done -->\n  <div class="scene" style="--out:12.25s" data-sfx="whoosh:out">\n    <div class="listhead">\n      <div class="big gone" style="--in:3.05s; --out:7.0s" data-sfx="whoosh:out">Your week:</div>\n      <div style="bottom:0">\n        <div class="mid rise" style="--in:7.3s">One plugin. <span class="accent">12 skills.</span></div>\n        <div class="tag fade" style="--in:7.7s">marketing-skill for Claude Code</div>\n      </div>\n    </div>\n    <div class="chips">\n      <div class="chip" style="--in:3.4s;  --tick:8.3s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>Competitor research</div>\n      <div class="chip" style="--in:3.75s; --tick:8.65s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>LinkedIn post</div>\n      <div class="chip" style="--in:4.1s;  --tick:9.0s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>X thread</div>\n      <div class="chip" style="--in:4.45s; --tick:9.35s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>SEO brief</div>\n      <div class="chip" style="--in:4.8s;  --tick:9.7s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>Ad copy variants</div>\n      <div class="chip" style="--in:5.15s; --tick:10.05s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>Cold emails</div>\n      <div class="chip" style="--in:5.5s;  --tick:10.4s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>TikTok script</div>\n      <div class="chip" style="--in:5.85s; --tick:10.75s" data-sfx="swish:in tick:tick"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>Reddit post</div>\n    </div>\n  </div>\n\n  <!-- Scene 4 (12.5–17.5s): nothing ships without approval -->\n  <div class="scene" style="--out:17.35s" data-sfx="whoosh:out">\n    <div class="big rise" style="--in:12.55s">Nothing posts</div>\n    <div class="big rise accent" style="--in:12.85s">until you say so.</div>\n    <div class="card rise" style="--in:13.3s">\n      <div class="cardtop">\n        <div>LinkedIn · Tue 9:00</div>\n        <div class="pill" style="--flip:15.1s" data-sfx="chime:flip"><span class="p1">Ready for approval</span><span class="p2">Approved ✓</span></div>\n      </div>\n      <div class="posttext">We cut onboarding from 14 days to 3. Here\'s what we stopped doing:</div>\n      <div class="bar" style="width:92%"></div>\n      <div class="bar" style="width:78%"></div>\n      <div class="btn" style="--press:14.85s; --flip:15.1s" data-sfx="click:press">Approve</div>\n      <svg class="cursor" style="--cin:14.1s" viewBox="0 0 24 24"><path d="M4 2.5l15 9.2-6.6 1.4 3.9 7.3-2.7 1.4-3.9-7.3L4.6 19z" fill="#fff" stroke="#0f0f13" stroke-width="1.3" stroke-linejoin="round"/></svg>\n    </div>\n  </div>\n\n  <!-- Scene 5 (17.5–20.7s): free, open, editable -->\n  <div class="scene" style="--out:20.55s" data-sfx="whoosh:out">\n    <div class="huge pop" style="--in:17.6s" data-sfx="pop">Free.</div>\n    <div class="huge pop" style="--in:17.95s" data-sfx="pop">Open source.</div>\n    <div class="huge pop accent" style="--in:18.3s" data-sfx="pop">Yours to edit.</div>\n    <div class="small fade" style="--in:18.9s; margin-top:40px">Every skill is a plain SKILL.md file.</div>\n  </div>\n\n  <!-- Scene 6 (20.7–24s): CTA -->\n  <div class="scene">\n    <div class="big rise" style="--in:20.75s">Get it on GitHub</div>\n    <div class="mid rise accent" style="--in:21.05s; margin-top:18px">marcosmodly/<br>marketing-skill</div>\n    <div class="term rise" style="--in:21.5s">\n      <div class="termbar"><i></i><i></i><i></i></div>\n      <div class="termbody"><span class="dollar">$</span> claude plugin install<br>&nbsp;&nbsp;marketing-skill@marketing-skill<span class="caret"></span></div>\n    </div>\n  </div>\n')
@@ -1384,6 +1628,7 @@ for name, t in TEMPLATES.items():
     t["kit"] = KIT
     t["edit"] = EDIT
     t["looks"] = LOOKS
+    t["graphics"] = GRAPHICS
     t["fx_script"] = FX_SCRIPT
     t.setdefault("head_extra", "")
     t["doc"] = t["doc"] + ("" if name == "promo.html" else POINTER)

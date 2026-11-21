@@ -57,6 +57,7 @@ const path = require('path');
 const { fileURLToPath, pathToFileURL } = require('url');
 const { buildSoundtrack, wavBuffer, parseMotif, SOUNDS, GENRES } = require('./soundtrack');
 const captions = require('./captions');
+const graphics = require('./graphics');
 
 // The frame: 1080x1920 unless the page asks for another (useFrameOf, as each page opens).
 let WIDTH = 1080;
@@ -1146,8 +1147,58 @@ function prepareVoiceFiles(files) {
 
 // Prepares every voice clip before any frame is captured, so the page can use real line
 // lengths: checks each line fits its scene, and puts word-by-word captions in every
-// <div class="say auto" data-voice>. Returns { problems, cues } (cues for an .srt file).
+// <div class="say auto" data-voice>. Then moves any graphic timed to a word onto that word.
+// Returns { problems, cues } (cues for an .srt file).
 async function prepareVoices(page, settings) {
+  const voiced = await timeVoices(page, settings);
+  voiced.problems.push(...await anchorGraphics(page, settings));
+  return voiced;
+}
+
+// Graphics timed to a word (graphics.js writes data-word="..." when the words weren't timed yet):
+// once the captions are, each moves to the first time its word is said at or after where it was
+// placed (the start of its line or shot), stays its data-for seconds, and its sound
+// (data-gx-sfx, kept off data-sfx so it isn't cued at the old time) is cued there. One whose word
+// isn't said stays where it was placed, and is reported.
+async function anchorGraphics(page, settings) {
+  const found = await page.evaluate(() => {
+    const toSeconds = (v) => (String(v || '').trim().endsWith('ms') ? parseFloat(v) / 1000 : parseFloat(v));
+    const words = [...document.querySelectorAll('.say.auto i')]
+      .map((w) => ({ text: w.textContent, start: toSeconds(w.style.getPropertyValue('--in')) }))
+      .filter((w) => Number.isFinite(w.start)).sort((a, b) => a.start - b.start);
+    const items = [...document.querySelectorAll('.gx[data-word], .gx[data-gx-sfx]')].map((el, i) => {
+      el.dataset.gxIndex = String(i);
+      return { i, word: el.dataset.word || '', for: parseFloat(el.dataset.for), at: toSeconds(el.style.getPropertyValue('--in')), sfx: el.dataset.gxSfx || '' };
+    });
+    return { words, items, duration: parseFloat(document.body.dataset.duration) };
+  });
+  if (!found.items.length) return [];
+  const problems = [];
+  const moves = [];
+  for (const it of found.items) {
+    let at = it.at;
+    if (it.word) {
+      const t = graphics.findWord(found.words, it.word, it.at);
+      if (t === null) problems.push(`a graphic is timed to "${it.word}", which isn't said after ${it.at.toFixed(2)}s; it shows at ${it.at.toFixed(2)}s`);
+      else {
+        at = t;
+        const end = Number.isFinite(found.duration) ? found.duration - 0.05 : Infinity;
+        moves.push({ i: it.i, at: Math.round(t * 1000) / 1000, out: Math.round(Math.min(end, t + (it.for || 2.5)) * 1000) / 1000 });
+      }
+    }
+    if (it.sfx) settings.cues.push(...it.sfx.split(/\s+/).filter(Boolean).map((sound) => ({ sound, time: at })));
+  }
+  await page.evaluate((list) => {
+    for (const m of list) {
+      const el = document.querySelector(`.gx[data-gx-index="${m.i}"]`);
+      el.style.setProperty('--in', `${m.at}s`);
+      el.style.setProperty('--out', `${m.out}s`);
+    }
+  }, moves);
+  return problems;
+}
+
+async function timeVoices(page, settings) {
   const problems = [];
   const cues = [];
   // the caption styles go in whenever a page has auto captions, voiced or not (narrated.html

@@ -7,6 +7,9 @@ for when the user names one ("add a whip pan", "glitch into the demo",
 they choose how a video is cut. The settings live in
 `scripts/video/edit.js` (the editing styles, transitions, and camera) and
 in the shared editing block of `scripts/video/templates/build.py` (their CSS).
+Graphics over the picture (lower thirds, callouts, motion graphics, kinetic
+type, HUD elements) are in `scripts/video/graphics.js`; see
+[Graphics](#graphics) below.
 
 Three words to keep apart, because users mix them:
 - A **hook** is the opening that stops the scroll, in up to three layers: the
@@ -140,22 +143,23 @@ one step.
 | Distortion effect | Partly: `glitch` tears and offsets the picture. Warps and bends are not built |
 | Light leak | `leak`: warm light sweeps across the cut |
 | Film burn | `burn`: a hot flare that whites out the cut (the `cinematic` drop) |
+| Shape transition | `bars` (three slanted bands in the brand's colors sweep across and hide the cut) and `blocks` (tiles in the accent pop in and out in a diagonal wave) |
 | Chromatic aberration | Only for a moment, in `glitch`. A steady colored-edge look is not built |
 
 ### Text and typography
 
 | Technique | How here |
 |---|---|
-| Kinetic typography | `captions-fx: kinetic`, `hook-fx: bounce`, the bold look (`captions: bold`), the 3D `title` shot |
+| Kinetic typography | `text "10x *faster*" @faster anim=slam` (a [graphic](#graphics): big words that slam, pop, rise, wave, stretch, glitch, or type in on a word); `captions-fx: kinetic`, `hook-fx: bounce`, the bold look (`captions: bold`), the 3D `title` shot |
 | Word-by-word captions | Every narrated video and filmed take: timed to the voice, the word being said highlighted |
 | Subtitle pop-ups | `captions-fx: bounce` (each chunk springs in) or `pop`; `captions: subtitle` for small, quiet ones |
-| Text reveal | `captions-fx: kinetic` (words rise in as said); a template's `.rise` and `.slide` entrances |
-| Typewriter effect | The 3D `terminal` and `agent` shots type their lines. Captions follow the voice word by word, never letter by letter |
+| Text reveal | `text "..." anim=rise` (letters rise out of a mask); `captions-fx: kinetic` (words rise in as said); a template's `.rise` and `.slide` entrances |
+| Typewriter effect | `text "..." anim=type`; the 3D `terminal` and `agent` shots type their lines. Captions follow the voice word by word, never letter by letter |
 | Text bounce | `hook-fx: bounce`, `captions-fx: bounce`, a template's `.pop` and `.stamp` |
 | Text tracking | By hand, in a template's CSS (`letter-spacing`); `.label` is set wide |
 | 3D typography | The 3D `title` shot: big 3D letters dropping onto the floor |
 | Text masking | Not built (footage inside the letters, or text behind a subject) |
-| Callout text | A montage `[callout: 30%,60% solid oak]`, a `.sticker`, the how-to template's tap ring |
+| Callout text | `pin 62%,40% "solid oak"`, or an `arrow`, `circle`, or `box` with a label ([graphics](#graphics)); a montage `[callout: 30%,60% solid oak]`, a `.sticker`, the how-to template's tap ring |
 | Text wipe | Not built for text; `.wipe` wipes between two pictures |
 | Kinetic subtitles | `captions-fx: bounce` (the word being said swells), with `*keywords*` lit and bigger in every caption style |
 
@@ -166,13 +170,14 @@ one step.
 | UI animation | The 3D `terminal`, `agent`, and `button` shots; the how-to phone with taps; the chat, notification, and post mockups in the everyday templates |
 | Screen replacement | `[bg: assets/me-laptop.jpg screen=assets/app.png at=...]` puts the user's screenshot on the screen in their photo; 3D props hold it (`prop=phone`, `laptop`, `desk src=`) |
 | Device mockup animation | The how-to template's phone, the 3D `hero` (a phone), `desk`, and the mascot holding a laptop or phone |
-| Shape animation | The 3D `shapes` and `rings` shots |
-| Icon animation | The 3D `icons` shot (app tiles dropping into a grid) |
+| Shape animation | `shapes burst`, `rings`, `lines` (speed lines), and `dots` over any picture; the 3D `shapes` and `rings` shots |
+| Icon animation | `icon check 78%,30% @done` (an icon drawn on a badge with a burst; or any emoji); the 3D `icons` shot (app tiles dropping into a grid) |
 | Logo animation | The end card (`brand.js`): the logo pops in on the sonic logo; the 3D `coin` with the logo on it |
-| Lower thirds | A montage shot's label (`.lt`); the team template |
-| Infographic animation | The 3D `chart` (the user's real numbers only), `.count` count-ups, `.poll`, `.progress` |
-| Callout animation | `[callout: ...]`, the tap ring |
-| Particle animation | Confetti on the mascot's `cheer` and the `button` shot; pixel `coins`; film `grain` |
+| Lower thirds | `lower "Maya Lopez" "Founder, Juniper"` over any picture, set as a bar, a box, a line, or a tech panel; a montage shot's label (`.lt`); the team template |
+| Infographic animation | `hud data` (a panel whose numbers count up, a percentage as a filling bar) and `text "$12,400" anim=count`; the 3D `chart`; `.count` count-ups, `.poll`, `.progress`. The user's real numbers only |
+| Callout animation | `arrow`, `circle`, `box`, `highlight`, `spot`, and `pin` ([graphics](#graphics)), each drawn in; `[callout: ...]`, the tap ring |
+| HUD / UI elements | `hud lock` (a targeting reticle locking on, with a readout), `hud frame` (corner brackets, a blinking REC, a ruler, a scan line), `hud data` (a data panel), `hud scan` (a scan line sweeping a region over a grid) |
+| Particle animation | `shapes confetti`; confetti on the mascot's `cheer` and the `button` shot; pixel `coins`; film `grain` |
 | Morphing | Not built |
 | Rive/Lottie animation | Not built: the pages animate with CSS (and three.js), which the renderer seeks frame by frame |
 
@@ -220,6 +225,63 @@ sound would drift. The renderer plays it at normal speed and says so.
 | Bloom | Not built for photos |
 | Motion blur | On `whip`, `spin`, and `blur` transitions; not on a subject moving in a clip |
 | Sharpening | Not built. `render.js` warns when a photo is shown far above its own size, which is what makes it soft |
+
+## Graphics
+
+Graphics go over the picture: the user's own footage (`cut.js --gfx`), a
+narrated video (`[gfx: ...]` on a line in `compose.js`), or a montage
+(`[gfx: ...]` on a shot in `montage.js`). Each is one line, written the same
+way in all three, and `scripts/video/graphics.js` has the full list:
+
+```
+<kind> [what] [x%,y%] ["text" ...] @<when> [+seconds] [key=value ...]
+```
+
+| Kind | Line | What it does |
+|---|---|---|
+| Lower third | `lower "Maya Lopez" "Founder, Juniper" @0.5 +4` | The name and title near the bottom of the picture, above the captions. `style=bar` (an accent bar and a dark panel), `box` (the name on the accent, the title on white), `line` (a rule drawn under the name), or `tech` (a HUD panel); the look picks one when `style=` doesn't. `side=right` |
+| Arrow | `arrow 62%,40% "the new button" @button` | An arrow drawn in to that point, its label at the tail. `from=ul\|ur\|dl\|dr` puts the tail; by default it comes from the middle of the frame |
+| Circle | `circle 62%,40% "this one" @3.2 r=130` | A ring drawn around the point by hand, a little more than once around |
+| Box | `box 10%,30%,80%,12% "before"` | A rectangle drawn around a region (x, y, width, height), its label on a tab |
+| Highlight | `highlight 10%,42%,80%,6%` | A marker swipe over a region, yellow by default: a line of text in a screen recording |
+| Spotlight | `spot 50%,35% "her reaction" r=240` | Everything but a circle dims |
+| Pin | `pin 62%,40% "solid oak"` | A dot on the point with a label |
+| Icon | `icon check 78%,30% @done` | An icon drawn on a badge, with a burst: `check`, `cross`, `plus`, `minus`, `star`, `heart`, `bolt`, `play`, `clock`, `up`, `down`, `chat`, `search`, `bell`, `lock`, or any emoji (`icon 🔥 ...`). `style=plain` drops the badge |
+| Accent | `shapes burst 50%,40%` | `burst` (lines flying out of a point), `rings` (a ping), `lines` (speed lines across the frame), `dots`, or `confetti` |
+| Kinetic type | `text "10x *faster*" @faster anim=slam` | Big words animated in on a word. `anim=pop`, `slam` (with a jolt), `type`, `rise`, `wave`, `stretch`, `glitch`, or `count` (a number counting up); `size=s\|m\|l\|xl`; `style=box` or `outline`; `*words*` take the accent; x%,y% moves its center |
+| HUD | `hud lock 50%,32% "TARGET ACQUIRED"` | A reticle locking onto the point, with a typed readout |
+| | `hud frame "CAM 01" +6` | Corner brackets around the picture, a blinking REC dot and label, a ruler, one scan line |
+| | `hud data "This week" "Users" "1,920" "Churn" "2%"` | A data panel: label and value pairs, numbers counting up, a percentage as a filling bar; an odd first text is its title |
+| | `hud scan 10%,30%,80%,30% "SCANNING"` | A scan line sweeping a region over a grid |
+
+**When:** `@2.5` is seconds (into the cut take for `cut.js`, into the line or
+shot for `compose.js` and `montage.js`); `@button` or `@"the new button"`
+brings it in as that word is first said, which is how a graphic lands on the
+beat of the speech. `cut.js` times words from `--text`; in a narrated video
+or a montage, `render.js` times them once the captions are. `+3` is how
+long it stays.
+
+**Where:** `x%,y%` is a point of the whole frame, 0,0 at the top left; a
+region is `x%,y%,w%,h%`. To point at something in the picture, look at a
+frame first (`render.js page.html --stills 2.5`, or `montage.js frames
+clip.mp4`) and read off where it is, then check the result the same way.
+Keep labels and type clear of the hook at the top and the captions low in
+the frame, and in from the right edge on a vertical video; `--check` (which
+`cut.js`, `compose.js`, and `montage.js` run) reports a label that runs into
+other text or leaves the safe zone. A graphic stays where it's put: on a
+clip where the subject moves, keep it short or point at what holds still.
+
+**Color and sound:** `color=yellow|white|red|green|blue|cyan|black|#hex`
+(default the accent). Kinetic type, icons, and accents bring a sound when
+the edit style wants sounds on its hits (`slam` an impact, `type` typing,
+`icon` a pop); callouts, lower thirds, and HUD elements are silent, so they
+don't crowd the voice. `sfx=<sound>` gives any graphic one, `sfx=none`
+takes it away.
+
+**Taste:** one graphic at a time, each on the word it's about, and only the
+ones that help the viewer follow: the speaker's name once, an arrow to the
+thing being talked about, the number that matters. Numbers, results, and
+names on screen are the user's real ones, like everything else.
 
 ## A 15-second software ad, cut by the book
 

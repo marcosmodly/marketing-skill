@@ -71,7 +71,8 @@
  *   hook-audio: silence      # what plays under the hook: build (the music's intro builds into the drop,
  *                            # the default) or silence (the voice alone, then the music lands on the drop)
  *   transitions: whip, punch # the cuts between lines, in turn (fade, cut, flash, slide, whip, zoom, punch,
- *                            # wipe, glitch, spin, blur, mask, leak, burn); drop: the one out of the hook
+ *                            # wipe, glitch, spin, blur, mask, leak, burn, and the graphic bars and
+ *                            # blocks); drop: the one out of the hook
  *   punch: 10%               # the camera punching in on each *keyword* as it's said (no to turn it off)
  *   captions-fx: kinetic     # pop, bounce, kinetic, or fade
  *   grain: yes               # film grain; vignette: yes darkens the edges
@@ -81,6 +82,11 @@
  * cut between as it's said (b-roll; one query alone fetches as many as the line needs), and
  * [sfx: ping] for a sound as the line starts (any sound in references/sound-guide.md: a
  * notification, a click, a ka-ching under the hook when it explains the picture).
+ * [gfx: ...] puts a graphic over the picture while the line plays, one tag per graphic
+ * (graphics.js has them all): a lower third, an arrow, circle, box, highlight, spotlight, or pin,
+ * an icon, a burst or confetti, kinetic type, or HUD elements. Its @word comes in as that word of
+ * the line is said (render.js times it with the captions); @seconds is that far into the line.
+ *   3. It closes in *two clicks* [gfx: icon check 74%,30% @clicks] [gfx: text "2 clicks" @two anim=slam]
  *
  * Your own character: "character: assets/hero.glb" puts the user's rigged 3D character (a .glb
  * from Blender, Ready Player Me, or VRoid, a .vrm, or Mixamo's .fbx) in the robot mascot's place in every shot it
@@ -116,6 +122,7 @@ const { SOUNDS } = require('./soundtrack');
 const EDIT = require('./edit');
 const LOOK = require('./look');
 const FIT = require('./fit');
+const GFX = require('./graphics');
 const captions = require('./captions');
 
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -413,16 +420,20 @@ async function main() {
     const source = /\[source:\s*([^\]]+)\]/i.exec(text);
     // [sfx: ping] plays a sound as the line starts: a notification, a tap, a sale under the hook
     const sfx = /\[sfx:\s*([^\]]+)\]/i.exec(text);
-    const said = text.replace(/\s*\[(bg|shot|cut|card|source|sfx):[^\]]*\]/gi, '').trim();
+    // [gfx: ...] puts a graphic over the picture while the line plays (graphics.js); any number of them
+    const gfx = [...text.matchAll(/\[gfx:\s*([^\]]+)\]/gi)].map((m) => GFX.parse(m[1].trim()));
+    const said = text.replace(/\s*\[(bg|shot|cut|card|source|sfx|gfx):[^\]]*\]/gi, '').trim();
     return {
       n, text: plainText(said), kw: keywords(said), no: cautions(said),
       bg: bg.query, more: bgs.slice(1).map((b) => b.query), screen: bg.screen, at: bg.at, focus: bg.focus, shot: shot ? parseShot(shot[1]) : null,
       cut: cut ? cut[1].trim().toLowerCase() : null, card: card ? card[1].trim() : null, source: source ? source[1].trim() : null,
-      sfx: sfx ? sfx[1].trim().toLowerCase().split(/[\s,]+/).filter(Boolean) : [],
+      sfx: sfx ? sfx[1].trim().toLowerCase().split(/[\s,]+/).filter(Boolean) : [], gfx,
     };
   }).filter((l) => l.text);
   const badSfx = lines.find((l) => l.sfx.some((s) => !SOUNDS.includes(s)));
   if (badSfx) fail(`Line ${badSfx.n}: [sfx: ${badSfx.sfx.join(' ')}]? The sounds are ${SOUNDS.join(', ')} (references/sound-guide.md).`);
+  const badGfx = lines.find((l) => l.gfx.some((g) => g.error));
+  if (badGfx) fail(`Line ${badGfx.n}: ${badGfx.gfx.find((g) => g.error).error}`);
   const badCut = lines.find((l) => l.cut && !EDIT.TRANSITIONS[l.cut]);
   if (badCut) fail(`Line ${badCut.n}: [cut: ${badCut.cut}]? The transitions are ${Object.keys(EDIT.TRANSITIONS).join(', ')}.`);
   if (lines[0] && lines[0].cut) console.warn(`Note: [cut: ...] on line ${lines[0].n} is ignored; it says how a line comes in, and the first is on screen from frame 0.`);
@@ -729,6 +740,23 @@ async function main() {
   }
   // overlays dropped on a cut (a flash, a light leak, a film burn), and the flash hook
   const overlays = shots.filter((x, i) => i > 0).map((x) => EDIT.overlayAt(x.transition, x.start)).filter(Boolean);
+
+  // ---- graphics over the picture ([gfx: ...]): from the line's voice, or on one of its words,
+  // timed here when the line's words already are, and otherwise by render.js with the captions
+  const gfxItems = [];
+  scenes.forEach((s, i) => {
+    for (const g of s.gfx) {
+      if (g.word && GFX.findWord(s.text.split(/\s+/).map((text) => ({ text, start: 0 })), g.word) === null) {
+        fail(`Line ${s.n}: [gfx: ${g.spec}] is timed to "${g.word}", which isn't in the line.`);
+      }
+      const words = wordsFor(i);
+      const placed = GFX.place(g, { base: s.voiceAt, words: words.length ? words : null, end: duration });
+      if (placed.error) fail(`Line ${s.n}: ${placed.error}`);
+      gfxItems.push(placed);
+    }
+  });
+  const gfxHtml = GFX.layer(gfxItems, { W: landscape ? 1920 : 1080, H: landscape ? 1080 : 1920, sounds: !!edit.cutSfx,
+    defaults: GFX.defaultsFor({ edit: edit.name, look: look && look.name }) });
   if (edit.hook === 'flash') overlays.unshift('  <div class="flash" style="--in:.08s" data-lint="off"></div>');
 
   // ---- the camera: every picture sits in one layer that punches in, shakes, or glitches on the
@@ -760,7 +788,7 @@ async function main() {
 ${head}
 <body ${attrs}>
 ${layers}
-${overlays.length ? `${overlays.join('\n')}\n` : ''}${cues.length ? `${cues.join('\n')}\n` : ''}${corners}
+${gfxHtml}${overlays.length ? `${overlays.join('\n')}\n` : ''}${cues.length ? `${cues.join('\n')}\n` : ''}${corners}
 
 ${sceneHtml}
 ${inserts}</body>
@@ -776,6 +804,7 @@ ${inserts}</body>
     const pics = mine.length ? `  ${mine[0].card ? `card "${plainText(mine[0].card)}"` : mine[0].media ? `bg ${mine[0].media}` : 'no bg'}${mine.length > 1 ? ` +${mine.length - 1} more` : ''}${i > 0 ? ` (${mine[0].transition})` : ''}${s.source ? ', sourced' : ''}` : '';
     console.log(`  ${String(s.n).padStart(2)}. ${s.start.toFixed(2)}–${s.end.toFixed(2)}s  ${s.clip}${pics}${s.shot && style.shots ? `  shot ${s.shot.name}` : ''}  ${s.text.slice(0, 48)}${s.text.length > 48 ? '...' : ''}`);
   }
+  for (const g of gfxItems) console.log(`  graphic: ${GFX.describe(g)}`);
   if (look) console.log(`  look: ${look.name}${look.goal && !meta.look ? ` (for goal: ${look.goal})` : ''}: ${look.about}${headFont ? `; headline in ${headFont[0]}` : ''}.`);
   console.log(`  edit: ${edit.name}${edit.picked ? ' (picked to fit the sound; set edit: to choose)' : ''}: ${edit.about}. Motion: ${edit.motion}. Hook: ${edit.hook}; keyword punch-ins: ${edit.punch ? `${Math.round((edit.punch - 1) * 1000) / 10}%` : 'off'}${pixel ? ' (pixel art: whole-pixel zooms that jump, never glide)' : ''}${edit.jcut ? `; J-cuts ${edit.jcut}s` : ''}.`);
   for (const n of fitNotes) console.warn(`Note: ${n}`);

@@ -74,7 +74,8 @@
  *   [say: ...]          a voiceover line for this shot, captioned word by word
  *   [hold: 2 bars]      this shot's length (bars, beats, or seconds), instead of the pace
  *   [transition: cut]   how this shot comes in (fade, cut, flash, slide, whip, zoom, punch, wipe, glitch,
- *                       spin, blur, mask, leak, or burn; references/editing-techniques.md)
+ *                       spin, blur, mask, leak, burn, or the graphic bars and blocks;
+ *                       references/editing-techniques.md)
  *   [staged]            the "Virtually staged" badge a virtually staged photo needs
  *   [ai]                the "AI-animated" badge, for a clip a video model made from a photo
  *   [callout: 30%,60% solid oak]    a dot at that point of the photo, with a label; the shot holds still
@@ -93,6 +94,10 @@
  *                       freeze frame until the next point ([ramp: 1.5:0,2.3:1]). Set [hold:] with it.
  *   [facts]             the price and specs go on this shot instead of the last
  *   [depth: assets/maple-02-depth.png]   a depth map from elsewhere (white near) for this photo
+ *   [gfx: arrow 62%,40% "new roof" @1]   a graphic over the shot (graphics.js has them all: a lower
+ *                       third, an arrow, circle, box, highlight, spotlight, or pin, an icon, a burst or
+ *                       confetti, kinetic type, HUD elements); @seconds is into the shot, @word when a
+ *                       word of the shot's [say: ...] or voiceover is said. One tag per graphic.
  *
  * A shot without a move gets one that suits it, each the other way from the last: with a depth
  * map, an orbit across a wide photo and a dolly in or a rise on a tall one; without, a pan or a
@@ -140,6 +145,7 @@ const READ_WPS = 4; // words a second, the reading pace render.js --check holds 
 // how long each transition takes (edit.js has them all: fade, cut, flash, slide, whip, zoom,
 // punch, wipe, glitch, spin, blur, mask, leak, burn)
 const EDIT = require('./edit');
+const GFX = require('./graphics');
 const TRANSITIONS = Object.fromEntries(Object.entries(EDIT.TRANSITIONS).map(([k, v]) => [k, v.dur]));
 const leadOf = (name) => (EDIT.TRANSITIONS[name].lead === 0 ? 0 : Math.min(0.3, TRANSITIONS[name] / 2 + 0.05));
 // 3D moves draw the photo from its depth map, so the camera seems to move through the space
@@ -148,7 +154,7 @@ const MOVES = ['push-in', 'pull-out', 'pan-left', 'pan-right', 'pan-up', 'pan-do
 // each 3D move's flat stand-in, for a shot without a depth map
 const FLAT = { orbit: 'pan-right', 'orbit-left': 'pan-left', 'orbit-right': 'pan-right', dolly: 'push-in', 'dolly-in': 'push-in', 'dolly-out': 'pull-out', rise: 'pan-up' };
 const FITS = ['cover', 'contain', 'card'];
-const TAGS = ['move', 'fit', 'say', 'hold', 'transition', 'staged', 'ai', 'callout', 'before', 'from', 'to', 'sound', 'focus', 'facts', 'depth', 'speed', 'ramp'];
+const TAGS = ['move', 'fit', 'say', 'hold', 'transition', 'staged', 'ai', 'callout', 'before', 'from', 'to', 'sound', 'focus', 'facts', 'depth', 'speed', 'ramp', 'gfx'];
 
 function fail(message) {
   console.error(message);
@@ -449,7 +455,13 @@ Order the shots, give each a label, and add tags; see the top of scripts/video/m
 const TAG = /\[([a-z][\w-]*)(?::\s*([^\]]*))?\]/gi;
 function parseShotLine({ n, text }) {
   const tags = {};
-  for (const m of text.matchAll(TAG)) tags[m[1].toLowerCase()] = m[2] === undefined ? true : m[2].trim();
+  for (const m of text.matchAll(TAG)) {
+    const key = m[1].toLowerCase();
+    const value = m[2] === undefined ? true : m[2].trim();
+    // a shot can have any number of graphics
+    if (key === 'gfx') (tags.gfx = tags.gfx || []).push(value);
+    else tags[key] = value;
+  }
   const rest = text.replace(TAG, ' ').replace(/\s+/g, ' ').trim();
   const m = /^(\S+)\s*(.*)$/.exec(rest);
   if (!m) return null;
@@ -623,6 +635,9 @@ async function build(args) {
   const missing = [];
   for (const s of shots) {
     for (const t of Object.keys(s.tags)) if (!TAGS.includes(t)) notes.push(`shot ${s.n}: unknown tag [${t}] ignored (a bracketed placeholder left in?)`);
+    s.gfx = (s.tags.gfx || []).map((v) => GFX.parse(v === true ? '' : v));
+    const badGfx = s.gfx.find((g) => g.error);
+    if (badGfx) fail(`shot ${s.n}: ${badGfx.error}`);
     const file = path.join(dir, s.media);
     if (!fs.existsSync(file)) {
       missing.push(s.media);
@@ -1032,6 +1047,18 @@ async function build(args) {
     return `  <!-- shot ${s.n}, ${s.start}–${s.end}s -->\n  <div class="scene shot"${last ? '' : ` style="--out:${r2(s.end - 0.15)}s"`}>\n${parts.join('\n')}\n  </div>`;
   });
 
+  // ---- graphics over the shots ([gfx: ...]): from the shot's start, or on a word said in it
+  // (render.js times those once the captions are)
+  const gfxItems = [];
+  for (const s of shots) {
+    for (const g of s.gfx) {
+      const placed = GFX.place(g, { base: s.start, end: duration });
+      if (placed.error) fail(`shot ${s.n}: ${placed.error}`);
+      gfxItems.push(placed);
+    }
+  }
+  const gfxHtml = GFX.layer(gfxItems, { W, H, sounds: !quiet });
+
   // ---- the page
   const head = template.slice(template.indexOf('<html>'), template.indexOf('</head>') + '</head>'.length);
   const attrs = [
@@ -1051,7 +1078,7 @@ ${head}
   <div class="glow g1"></div>
   <div class="glow g2"></div>
 ${slots.join('\n')}
-
+${gfxHtml}
 ${scenes.join('\n\n')}${voiceover ? `
 
   <!-- the voiceover, ${voiceover.at}–${r2(voiceover.end)}s, over every shot -->
@@ -1079,6 +1106,7 @@ ${scenes.join('\n\n')}${voiceover ? `
     const what = [s.clip ? `clip from ${s.from}s` : '', s.is3d ? `${s.moveName} (3D)` : s.moveName, s.fit !== 'cover' ? `fit ${s.fit}` : '', s.transition !== 'fade' && s.n !== shots[0].n ? s.transition : '', s.say ? 'voiced' : '', s.sound ? 'own sound' : '', s.clipSay ? 'captioned' : '', s.tags.staged ? 'staged' : '', s.tags.ai ? 'AI' : ''].filter(Boolean).join(', ');
     console.log(`  ${String(s.n).padStart(2)}. ${s.start.toFixed(2)}–${s.end.toFixed(2)}s  ${s.media.padEnd(22)} ${what.padEnd(24)} ${[s.label, s.sub].filter(Boolean).join(' | ').slice(0, 44)}`);
   }
+  for (const g of gfxItems) console.log(`  graphic: ${GFX.describe(g)}`);
   const soundLine = musicSrc
     ? `licensed track ${musicSrc}${track ? `, ${track.bpm} BPM, from ${musicStart ?? 0}s${snap ? `, cuts on the ${unitBeats === 4 && track.barConfidence >= 0.15 ? 'bar' : 'beat'}` : ''}` : ''}`
     : `${sound.music}${sound.music !== 'none' ? `, ${sound.bpm} BPM, ${sound.key} ${sound.mode || ''}, energy ${sound.energy}, cuts on the ${unitBeats === 4 ? 'bar' : 'beat'}` : ''}${identity ? ` (${sound.music === identity.music ? '' : 'in the key and hook of '}${profile ? 'the client\'s' : 'the'} Sonic Identity)` : ' (no Sonic Identity saved; the template default)'}`;

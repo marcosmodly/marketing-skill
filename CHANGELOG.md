@@ -3,6 +3,41 @@
 What changed in each version of the plugin (`.claude-plugin/plugin.json`).
 Skills that read "our changelog" for source material read this file too.
 
+## 0.11.0 (2026-11-21)
+
+- **Graphics over your videos.** Your filmed take, a narrated video, or a
+  montage of your clips or photos can now carry graphics, each written as
+  one plain line and timed to the word you say:
+  - **Lower thirds:** your name and title near the bottom of the picture,
+    above the captions, as an accent bar, a box, a line, or a tech panel
+    (`lower "Maya Lopez" "Founder, Juniper" @0.5`).
+  - **Callouts:** an arrow drawn in to what you're talking about, a ring
+    drawn around it by hand, a box around a region, a marker swipe over a
+    line of text, a spotlight that dims everything else, or a pin with a
+    label (`arrow 62%,40% "the new button" @button`).
+  - **Kinetic type:** big words that slam, pop, rise, wave, stretch,
+    glitch, or type themselves on screen, or a number counting up
+    (`text "10x *faster*" @faster anim=slam`).
+  - **Motion graphics:** an icon drawn on a badge (check, star, bolt, and
+    a dozen more, or any emoji), a burst, rings, speed lines, dots, and
+    confetti.
+  - **HUD elements:** a targeting reticle that locks on with a readout, a
+    frame with a blinking REC dot, a data panel whose numbers count up and
+    whose percentages fill as bars, and a scan line sweeping a region.
+
+  On a filmed take each is a `--gfx` to `cut.js` (or a `--graphics` file
+  with one per line); in a narrated video or a montage it's `[gfx: ...]`
+  on the line or shot. Ask in plain words ("put my name up", "point at the
+  button when I say it") and Claude writes them, looking at a frame first
+  to find what to point at. They're drawn in your brand's accent, and the
+  layout check flags a label that runs into the hook or the captions.
+  Only the "hits" (kinetic type, icons, bursts) bring a sound, so the
+  callouts don't crowd your voice.
+- **Two graphic transitions:** `bars` (slanted bands in your brand's
+  colors sweep across the cut) and `blocks` (tiles in your accent pop in
+  and out in a wave), as `[cut: bars]` on a line or `[transition: blocks]`
+  on a montage shot.
+
 ## 0.10.1 (2026-11-14)
 
 - **Videos in your own voice, cloned for free on your computer.** The

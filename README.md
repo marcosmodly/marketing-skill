@@ -131,6 +131,13 @@ was made with the same renderer.
   ones), or, on a paid video-model plan you approve, gets AI camera moves.
   Then keep editing it ("use the part where she laughs", "kitchen first",
   "calmer music") version by version, with a saved profile per client.
+- **Graphics over any video:** lower thirds with your name and title,
+  arrows, circles, boxes, highlights, spotlights, and pins that point at
+  what you're talking about, kinetic type that slams or types itself on
+  screen, icons, bursts and confetti, and HUD elements (a reticle locking
+  on, a REC frame, a data panel whose numbers count up), each timed to the
+  word you say. They go on your filmed take, a narrated video, or a
+  montage, plus two graphic transitions in your brand's colors.
 - **Community posts:** Reddit, Product Hunt, Hacker News (Show HN), Indie
   Hackers, dev.to, Discord, Slack, and Telegram posts written to each
   community's actual rules, with a Go/No-Go before drafting.
@@ -341,6 +348,10 @@ times for TikTok, Reels, and Shorts, and, if you want, makes the video:
 - **Your own footage:** a talking-head take from your phone gets its
   pauses cut and captions added (`cut.js`); screen recordings play in a
   phone frame.
+- **Graphics on it:** lower thirds, callouts (arrows, circles, boxes,
+  highlights, spotlights, pins), kinetic type, icons and bursts, and HUD
+  elements over any of these, each one line timed to a spoken word
+  (`graphics.js`: `--gfx` on a take, `[gfx: ...]` in a script).
 - **A montage of your clips** (`clip-montage`, the default and free): the
   phone videos you film, each at its best moment, cut on the beat of your
   own music, with a clip's own sound, your voiceover and synced captions,
@@ -591,6 +602,7 @@ scripts/
     depth.js             # a photo's depth map (free local model), for the montage's 3D camera moves
     brand.js             # applies the Visual Identity to a page: colors, font, logo end card
     cut.js               # a filmed talking-head take: pauses cut, captions, and a page to render it
+    graphics.js          # graphics over the picture: lower thirds, callouts, kinetic type, icons, HUD elements
     beats.js             # a music track's tempo, beats, bars, and drops, to cut a video on its beat
     reference.js         # how a reference video is edited (cuts, transitions, pacing, palette, tempo), and a plan to match it
     gallery.js           # rebuilds the template gallery in docs/gallery

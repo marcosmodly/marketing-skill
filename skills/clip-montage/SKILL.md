@@ -247,7 +247,8 @@ command below. `VIDEO` below means `${CLAUDE_PLUGIN_ROOT}/scripts/video`.
    | "different song" / "no music" | `music:` another file, a genre, or `none` |
    | "show the left side", "keep her in frame" | `[focus: 25%,50%]` |
    | "zoom in on it" | `[move: push-in]` (with `[focus:]` on the spot) |
-   | "smoother" / "punchier cuts" | `transition: fade`, or `cut`, `punch`, `whip`, `slide`, `zoom`, `wipe`, `flash`, `glitch`, `spin`, `blur`, `mask`, `leak`, `burn` (`references/editing-techniques.md` says which edit each one is) |
+   | "smoother" / "punchier cuts" | `transition: fade`, or `cut`, `punch`, `whip`, `slide`, `zoom`, `wipe`, `flash`, `glitch`, `spin`, `blur`, `mask`, `leak`, `burn`, or the graphic `bars` and `blocks` (`references/editing-techniques.md` says which edit each one is) |
+   | "point at the fireplace", "circle the new roof", "put her name up", "make the price slam in", "add some motion graphics" | a `[gfx: ...]` on that shot: `arrow 62%,40% "fireplace"`, `circle ...`, `lower "Dana Ruiz" "Listing agent"`, `text "$489k" anim=slam`, an icon, a burst, or a HUD element (`references/editing-techniques.md`, "Graphics"). Find the spot on a still of the shot (`render.js <page> --stills <time>`), as a percent of the frame; `@<word>` times it to a word of the shot's `[say:]` or the voiceover |
    | "change the text" | the label, `hook:`, `cta:`, `price:`, `specs:` |
    | "slow motion", "speed it up", "speed ramp", "freeze on that" | `[speed: 0.5]` (slow), `[speed: 2]` (fast), `[ramp: 1.2:0.3,2.4:1]` (slows at 1.2s, back to speed at 2.4s), `[ramp: 1.5:0,2.3:1]` (a freeze frame); not on a `[sound]` clip. Smooth slow motion needs footage filmed at 60fps or more |
    | "another color / logo / phone number" | the client's profile, not the script |
