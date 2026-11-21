@@ -16,6 +16,7 @@
  *               [--edit ugc|meme|fast|kinetic|cinematic|clean] [--hook-fx zoom|shake|glitch|flash|bounce|none]
  *               [--punch 10%] [--focus 50%,32%] [--broll "assets/app.mp4@invoice+2.5, assets/shot.png@6.2"]
  *               [--look documentary|social|minimal|...] [--motion low|medium|high]
+ *               [--gfx 'lower "Maya Lopez" "Founder" @0.5'] [--gfx 'arrow 62%,40% "this" @button'] [--graphics gfx.txt]
  *
  * --min-pause: pauses at least this long are cut (shorter ones are breathing room and stay).
  * --pad: how much of each pause stays on either side of the cut, so words aren't clipped.
@@ -37,6 +38,11 @@
  * user's own screen recordings, product shots, or photos; the take's sound plays on under them.
  * --look sets the visual style (look.js: its captions, grade, texture, and headline font; a
  * documentary look puts the captions on a solid panel, for example), and --motion how much moves.
+ * --gfx puts a graphic over the take (graphics.js has them all): a lower third with the speaker's
+ * name, an arrow, circle, box, highlight, spotlight, or pin pointing at something in the frame, an
+ * icon, a burst or confetti, big kinetic type, or HUD elements (a reticle, a frame, a data panel,
+ * a scan). One --gfx per graphic, or one per line in a --graphics file (# starts a comment).
+ * @word comes in as that word is first said (it needs --text), @seconds that far into the cut.
  */
 const fs = require('fs');
 const path = require('path');
@@ -47,6 +53,7 @@ const { sonicIdentity } = require('./compose');
 const { visualIdentity, applyIdentity } = require('./brand');
 const EDIT = require('./edit');
 const LOOK = require('./look');
+const GFX = require('./graphics');
 
 const TEMPLATE = path.join(__dirname, 'templates', 'narrated.html');
 const TAIL = 1.2; // after the take ends, room for the sonic logo
@@ -61,6 +68,8 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--bold') args.bold = true;
+    else if (a === '--gfx') (args.gfx = args.gfx || []).push(argv[++i]);
+    else if (a === '--graphics') args.graphics = argv[++i];
     else if (['--out', '--min-pause', '--pad', '--text', '--page', '--hook', '--cta', '--series', '--brand', '--edit', '--hook-fx', '--punch', '--focus', '--broll', '--look', '--motion'].includes(a)) args[a.slice(2).replace(/-(\w)/g, (m, c) => c.toUpperCase())] = argv[++i];
     else if (a === '-h' || a === '--help') args.help = true;
     else args.positional.push(a);
@@ -231,6 +240,22 @@ function writePage(page, clipSrc, length, args, { bounds = [], words = [] } = {}
   const hookSfx = { shake: 'impact', glitch: 'glitch', flash: 'impact' }[edit.hook];
   if (hookSfx) cues.push(`  <i class="cue" hidden style="--in:${edit.hook === 'shake' ? 0.04 : 0.08}s" data-sfx="${hookSfx}"></i>`);
   const overlays = [...brolls.map((b) => EDIT.overlayAt(b.tr, b.at)).filter(Boolean), ...(edit.hook === 'flash' ? ['  <div class="flash" style="--in:.08s" data-lint="off"></div>'] : [])];
+  // graphics over the take: timed to the words said (or seconds into the cut), under the captions
+  const gfxLines = [...(args.gfx || [])];
+  if (args.graphics) {
+    if (!fs.existsSync(args.graphics)) throw new Error(`No graphics file at ${args.graphics}`);
+    gfxLines.push(...fs.readFileSync(args.graphics, 'utf8').split('\n').map((l) => l.replace(/^\s*#.*$/, '').trim()).filter(Boolean));
+  }
+  const gfx = [];
+  for (const line of gfxLines) {
+    const g = GFX.parse(line);
+    if (g.error) { notes.push(g.error); continue; }
+    if (g.word && !words.length) { notes.push(`gfx "${g.spec}" is timed to "${g.word}", so it needs --text (or give it @seconds)`); continue; }
+    const placed = GFX.place(g, { base: 0, words, end: length + TAIL });
+    if (placed.error) notes.push(placed.error);
+    else gfx.push(placed);
+  }
+  const gfxHtml = GFX.layer(gfx, { W: 1080, H: 1920, sounds: !!edit.cutSfx, defaults: GFX.defaultsFor({ edit: edit.name, look: look && look.name }) });
   const camAnim = EDIT.cameraAnimation({ hook: edit.hook, drawn: true });
   const camOpen = `  <div class="cam" data-lint="off"${edit.punch ? ` data-punch="${edit.punch}"${edit.punchFx ? ` data-punch-fx="${edit.punchFx}"` : ''}` : ''} style="${edit.punch ? `--punch:${edit.punch}; ` : ''}--cam-x:${esc(fx0)}; --cam-y:${esc(fy0 || '32%')}${camAnim ? `; animation: ${camAnim}` : ''}">`;
   const doc = `<!doctype html>
@@ -248,7 +273,7 @@ ${camOpen}
   <!-- the take, the whole video long; a light scrim so the captions read without hiding faces -->
   <div class="bg now" style="--in:0s; ${takeKb}; --shade:.12"><video class="bg-media" id="take" src="${esc(clipSrc)}" data-audio data-loop="false" style="transform-origin: ${esc(fx0)} ${esc(fy0 || '32%')}"></video></div>
 ${brollHtml ? `${brollHtml}\n` : ''}  </div>
-${overlays.length ? `${overlays.join('\n')}\n` : ''}${cues.length ? `${cues.join('\n')}\n` : ''}${corners}
+${gfxHtml}${overlays.length ? `${overlays.join('\n')}\n` : ''}${cues.length ? `${cues.join('\n')}\n` : ''}${corners}
 
   <div class="scene narr center">
 ${parts.join('\n')}
@@ -258,7 +283,7 @@ ${parts.join('\n')}
 `;
   const branded = id0 ? applyIdentity(doc, id0, { pageDir: path.dirname(page) }) : { html: doc, changes: [], problems: [] };
   fs.writeFileSync(page, branded.html);
-  return { duration, sound, identity: !!id, look: branded, edit, brolls, notes, zoom, lookName: look ? `${look.name}: ${look.about}` : '' };
+  return { duration, sound, identity: !!id, look: branded, edit, brolls, gfx, notes, zoom, lookName: look ? `${look.name}: ${look.about}` : '' };
 }
 
 async function main() {
@@ -308,10 +333,11 @@ async function main() {
     } catch (e) {
       fail(e.message);
     }
-    const { duration, sound, identity, look, edit, brolls, notes, zoom } = written;
+    const { duration, sound, identity, look, edit, brolls, gfx, notes, zoom } = written;
     console.log(`Wrote ${page}: ${duration}s`);
     console.log(`  edit: ${edit.name}: ${zoom ? `a new framing at each of the ${bounds.length} jump cut${bounds.length === 1 ? '' : 's'} (up to ${Math.round((zoom + 0.05 - 1) * 100)}%), ` : ''}punch-ins on *keywords* ${edit.punch ? `${Math.round((edit.punch - 1) * 100)}%` : 'off'}, hook: ${edit.hook}`);
     for (const b of brolls) console.log(`  b-roll ${b.file} ${b.at}–${b.end}s (${b.tr})`);
+    for (const g of gfx) console.log(`  graphic: ${GFX.describe(g)}`);
     for (const n of notes) console.warn(`Note: ${n}`);
     console.log(`  sound: the take's own voice over ${sound.music}${identity ? ' (the Sonic Identity, one energy step lower)' : ' (the template default)'}`);
     console.log(`  brand: ${look.changes.length ? look.changes.join('; ') : 'the template default; no Visual Identity saved yet'}`);

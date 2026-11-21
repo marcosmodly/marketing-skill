@@ -153,6 +153,17 @@ the user, and offer another when they describe a feel ("more energy",
   the moment that means something: the reveal, the turn, the payoff. The
   rest stay on the style's clean base cut, with its accents only on the drop,
   the payoff, and a turn every few cuts.
+- **Graphics on the words.** `[gfx: ...]` on a line puts a graphic over
+  the picture while it's said, one tag per graphic: a lower third, an
+  arrow, circle, box, highlight, spotlight, or pin, an icon, a burst or
+  confetti, kinetic type, or a HUD element (`editing-techniques.md`,
+  "Graphics", has every kind). `@word` brings it in as that word is said:
+  `3. It closes in *two clicks* [gfx: text "2 clicks" @two anim=slam]`.
+  Use them for what the viewer should see on that word (the number, the
+  thing being pointed at), one at a time.
+- **Graphic transitions.** `[cut: bars]` (slanted bands in the brand's
+  colors sweep across) and `[cut: blocks]` (tiles in the accent pop in and
+  out) hide the cut under shapes, for a section change.
 - **Sounds that sell the cuts.** Styles with sounds put a whoosh on whips
   and zooms, an impact on punches, a glitch on glitches, and a riser into
   the drop; they duck under the voice like everything else.
@@ -599,6 +610,16 @@ ship one.
     photo at the word "invoice" (or at 6.2s into the cut) for 2.5 seconds
     while they keep talking, then back to them. Ask for the screen
     recordings and product shots their words point at.
+  - **Graphics over the take:** `--gfx 'lower "Maya Lopez" "Founder,
+    Juniper" @0.5'` puts their name and title up as a lower third;
+    `--gfx 'arrow 62%,40% "the new button" @button'` points at something
+    in the frame as they say it; `--gfx 'text "10x *faster*" @faster
+    anim=slam'` slams the claim on screen; HUD elements, icons, bursts, and
+    the rest are in `editing-techniques.md`, "Graphics". One `--gfx` per
+    graphic, or a `--graphics` file with one per line. `@word` needs
+    `--text`. To point at something, look at a still of the cut first
+    (`render.js <page> --stills 2`) and read off where it is as a percent
+    of the frame, then check the graphic the same way.
 - **A realistic avatar's clip** (a talking presenter made by a connected
   AI avatar tool such as HeyGen, Synthesia, D-ID, or Hedra) goes through
   `cut.js` the same way, with the script it was given as `--text`. Label

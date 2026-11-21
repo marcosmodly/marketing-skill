@@ -1,6 +1,6 @@
 ---
 name: short-form-video
-description: "Writes and makes short videos for TikTok, Reels, and Shorts (or 16:9 for YouTube, Reddit, LinkedIn): a hook-first script, captions, hashtags, a posting time, and, if wanted, the rendered video. Use whenever someone wants a TikTok, Reel, Short, launch or demo video, or video script, even a quick 15-second one."
+description: "Writes and makes short videos for TikTok, Reels, and Shorts (or 16:9 for YouTube, Reddit, LinkedIn): a hook-first script, captions, hashtags, a posting time, and, if wanted, the rendered video. Use whenever someone wants a TikTok, Reel, Short, launch or demo video, video script, or graphics on their video (lower thirds, callouts, kinetic text), even a quick 15-second one."
 allowed-tools: Read, Grep, Glob, WebSearch, WebFetch, Write, Bash
 ---
 
@@ -332,6 +332,11 @@ command below.
      list and edit notes (step 6) instead of a video. Once the user has
      filmed a talking-head take, `scripts/video/cut.js` turns it into the
      finished video (see "Your own footage" in `video-rendering.md`).
+     Graphics go over the take with `--gfx`: a lower third with their name,
+     an arrow or circle on what they're talking about, the number as
+     kinetic type, an icon, a HUD element (`editing-techniques.md`,
+     "Graphics"). Ask what should be named or pointed at, look at a still
+     of the cut to place each one, and time it to the word it's about.
      Don't offer to render or generate a fake version of real people or
      real events.
    - **Either way, continue to step 4.** The script and packages below are
@@ -527,6 +532,7 @@ Trigger on requests like:
 - "Make it like this video" (with a video attached), "edit ours like theirs"
 - "Use our own mascot / character / avatar (here's the .glb)"
 - "Make a 16:9 version for YouTube / Reddit / LinkedIn"
+- "Add a lower third / an arrow / motion graphics / a HUD to my video"
 - "We need something memeable / relatable for the feed this week"
 
 **Do not** trigger when the user hands over their own clips of a place, a

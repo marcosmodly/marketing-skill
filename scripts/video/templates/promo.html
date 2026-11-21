@@ -77,7 +77,8 @@
     editing-techniques.md maps each to its name): a class on a .bg slot
     sets how it comes in (t-cut, t-punch, t-whip, t-slide, t-zoom, t-wipe,
     t-glitch, t-spin, t-blur, t-mask, t-leak); .flash, .leak, and .burn
-    are overlays dropped on a cut; --kb also takes kbDyn, kbDynOut, kbUp,
+    are overlays dropped on a cut, and .bars and .blocks are graphic
+    transitions that cover the frame as the cut happens (edit.js overlayAt); --kb also takes kbDyn, kbDynOut, kbUp,
     and kbDown. <div class="cam"> around the backgrounds is the camera:
     data-punch="1.08" punches in on each *keyword* (render.js), and its
     animations shake (camShake), punch (camPunch), or glitch (camGlitch).
@@ -87,6 +88,13 @@
     animate the synced captions.
     A photo or clip can go in a .pane, .side, or .cell too, as
     <img class="bg-media" src="...">.
+  - Graphics over the picture (scripts/video/graphics.js writes them, one
+    line each: lower thirds, arrows, circles, boxes, highlights, spotlights,
+    pins, icons, bursts, kinetic type, and HUD elements): a <div
+    class="gx-layer"> after the camera holds one .gx per graphic, timed by
+    its --in and --out and placed in the frame's pixels. data-word="..."
+    on one has render.js move it to when that word is said, once the
+    captions are timed.
   - The hook: give the first thing on screen class "now" instead of an
     entrance (pop, rise, ...), so it shows on frame 0, which is the default
     cover and the moment a viewer decides to stay. render.js --check warns
@@ -488,6 +496,21 @@
   .burn { background: radial-gradient(55% 45% at 50% 52%, #fff 0%, rgba(255,226,170,.98) 30%, rgba(255,120,40,.85) 55%, rgba(160,20,0,.4) 72%, transparent 82%);
           animation: burn .75s ease-in-out var(--in) both; }
   @keyframes burn { 0% { opacity: 0; scale: .4; } 38% { opacity: 1; scale: 1.5; } 100% { opacity: 0; scale: 2.2; } }
+  /* graphic transitions: shapes in the brand's colors cover the frame and hide the cut under them.
+     .bars: three slanted bands sweep across; .blocks: tiles pop in and out in a diagonal wave.
+     Each is dropped before the cut (edit.js overlayAt) so it covers the frame as the cut happens. */
+  .bars, .blocks { position: absolute; inset: 0; z-index: 20; pointer-events: none; overflow: hidden; }
+  .bars i { position: absolute; left: -30%; width: 160%; height: 35%; top: calc(var(--k) * 33%); background: var(--accent); transform: skewX(-14deg);
+            animation: barSweep .6s cubic-bezier(.7,0,.3,1) calc(var(--in) + var(--k) * .03s) both; }
+  .bars i:nth-child(2) { background: color-mix(in srgb, var(--accent) 45%, #fff); }
+  .bars i:nth-child(3) { background: var(--bg); }
+  @keyframes barSweep { from { translate: -110% 0; } 40%, 60% { translate: 0 0; } to { translate: 110% 0; } }
+  .blocks i { position: absolute; width: calc(100% / 6 + 1px); height: calc(100% / 10 + 1px); left: calc(var(--c) * 100% / 6); top: calc(var(--r) * 100% / 10);
+              background: var(--accent); animation: blockPop .8s cubic-bezier(.5,0,.5,1) calc(var(--in) + (var(--c) + var(--r)) * .02s) both; }
+  body[data-size="1920x1080"] .blocks i { width: calc(100% / 10 + 1px); height: calc(100% / 6 + 1px); left: calc(var(--lc) * 10%); top: calc(var(--lr) * 100% / 6);
+                                          animation-delay: calc(var(--in) + (var(--lc) + var(--lr)) * .02s); }
+  .blocks i:nth-child(even) { background: color-mix(in srgb, var(--accent) 78%, #000); }
+  @keyframes blockPop { from { scale: 0; rotate: 45deg; } 30%, 70% { scale: 1.04; rotate: 0deg; } to { scale: 0; rotate: -45deg; } }
 
   /* Ken Burns moves on a still, beside kbIn/kbOut/kbLeft/kbRight: kbDyn zooms with changing speed
      (slow, fast, slow), kbDynOut the reverse, kbUp and kbDown tilt */
@@ -590,6 +613,230 @@
   /* color roles: *keywords* (the key, the accent) and ~wrong~ (the wrong way, struck through in the caution color, so it doesn't rest on color alone) */
   .no { color: var(--bad); text-decoration: line-through .08em var(--bad); }
   .hook .no { text-decoration-thickness: .07em; }
+
+
+  /* ---- graphics over the picture (graphics.js): one layer above the backgrounds and below the
+     captions. Each .gx shows from its --in and fades at its --out, placed in the frame's pixels;
+     --gc is its color (the accent unless color= says otherwise). ---- */
+  .gx-layer { position: absolute; inset: 0; pointer-events: none; }
+  .gx { position: absolute; --gc: var(--accent); text-shadow: none;
+        animation: gxShow .01s linear var(--in, 0s) both, gxOut .3s ease-in var(--out, 999s) forwards; }
+  @keyframes gxShow { from { visibility: hidden; } to { visibility: visible; } }
+  @keyframes gxOut { to { opacity: 0; } }
+  @keyframes gxFade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes gxPop { from { opacity: 0; scale: .5; } 70% { opacity: 1; scale: 1.06; } to { opacity: 1; scale: 1; } }
+  @keyframes gxDraw { to { stroke-dashoffset: 0; } }
+  @keyframes gxGrowX { from { scale: 0 1; } to { scale: 1 1; } }
+  @keyframes gxGrowY { from { scale: 1 0; } to { scale: 1 1; } }
+  @keyframes gxWipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+  @keyframes gxRise { from { opacity: 0; translate: 0 30px; } to { opacity: 1; translate: 0 0; } }
+  @keyframes gxSpin { to { rotate: 360deg; } }
+  @keyframes gxBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+  .gx svg { position: absolute; overflow: visible; filter: drop-shadow(0 4px 10px rgba(0,0,0,.45)); }
+  /* a stroke that draws itself (pathLength="1" on the shape) */
+  .gx-draw { fill: none; stroke: var(--gc); stroke-width: 12; stroke-linecap: round; stroke-linejoin: round;
+             stroke-dasharray: 1 1; stroke-dashoffset: 1; animation: gxDraw .45s cubic-bezier(.6,0,.3,1) var(--in) both; }
+  .gx-hi { color: var(--gc); }
+  /* a callout's label: white, bold, popping in once its mark is drawn */
+  .gx-tag { position: absolute; white-space: nowrap; padding: 12px 26px 14px; border-radius: 18px; background: #fff; color: #121212;
+            font-size: 42px; font-weight: 800; line-height: 1.15; box-shadow: 0 14px 40px rgba(0,0,0,.3);
+            animation: gxPop .4s cubic-bezier(.2,.9,.3,1.25) calc(var(--in) + .4s) both; }
+  /* a *keyword* in a label: a marker stroke in the graphic's color under dark ink, readable whatever the color */
+  .gx-tag .gx-hi { color: inherit; background: linear-gradient(transparent 60%, color-mix(in srgb, var(--gc) 60%, transparent) 60%); }
+  .gx-tag.gx-up { translate: -50% calc(-100% - 14px); }
+  .gx-tag.gx-down { translate: -50% 14px; }
+  .gx-tag.gx-side { translate: 0 -50%; }
+  .gx-tag.gx-side.gx-flip { translate: -100% -50%; }
+  .gx-tag.gx-tab { translate: 0 calc(-100% - 14px); }
+  .gx-tag.gx-tab.gx-below { translate: 0 14px; }
+
+  /* lower third: a name and a title near the bottom of the picture, above the captions.
+     bar (default): an accent bar and a dark panel; box: the name on the accent, the title on white;
+     line: no panel, a rule drawn under the name; tech: a HUD panel with a monospace title */
+  .gx-lower { left: 90px; bottom: 790px; display: flex; align-items: stretch; max-width: 820px; }
+  .gx-lower.ls-right { left: auto; right: 150px; flex-direction: row-reverse; text-align: right; }
+  body[data-size="1920x1080"] .gx-lower { left: 110px; bottom: 230px; max-width: 1100px; }
+  body[data-size="1920x1080"] .gx-lower.ls-right { left: auto; right: 110px; }
+  .gx-bar { flex: none; width: 14px; border-radius: 7px; background: var(--gc); transform-origin: 50% 100%;
+            animation: gxGrowY .32s cubic-bezier(.2,.8,.2,1) var(--in) both; }
+  .gx-lt { margin-left: 12px; padding: 16px 34px 20px 26px; border-radius: 0 20px 20px 0; background: rgba(12,12,16,.74);
+           animation: gxWipe .5s cubic-bezier(.7,0,.25,1) calc(var(--in) + .12s) both; }
+  .ls-right .gx-lt { margin: 0 12px 0 0; border-radius: 20px 0 0 20px; }
+  .gx-lt b { display: block; font-size: 60px; font-weight: 800; line-height: 1.12; letter-spacing: -1px; color: #fff; }
+  .gx-lt small { display: block; margin-top: 6px; font-size: 36px; font-weight: 600; line-height: 1.25; color: #e2e1e8;
+                 animation: gxRise .4s cubic-bezier(.2,.8,.2,1) calc(var(--in) + .4s) both; }
+  .ls-box .gx-bar, .ls-line .gx-bar, .ls-tech .gx-bar { display: none; }
+  .ls-box .gx-lt { margin: 0; padding: 0; border-radius: 0; background: none; animation: none; display: flex; flex-direction: column; align-items: flex-start; }
+  .ls-box.ls-right .gx-lt { align-items: flex-end; }
+  .ls-box .gx-lt b { padding: 10px 26px 14px; background: var(--gc); color: var(--on-accent); animation: gxWipe .45s cubic-bezier(.7,0,.25,1) var(--in) both; }
+  .ls-box .gx-lt b .gx-hi { color: inherit; }
+  .ls-box .gx-lt small { margin-top: 0; padding: 8px 26px 10px; background: #fff; color: #121212; animation: gxWipe .45s cubic-bezier(.7,0,.25,1) calc(var(--in) + .18s) both; }
+  .ls-line .gx-lt { margin: 0; padding: 0; border-radius: 0; background: none; text-shadow: 0 2px 6px rgba(0,0,0,.5), 0 6px 30px rgba(0,0,0,.5);
+                    animation: gxFade .5s ease-out var(--in) both; }
+  .ls-line .gx-lt b::after { content: ''; display: block; height: 6px; margin-top: 14px; border-radius: 3px; background: var(--gc); transform-origin: 0 50%;
+                             animation: gxGrowX .6s cubic-bezier(.7,0,.25,1) calc(var(--in) + .1s) both; }
+  .ls-line.ls-right .gx-lt b::after { transform-origin: 100% 50%; }
+  .ls-tech .gx-lt { margin: 0; padding: 18px 34px 20px; border-radius: 4px; background: rgba(6,14,20,.82);
+                    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--gc) 60%, transparent), 0 0 30px color-mix(in srgb, var(--gc) 30%, transparent); }
+  .ls-tech .gx-lt b { color: #eafcff; }
+  .ls-tech .gx-lt small { font-family: "JetBrains Mono", "Liberation Mono", monospace; font-size: 30px; font-weight: 500; letter-spacing: .12em;
+                          text-transform: uppercase; color: #bfe3ea; }
+
+  /* callouts: an arrow drawn in to a point, a ring around it, a box around a region, a marker
+     swipe, a spotlight, a pin. Their marks sit on a zero-size box at the point. */
+  .gx-arrow, .gx-circle, .gx-pin, .gx-icon, .gx-shapes, .hv-lock { width: 0; height: 0; }
+  .gx-arrow svg { transform-origin: 26px 200px; }
+  .gx-arrow svg.a-ul { scale: -1 1; }
+  .gx-arrow svg.a-dr { scale: 1 -1; }
+  .gx-arrow svg.a-dl { scale: -1 -1; }
+  .gx-arrow .gx-head { animation-duration: .16s; animation-delay: calc(var(--in) + .36s); }
+  .gx-circle .gx-draw { stroke-width: 10; animation-duration: .6s; }
+  .gx-box .gx-draw { stroke-width: 9; animation-duration: .6s; }
+  .gx-highlight { --gc: #ffd84d; }
+  .gx-mark { position: absolute; inset: 0; border-radius: 10px; background: color-mix(in srgb, var(--gc) 42%, transparent);
+             box-shadow: 0 0 0 3px color-mix(in srgb, var(--gc) 70%, transparent); transform-origin: 0 50%;
+             animation: gxGrowX .45s cubic-bezier(.6,0,.3,1) var(--in) both; }
+  @property --sr { syntax: '<length>'; inherits: false; initial-value: 0px; }
+  .gx-dim { position: absolute; inset: 0; --sr: var(--r);
+            background: radial-gradient(circle at var(--px) var(--py), transparent calc(var(--sr) - 2px), rgba(4,4,8,.66) var(--sr));
+            animation: gxSpot .6s cubic-bezier(.6,0,.3,1) var(--in) both; }
+  @keyframes gxSpot { from { --sr: 1800px; opacity: 0; } 30% { opacity: 1; } to { --sr: var(--r); opacity: 1; } }
+  .gx-dot { position: absolute; left: -20px; top: -20px; width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 10px solid var(--gc);
+            animation: gxPop .35s cubic-bezier(.2,.9,.3,1.3) var(--in) both; }
+  .gx-dot::after { content: ''; position: absolute; inset: -24px; border-radius: 50%; border: 6px solid #fff; opacity: 0;
+                   animation: gxPing 1.1s ease-out calc(var(--in) + .2s) 2; }
+  @keyframes gxPing { from { opacity: .9; scale: .5; } to { opacity: 0; scale: 1.6; } }
+  .gx-tag.gx-pintag { left: 40px; top: -100px; }
+  .gx-tag.gx-pintag.gx-flip { left: auto; right: 40px; }
+  .gx-tag.gx-pintag.gx-below { top: 40px; }
+
+  /* motion graphics: an icon on a badge with a burst, and accents (a burst, rings, speed lines, dots, confetti) */
+  .gx-badge { position: absolute; display: grid; place-items: center; border-radius: 50%; background: var(--gc); box-shadow: 0 16px 44px rgba(0,0,0,.35);
+              animation: gxPop .45s cubic-bezier(.2,.9,.3,1.3) var(--in) both; }
+  .gx .gx-badge svg { position: static; width: 58%; height: 58%; filter: none; }
+  .gx-badge .gx-draw { stroke: var(--on-accent); stroke-width: 4.5; animation-duration: .4s; animation-delay: calc(var(--in) + .2s); }
+  .gx-glyph { line-height: 1; font-family: "Noto Color Emoji", "Inter", sans-serif; font-weight: 800; color: var(--on-accent); }
+  .ic-plain .gx-badge { background: none; box-shadow: none; }
+  .gx.ic-plain .gx-badge svg { filter: drop-shadow(0 4px 12px rgba(0,0,0,.5)); }
+  .ic-plain .gx-badge .gx-draw { stroke: #fff; stroke-width: 5.5; }
+  .ic-plain .gx-glyph { color: #fff; }
+  .gx-rays line { fill: none; stroke: var(--gc); stroke-width: 9; stroke-linecap: round; stroke-dasharray: 1 1; stroke-dashoffset: 1;
+                  animation: gxRay .55s cubic-bezier(.2,.8,.2,1) calc(var(--in) + var(--ray-at, 0s)) both; }
+  @keyframes gxRay { from { stroke-dashoffset: 1; } 45% { stroke-dashoffset: 0; } to { stroke-dashoffset: -1; } }
+  .gx-ring { position: absolute; border-radius: 50%; border: 7px solid var(--gc);
+             animation: gxRingOut .9s cubic-bezier(.2,.8,.2,1) calc(var(--in) + var(--k) * .14s) both; }
+  @keyframes gxRingOut { from { opacity: 0; scale: .1; } 8% { opacity: 1; } 70% { opacity: .8; } to { opacity: 0; scale: 1; } }
+  .sh-lines, .sh-confetti { overflow: hidden; }
+  .sh-lines i { position: absolute; left: 0; width: 70%; height: var(--t, 10px); border-radius: 99px; rotate: -12deg;
+                background: linear-gradient(90deg, transparent, var(--gc) 35%, #fff 70%, transparent);
+                animation: gxSweep .55s cubic-bezier(.5,0,.3,1) calc(var(--in) + var(--d)) both; }
+  @keyframes gxSweep { from { translate: -110% 0; opacity: 0; } 15% { opacity: 1; } to { translate: 160% 0; opacity: 0; } }
+  .sh-dots i { position: absolute; width: 20px; height: 20px; margin: -10px; border-radius: 50%; background: var(--gc);
+               animation: gxDot .9s cubic-bezier(.2,.9,.3,1.3) calc(var(--in) + var(--d)) both; }
+  @keyframes gxDot { from { opacity: 0; scale: 0; } 25% { opacity: 1; scale: 1.2; } 70% { opacity: 1; scale: 1; } to { opacity: 0; scale: 0; } }
+  .sh-confetti i { position: absolute; top: -50px; width: var(--w); height: calc(var(--w) * .45); border-radius: 3px; background: var(--c);
+                   animation: gxFall var(--t, 1.8s) cubic-bezier(.3,.1,.6,1) calc(var(--in) + var(--d)) both; }
+  @keyframes gxFall { from { translate: 0 0; rotate: 0deg; } to { translate: var(--dx) var(--fall); rotate: var(--rot); } }
+
+  /* kinetic type: big words animated in, in sync with the video. ta-<anim> sets how they come in,
+     ts-<size> how big; gt-box sets each word on a white box, gt-outline in outline */
+  .gx-text { translate: -50% -50%; text-align: center; }
+  .gx-tx { font-weight: var(--head-weight, 900); line-height: 1.06; letter-spacing: -.02em; color: #fff; text-wrap: balance;
+           text-shadow: 0 3px 8px rgba(0,0,0,.45), 0 10px 50px rgba(0,0,0,.55); }
+  .has-head .gx-tx { font-family: var(--font-head); }
+  .ts-s .gx-tx { font-size: 72px; }
+  .ts-m .gx-tx { font-size: 100px; }
+  .ts-l .gx-tx { font-size: 132px; }
+  .ts-xl .gx-tx { font-size: 172px; }
+  body[data-size="1920x1080"] .ts-l .gx-tx { font-size: 116px; }
+  body[data-size="1920x1080"] .ts-xl .gx-tx { font-size: 150px; }
+  .gx-w { display: inline-block; white-space: nowrap; margin: .02em .1em; }
+  .gt-box .gx-w { padding: .02em .16em .08em; border-radius: .12em; background: #fff; color: #121212; text-shadow: none; }
+  .gt-box .gx-w.gx-hi { background: var(--gc); color: var(--on-accent); }
+  .gt-outline { color: transparent; -webkit-text-stroke: .035em #fff; text-shadow: none; }
+  .gt-outline .gx-hi { color: transparent; -webkit-text-stroke-color: var(--gc); }
+  .ta-pop .gx-w { animation: gxPop .4s cubic-bezier(.2,.9,.3,1.3) calc(var(--in) + var(--k) * .12s) both; }
+  .ta-slam .gx-w { animation: gxSlam .3s cubic-bezier(.3,.7,.3,1) calc(var(--in) + var(--k) * .14s) both; }
+  @keyframes gxSlam { from { opacity: 0; scale: 2.8; filter: blur(8px); } 65% { opacity: 1; scale: .95; filter: blur(0); } to { opacity: 1; scale: 1; filter: none; } }
+  .ta-slam .gx-tx { animation: hkJolt .4s linear calc(var(--in) + .24s) both; }
+  .ta-type .gx-c { animation: gxFade .01s linear calc(var(--in) + var(--c) * .045s) both; }
+  .ta-rise .gx-w { overflow: hidden; padding: 0 .02em .1em; vertical-align: top; }
+  .ta-rise .gx-c { display: inline-block; animation: gxUp .5s cubic-bezier(.2,.8,.2,1) calc(var(--in) + var(--c) * .028s) both; }
+  @keyframes gxUp { from { translate: 0 110%; opacity: 0; } 30% { opacity: 1; } to { translate: 0 0; opacity: 1; } }
+  .ta-wave .gx-c { display: inline-block; animation: gxWave .5s cubic-bezier(.3,1.4,.5,1) calc(var(--in) + var(--c) * .035s) both; }
+  @keyframes gxWave { from { opacity: 0; translate: 0 60px; scale: .6; } to { opacity: 1; translate: 0 0; scale: 1; } }
+  .ta-stretch .gx-tx { animation: gxStretch .6s cubic-bezier(.2,.9,.3,1.15) var(--in) both; }
+  @keyframes gxStretch { from { opacity: 0; scale: .15 1.5; letter-spacing: .5em; } to { opacity: 1; scale: 1 1; letter-spacing: -.02em; } }
+  .ta-glitch .gx-tx { animation: gxFade .01s linear var(--in) both, hkGlitch .5s steps(1, end) var(--in) both; }
+  .ta-count .gx-tx { animation: gxPop .4s cubic-bezier(.2,.9,.3,1.3) var(--in) both; }
+  /* a number counting up (graphics.js countHtml): the count, then the figure as written, commas and all */
+  .gx-num { display: inline-grid; font-variant-numeric: tabular-nums; }
+  .gx-num > * { grid-area: 1 / 1; text-align: left; }
+  .gx-num .count { animation: countUp var(--for, 1.2s) cubic-bezier(.2,.8,.2,1) calc(var(--in) + var(--d, 0s)) both,
+                               fadeOut .01s linear calc(var(--in) + var(--d, 0s) + var(--for, 1.2s)) forwards; }
+  .gx-num .gx-final { animation: gxFade .01s linear calc(var(--in) + var(--d, 0s) + var(--for, 1.2s)) both; }
+
+  /* HUD: a targeting reticle locking on (hv-lock), a frame around the picture (hv-frame), a data
+     panel (hv-data), and a scan over a region (hv-scan), in light monospace with accent lines */
+  .gx-hud { color: #eafcff; font-family: "JetBrains Mono", "Liberation Mono", monospace; }
+  .gx-hb { position: absolute; width: 46px; height: 46px; border: 0 solid var(--gc);
+           animation: gxClose .5s cubic-bezier(.2,.8,.2,1) var(--in) both; }
+  .gx-hb.c-tl { border-width: 7px 0 0 7px; }
+  .gx-hb.c-tr { border-width: 7px 7px 0 0; }
+  .gx-hb.c-bl { border-width: 0 0 7px 7px; }
+  .gx-hb.c-br { border-width: 0 7px 7px 0; }
+  @keyframes gxClose { from { opacity: 0; translate: calc(var(--sx) * 110px) calc(var(--sy) * 110px); } 50% { opacity: 1; } to { opacity: 1; translate: 0 0; } }
+  .gx-orbit { animation: gxFade .3s ease-out calc(var(--in) + .3s) both, gxSpin 7s linear var(--in) infinite; }
+  .gx-orbit circle { fill: none; stroke: var(--gc); stroke-width: 4; stroke-dasharray: 18 12; opacity: .85; }
+  .gx-cross { animation: gxFade .2s linear calc(var(--in) + .45s) both; }
+  .gx-cross line { stroke: var(--gc); stroke-width: 4; stroke-linecap: round; }
+  .gx-pip { position: absolute; left: -7px; top: -7px; width: 14px; height: 14px; border-radius: 50%; background: var(--gc);
+            animation: gxFade .01s linear calc(var(--in) + .45s) both, gxBlink .7s steps(1) calc(var(--in) + .45s) infinite; }
+  .gx-read { position: absolute; white-space: nowrap; padding: 10px 20px 12px; background: rgba(6,12,18,.74); border-left: 6px solid var(--gc);
+             animation: gxWipe .4s steps(12, end) calc(var(--in) + .5s) both; }
+  .gx-read.gx-flip { border-left: 0; border-right: 6px solid var(--gc); text-align: right; }
+  .gx-read b { display: block; font-size: 34px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; }
+  .gx-read small { display: block; margin-top: 4px; font-size: 24px; letter-spacing: .14em; color: #a9c4cc; }
+  .gx-deco { position: absolute; inset: 0; }
+  .hv-frame .gx-hb, .hv-scan .gx-hb { width: 90px; height: 90px; }
+  .hv-scan .gx-hb { width: 60px; height: 60px; }
+  .hv-frame .gx-hb.c-tl, .hv-scan .gx-hb.c-tl { left: 0; top: 0; }
+  .hv-frame .gx-hb.c-tr, .hv-scan .gx-hb.c-tr { right: 0; top: 0; }
+  .hv-frame .gx-hb.c-bl, .hv-scan .gx-hb.c-bl { left: 0; bottom: 0; }
+  .hv-frame .gx-hb.c-br, .hv-scan .gx-hb.c-br { right: 0; bottom: 0; }
+  .gx-ruler { position: absolute; left: 26px; top: 22%; bottom: 22%; width: 26px; opacity: .8;
+              background: repeating-linear-gradient(to bottom, var(--gc) 0 3px, transparent 3px 30px);
+              -webkit-mask-image: linear-gradient(transparent, #000 15%, #000 85%, transparent); mask-image: linear-gradient(transparent, #000 15%, #000 85%, transparent);
+              animation: gxFade .5s ease-out calc(var(--in) + .3s) both; }
+  .gx-sweep { position: absolute; left: 0; right: 0; top: 0; height: 4px; background: var(--gc); opacity: 0;
+              box-shadow: 0 0 24px 6px color-mix(in srgb, var(--gc) 60%, transparent);
+              animation: gxScan 1.2s cubic-bezier(.4,0,.6,1) calc(var(--in) + .1s) both; }
+  @keyframes gxScan { from { top: 0%; opacity: 0; } 10%, 90% { opacity: 1; } to { top: 100%; opacity: 0; } }
+  .gx-htop { position: absolute; left: 30px; top: 26px; display: flex; align-items: center; gap: 16px;
+             font-size: 32px; letter-spacing: .14em; text-transform: uppercase; text-shadow: 0 2px 8px rgba(0,0,0,.6);
+             animation: gxWipe .5s steps(14, end) calc(var(--in) + .3s) both; }
+  .gx-htop b { font-weight: 500; }
+  .gx-rec { width: 22px; height: 22px; border-radius: 50%; background: #ff3b3b; animation: gxBlink 1s steps(1) var(--in) infinite; }
+  .hv-data { min-width: 440px; max-width: 760px; padding: 26px 32px 28px; border-radius: 6px; background: rgba(6,12,18,.78);
+             box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--gc) 50%, transparent), 0 20px 50px rgba(0,0,0,.35);
+             animation: gxShow .01s linear var(--in) both, gxPanel .4s cubic-bezier(.2,.8,.2,1) var(--in) both, gxOut .3s ease-in var(--out, 999s) forwards; }
+  @keyframes gxPanel { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+  .hv-data h6 { margin-bottom: 14px; font-size: 26px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; color: #bfe3ea; }
+  .gx-row { animation: gxRise .4s cubic-bezier(.2,.8,.2,1) calc(var(--in) + .25s + var(--k) * .22s) both; }
+  .gx-row + .gx-row { margin-top: 18px; }
+  .gx-k { display: block; font-size: 26px; letter-spacing: .14em; text-transform: uppercase; color: #a9c4cc; }
+  .gx-v { display: block; font-family: "Inter", "Liberation Sans", sans-serif; font-size: 64px; font-weight: 800; line-height: 1.08; color: #fff; }
+  .gx-meter { display: block; height: 12px; margin-top: 10px; border-radius: 6px; background: rgba(255,255,255,.14); overflow: hidden; }
+  .gx-meter i { display: block; width: var(--pct); height: 100%; background: var(--gc); transform-origin: 0 50%;
+                animation: gxGrowX .9s cubic-bezier(.2,.8,.2,1) calc(var(--in) + .35s + var(--k) * .22s) both; }
+  .hv-scan { overflow: hidden; }
+  .gx-grid { position: absolute; inset: 0; opacity: .45;
+             background-image: linear-gradient(color-mix(in srgb, var(--gc) 60%, transparent) 2px, transparent 2px),
+                               linear-gradient(90deg, color-mix(in srgb, var(--gc) 60%, transparent) 2px, transparent 2px);
+             background-size: 60px 60px;
+             animation: gxReveal 1.2s cubic-bezier(.4,0,.6,1) calc(var(--in) + .1s) both, fadeOut .6s ease-in calc(var(--in) + 1.4s) forwards; }
+  @keyframes gxReveal { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+  .gx-read.gx-inset { left: 24px; top: 24px; }
 
   /* scene 2/3: the to-do list */
   .listhead { position: relative; height: 180px; margin-bottom: 28px; }

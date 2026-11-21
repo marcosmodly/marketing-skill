@@ -28,6 +28,17 @@ const TRANSITIONS = {
   mask: { dur: 0.55, lead: 0.2, covers: true, sfx: 'swish' },
   leak: { dur: 0.5, lead: 0.2, covers: true, overlay: 'leak' },
   burn: { dur: 0.01, lead: 0, covers: true, cls: 'cut', overlay: 'burn' },
+  // graphic transitions: shapes in the brand's colors cover the frame, and the cut happens under
+  // them; `pre` is how long before the cut the overlay starts, so it covers the frame on the cut
+  bars: { dur: 0.01, lead: 0, covers: true, cls: 'cut', overlay: 'bars', pre: 0.33, sfx: 'whoosh' },
+  blocks: { dur: 0.01, lead: 0, covers: true, cls: 'cut', overlay: 'blocks', pre: 0.54, sfx: 'swish' },
+};
+
+// What goes inside a graphic transition's overlay: the bands, or the tiles (with their place in a
+// 6x10 grid, and in a 10x6 one for a landscape frame).
+const OVERLAY_INNER = {
+  bars: () => [0, 1, 2].map((k) => `<i style="--k:${k}"></i>`).join(''),
+  blocks: () => Array.from({ length: 60 }, (_, i) => `<i style="--c:${i % 6}; --r:${Math.floor(i / 6)}; --lc:${i % 10}; --lr:${Math.floor(i / 10)}"></i>`).join(''),
 };
 
 // Camera moves on a still or a clip (--kb on the slot). The dynamic ones change speed.
@@ -100,7 +111,7 @@ const EDIT_STYLES = {
 // style, but shakes only on the drop and no flashes or spins after it. High is the style as it
 // is. Lowering never adds effects.
 const MOTION = ['low', 'medium', 'high'];
-const LOUD = ['flash', 'glitch', 'spin', 'burn', 'whip'];
+const LOUD = ['flash', 'glitch', 'spin', 'burn', 'whip', 'bars', 'blocks'];
 function applyMotion(style, level) {
   const m = String(level || style.motion || 'high').toLowerCase();
   if (!MOTION.includes(m)) throw new Error(`motion: ${m}? Use ${MOTION.join(', ')}.`);
@@ -259,8 +270,11 @@ const transitionClass = (name) => (name === 'fade' ? '' : `t-${TRANSITIONS[name]
 
 // The full-frame overlay a transition drops on its cut, as markup ('' for none).
 function overlayAt(name, t) {
-  const o = TRANSITIONS[name] && TRANSITIONS[name].overlay;
-  return o ? `  <div class="${o}" style="--in:${r2(o === 'flash' ? t : t - 0.12)}s" data-lint="off"></div>` : '';
+  const tr = TRANSITIONS[name];
+  const o = tr && tr.overlay;
+  if (!o) return '';
+  const pre = tr.pre !== undefined ? tr.pre : o === 'flash' ? 0 : 0.12;
+  return `  <div class="${o}" style="--in:${r2(Math.max(0, t - pre))}s" data-lint="off">${OVERLAY_INNER[o] ? OVERLAY_INNER[o]() : ''}</div>`;
 }
 
 const r2 = (t) => Math.round(t * 100) / 100;

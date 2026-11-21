@@ -122,7 +122,8 @@ in, `short-form-video` writes the page from its own script and renders
 it. You can also run the renderer yourself.
 
 **What it makes:** motion graphics (kinetic text, shapes, UI mockups) over
-real backgrounds, or drawn 3D and pixel-art scenes (see "3D and pixel-art
+real backgrounds, graphics over your own footage (lower thirds, callouts,
+kinetic type, HUD elements), or drawn 3D and pixel-art scenes (see "3D and pixel-art
 animation" below), with music composed for your project, and a voiceover if
 you record or generate one. It doesn't film your product or people, but it does finish
 footage you film: `cut.js` takes a talking-head take from your phone, cuts
@@ -179,6 +180,8 @@ node brand.js page.html                                   # the Visual Identity:
 node render.js page.html out.mp4 --variants a,b --cover 0 # one video per hook variant, plus the cover frame
 node cut.js take.mp4 --text "what's said" --page page.html # a filmed talking-head take: pauses cut, captioned, ready to render
 node cut.js take.mp4 --text "what's said" --page page.html --broll "assets/app.mp4@invoice+2"  # ...cutting away to your screen recording at "invoice"
+node cut.js take.mp4 --text "what's said" --page page.html --gfx 'lower "Maya Lopez" "Founder" @0.5' --gfx 'arrow 62%,40% "this" @button'  # ...with a lower third and an arrow
+node graphics.js check 'text "10x *faster*" @faster anim=slam'   # check a graphic's line before using it
 node hook.js "hook one" "hook two" "hook three"            # each hook's type, what to fix, and whether they're different types
 node hook.js --script script.md                           # a script's hook in all three layers: on screen, spoken, and what moves
 node fit.js assets/a.jpg assets/b.jpg                     # how well each works behind words: sharpness, exposure, subject, calm room for captions
@@ -396,6 +399,36 @@ lands on the cut, `[sfx: ping]` on a line plays a sound with it, and
 the same treatment from `cut.js`: every jump cut changes the framing, the
 keywords punch in, and `--broll` cuts away to your screen recording while
 you keep talking.
+
+### Graphics over the picture
+
+Any video made here can have graphics over it: your filmed take, a
+narrated video, or a montage of your clips or photos. Ask in plain words
+("put my name up when I start talking", "point at the new button when I
+say it", "slam the price on screen", "make it look like a HUD"), and Claude
+writes each one as a line:
+
+| You get | For example |
+|---|---|
+| A lower third: your name and title near the bottom, as a bar, a box, a line, or a tech panel | `lower "Maya Lopez" "Founder, Juniper" @0.5` |
+| A callout: an arrow drawn in, a ring around something, a box around a region, a marker swipe, a spotlight, or a pin with a label | `arrow 62%,40% "the new button" @button` |
+| Kinetic type: big words that slam, pop, rise, wave, stretch, glitch, type themselves in, or a number counting up | `text "10x *faster*" @faster anim=slam` |
+| Motion graphics: an icon drawn on a badge (or any emoji), a burst, rings, speed lines, dots, confetti | `icon check 78%,30% @done` |
+| HUD elements: a targeting reticle that locks on, a frame with a blinking REC, a data panel whose numbers count up, a scan line | `hud lock 50%,32% "TARGET ACQUIRED"` |
+
+`@button` brings a graphic in as that word is said, so it lands on your
+speech; `@2.5` is seconds. `62%,40%` is where in the frame: Claude looks at
+a frame first to find what to point at, then checks the result. On a
+filmed take each one is a `--gfx` to `cut.js`; in a narrated video or a
+montage it's `[gfx: ...]` on the line or shot. Graphics are drawn in your
+brand's accent (or `color=`), stay clear of the hook and the captions, and
+the layout check flags any label that runs into other text. Two graphic
+transitions go with them: `bars` (slanted bands in your colors sweep across
+the cut) and `blocks` (tiles pop in and out). A graphic stays where it's
+put, so on a clip where the subject moves, keep it short or point at what
+holds still; tracking a moving subject isn't built.
+[`references/editing-techniques.md`](../references/editing-techniques.md),
+"Graphics", has every kind and option.
 
 [`references/editing-techniques.md`](../references/editing-techniques.md)
 lists every editing technique you might ask for by name (a whip pan, a
