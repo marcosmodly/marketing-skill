@@ -3,6 +3,12 @@
 What changed in each version of the plugin (`.claude-plugin/plugin.json`).
 Skills that read "our changelog" for source material read this file too.
 
+## Unreleased
+
+- Kinetic type keeps punctuation on a highlighted word: `text "Right on
+  your *product page*."` now reads "product page." instead of "product
+  page ." with a stray space.
+
 ## 0.11.0 (2026-11-21)
 
 - **Graphics over your videos.** Your filmed take, a narrated video, or a

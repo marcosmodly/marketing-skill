@@ -274,11 +274,14 @@ function countHtml(v, d = 0) {
     + `<span class="gx-final">${esc(c.digits)}</span></span>${c.suf ? `<span class="gx-suf">${esc(c.suf)}</span>` : ''}`;
 }
 
+// Kinetic type's words: *highlighted* ones flagged, with the punctuation right before or after a
+// highlight kept on its word ("(*fit*)." is one word, "(fit).", with only "fit" highlighted).
 function wordsOf(text) {
   const out = [];
-  for (const m of String(text).matchAll(/\*([^*]+)\*|[^\s*]+/g)) {
-    if (m[1] !== undefined) for (const w of m[1].trim().split(/\s+/)) out.push({ w, hi: true });
-    else out.push({ w: m[0], hi: false });
+  for (const m of String(text).matchAll(/([^\s*]*)\*([^*]+)\*([^\s*]*)|[^\s*]+/g)) {
+    if (m[2] === undefined) { out.push({ w: m[0], hi: false, head: '', tail: '' }); continue; }
+    const ws = m[2].trim().split(/\s+/);
+    ws.forEach((w, i) => out.push({ w, hi: true, head: i === 0 ? m[1] : '', tail: i === ws.length - 1 ? m[3] : '' }));
   }
   return out;
 }
@@ -375,12 +378,14 @@ function textHtml(g, defaults) {
   if (anim === 'count') return `<div class="gx-tx">${countHtml(plain(text))}</div>`;
   const words = wordsOf(text);
   let c = 0;
-  const html = words.map(({ w, hi }, k) => {
-    const cls = `gx-w${hi ? ' gx-hi' : ''}`;
-    if (['type', 'rise', 'wave'].includes(anim)) {
-      return `<span class="${cls}">${Array.from(w).map((ch) => `<span class="gx-c" style="--c:${c++}">${esc(ch)}</span>`).join('')}</span>`;
-    }
-    return `<span class="${cls}" style="--k:${k}">${esc(w)}</span>`;
+  const letters = (str) => Array.from(str).map((ch) => `<span class="gx-c" style="--c:${c++}">${esc(ch)}</span>`).join('');
+  const html = words.map(({ w, hi, head, tail }, k) => {
+    const split = ['type', 'rise', 'wave'].includes(anim);
+    const part = (str) => (split ? letters(str) : esc(str));
+    const style = split ? '' : ` style="--k:${k}"`;
+    // a highlight with punctuation on it: the word's own span lit, the punctuation not
+    if (hi && (head || tail)) return `<span class="gx-w"${style}>${part(head)}<span class="gx-hi">${part(w)}</span>${part(tail)}</span>`;
+    return `<span class="gx-w${hi ? ' gx-hi' : ''}"${style}>${part(w)}</span>`;
   }).join(' ');
   return `<div class="gx-tx${g.opts.style && g.opts.style !== 'plain' ? ` gt-${g.opts.style}` : ''}">${html}</div>`;
 }
