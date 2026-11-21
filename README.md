@@ -1,15 +1,47 @@
-# Marketing Skills for Claude Code
+<p align="center">
+  <img src="media/brand/icon.png" width="144" height="144" alt="The plugin's mascot: an orange robot with a screen for a face, waving">
+</p>
 
-**14 AI marketing skills in one Claude Code plugin:** competitor research,
-social media content calendars, LinkedIn and X posts, SEO content briefs,
-ad copy, email sequences, personalized cold email outreach, TikTok / Reels /
-YouTube Shorts scripts, montages edited from your own videos or photos,
-Reddit and Hacker News posts, and approval-gated publishing to n8n, Make,
-or platform APIs.
+<h1 align="center">Marketing Skills</h1>
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-D97757.svg)](#install)
-[![Agent Skills](https://img.shields.io/badge/Agent%20Skills-SKILL.md-555.svg)](skills/)
+<p align="center">
+  <b>The open-source AI marketing studio for Claude Code.</b><br>
+  Research rivals. Write the posts, ads, and emails. Make the videos. Publish when you say so.<br>
+  14 skills in one plugin, and nothing posts or sends without your approval.
+</p>
+
+<p align="center">
+  <a href="https://github.com/marcosmodly/marketing-skill/releases"><img src="https://img.shields.io/github/v/release/marcosmodly/marketing-skill?label=release&color=D97757" alt="Latest release"></a>
+  <a href="https://github.com/marcosmodly/marketing-skill/stargazers"><img src="https://img.shields.io/github/stars/marcosmodly/marketing-skill?label=stars&color=555" alt="GitHub stars"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="https://github.com/marcosmodly/marketing-skill/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/marcosmodly/marketing-skill/ci.yml?branch=main&label=CI" alt="CI"></a>
+  <a href="#install"><img src="https://img.shields.io/badge/Claude%20Code-plugin-D97757.svg" alt="Claude Code plugin"></a>
+  <a href="skills/"><img src="https://img.shields.io/badge/Agent%20Skills-SKILL.md-555.svg" alt="Agent Skills"></a>
+</p>
+
+<p align="center">
+  <a href="media/explainer/v4/marketing-skill-v4-landscape.mp4"><img src="media/brand/made-its-own-video.svg" width="340" alt="Made by this plugin: its own 78-second launch video"></a>
+</p>
+
+<p align="center">
+  <a href="#install">Install</a> •
+  <a href="#skills">Skills</a> •
+  <a href="#making-videos">Videos</a> •
+  <a href="EXAMPLE.md">Example run</a> •
+  <a href="docs/">Docs</a> •
+  <a href="CHANGELOG.md">Changelog</a> •
+  <a href="https://github.com/marcosmodly/marketing-skill/discussions">Discussions</a>
+</p>
+
+<p align="center">
+  <a href="media/explainer/v4/marketing-skill-v4-landscape.mp4"><img src="media/explainer/v4/poster-landscape.jpg" width="820" alt="The plugin's 78-second launch video: a desk at night, the camera pushing into the monitor, Claude asking what you've got before a video, a realistic character in the mascot's place, and Claude reading how a reference video is edited"></a>
+</p>
+
+Competitor research, social media content calendars, LinkedIn and X posts,
+SEO content briefs, ad copy, email sequences, personalized cold email
+outreach, TikTok / Reels / YouTube Shorts scripts and rendered videos,
+montages edited from your own videos or photos, Reddit and Hacker News
+posts, and approval-gated publishing to n8n, Make, or platform APIs.
 
 ```
 claude plugin marketplace add marcosmodly/marketing-skill
@@ -17,16 +49,13 @@ claude plugin install marketing-skill@marketing-skill
 ```
 
 Every skill is a standard `SKILL.md` in [`skills/`](skills/), shares one
-brand-voice config, and works on its own or chained together. Nothing
-posts or sends without your explicit approval. Using OpenAI Codex? See
-[Using with Codex](#using-with-codex).
+brand-voice config, and works on its own or chained together. Using
+OpenAI Codex? See [Using with Codex](#using-with-codex).
 
 If it saves you time, a star on the repo helps other people find it.
 Made something with it? [Share it in Show and tell](https://github.com/marcosmodly/marketing-skill/discussions/categories/show-and-tell).
 
 ## See it
-
-[![The plugin's 78-second launch video: a desk at night, the camera pushing into the monitor, Claude asking what you've got before a video, a realistic character in the mascot's place, and Claude reading how a reference video is edited](media/explainer/v4/poster-landscape.jpg)](media/explainer/v4/marketing-skill-v4-landscape.mp4)
 
 **[▶ Watch the 78-second launch video](media/explainer/v4/marketing-skill-v4-landscape.mp4)**:
 the plugin installing and running its skills in Claude Code, the
