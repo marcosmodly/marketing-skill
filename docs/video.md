@@ -182,6 +182,8 @@ node cut.js take.mp4 --text "what's said" --page page.html # a filmed talking-he
 node cut.js take.mp4 --text "what's said" --page page.html --broll "assets/app.mp4@invoice+2"  # ...cutting away to your screen recording at "invoice"
 node cut.js take.mp4 --text "what's said" --page page.html --gfx 'lower "Maya Lopez" "Founder" @0.5' --gfx 'arrow 62%,40% "this" @button'  # ...with a lower third and an arrow
 node graphics.js check 'text "10x *faster*" @faster anim=slam'   # check a graphic's line before using it
+node card.js state/videos/2026-11-21-demo.md              # a widescreen video as a vertical short: a card, zooms, lines, graphics, an end card
+node card.js where state/videos/2026-11-21-demo.md 4 1290 893   # a pixel of the video in beat 4's zoom, as x%,y% for a graphic
 node hook.js "hook one" "hook two" "hook three"            # each hook's type, what to fix, and whether they're different types
 node hook.js --script script.md                           # a script's hook in all three layers: on screen, spoken, and what moves
 node fit.js assets/a.jpg assets/b.jpg                     # how well each works behind words: sharpness, exposure, subject, calm room for captions
@@ -415,6 +417,8 @@ writes each one as a line:
 | Kinetic type: big words that slam, pop, rise, wave, stretch, glitch, type themselves in, or a number counting up | `text "10x *faster*" @faster anim=slam` |
 | Motion graphics: an icon drawn on a badge (or any emoji), a burst, rings, speed lines, dots, confetti | `icon check 78%,30% @done` |
 | HUD elements: a targeting reticle that locks on, a frame with a blinking REC, a data panel whose numbers count up, a scan line | `hud lock 50%,32% "TARGET ACQUIRED"` |
+| Infographics: a dimension line whose number counts up, a price ticking from one value to another, facts popping in as chips, a checklist ticking item by item | `measure 12%,47% 54%,47% "88″ wide"`, `ticker "$1,599" "$1,679"` |
+| UI moments: a cursor gliding in and tapping a button, a notification sliding down, a verdict stamped on | `cursor 30%,40%`, `notify "New quote request"`, `stamp "✓ Fits"` |
 
 `@button` brings a graphic in as that word is said, so it lands on your
 speech; `@2.5` is seconds. `62%,40%` is where in the frame: Claude looks at
@@ -429,6 +433,20 @@ put, so on a clip where the subject moves, keep it short or point at what
 holds still; tracking a moving subject isn't built.
 [`references/editing-techniques.md`](../references/editing-techniques.md),
 "Graphics", has every kind and option.
+
+### A widescreen video, vertical
+
+Got a 16:9 video, such as a product demo, a screen recording, or your
+site's explainer? `card.js` makes it a vertical short without cropping its
+picture away: it plays as a card in the middle of the frame, cut into
+beats that each zoom into the part that matters (sharp, from the
+full-resolution original), with each line set big above it in your font,
+graphics over it (a cursor tapping the button, a price ticking, a verdict
+stamped on), a background drifting in your colors, a progress bar under
+your brand's chip, and an end card with your logo, tagline, and call to
+action. Its own voice and music play throughout, and a silent screen
+recording gets your brand's music. Hand Claude the file (or your site's
+address, if the video is on your own site) and say what the short is for.
 
 [`references/editing-techniques.md`](../references/editing-techniques.md)
 lists every editing technique you might ask for by name (a whip pan, a

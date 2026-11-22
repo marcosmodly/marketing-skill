@@ -165,8 +165,14 @@ was made with the same renderer.
   what you're talking about, kinetic type that slams or types itself on
   screen, icons, bursts and confetti, and HUD elements (a reticle locking
   on, a REC frame, a data panel whose numbers count up), each timed to the
-  word you say. They go on your filmed take, a narrated video, or a
-  montage, plus two graphic transitions in your brand's colors.
+  word you say, plus infographics (a dimension line, a ticking price, a
+  checklist) and UI moments (a cursor tapping, a notification, a stamped
+  verdict). They go on your filmed take, a narrated video, or a montage,
+  plus two graphic transitions in your brand's colors.
+- **Widescreen videos made vertical:** a product demo, a screen recording,
+  or your site's explainer becomes a short without cropping its picture
+  away: a floating card that zooms into each moment, your lines big above
+  it, graphics over it, and an end card with your call to action.
 - **Community posts:** Reddit, Product Hunt, Hacker News (Show HN), Indie
   Hackers, dev.to, Discord, Slack, and Telegram posts written to each
   community's actual rules, with a Go/No-Go before drafting.
@@ -378,9 +384,14 @@ times for TikTok, Reels, and Shorts, and, if you want, makes the video:
   pauses cut and captions added (`cut.js`); screen recordings play in a
   phone frame.
 - **Graphics on it:** lower thirds, callouts (arrows, circles, boxes,
-  highlights, spotlights, pins), kinetic type, icons and bursts, and HUD
-  elements over any of these, each one line timed to a spoken word
-  (`graphics.js`: `--gfx` on a take, `[gfx: ...]` in a script).
+  highlights, spotlights, pins), kinetic type, icons and bursts, HUD
+  elements, infographics (a dimension line, a ticking price, a checklist),
+  and UI moments (a cursor tap, a notification, a stamp) over any of
+  these, each one line timed to a spoken word (`graphics.js`: `--gfx` on a
+  take, `[gfx: ...]` in a script).
+- **A widescreen video, vertical** (`card.js`): a demo, a screen
+  recording, or an explainer plays as a card in the frame, cut into beats
+  that zoom into what matters, with its lines above it and an end card.
 - **A montage of your clips** (`clip-montage`, the default and free): the
   phone videos you film, each at its best moment, cut on the beat of your
   own music, with a clip's own sound, your voiceover and synced captions,
@@ -631,7 +642,8 @@ scripts/
     depth.js             # a photo's depth map (free local model), for the montage's 3D camera moves
     brand.js             # applies the Visual Identity to a page: colors, font, logo end card
     cut.js               # a filmed talking-head take: pauses cut, captions, and a page to render it
-    graphics.js          # graphics over the picture: lower thirds, callouts, kinetic type, icons, HUD elements
+    graphics.js          # graphics over the picture: lower thirds, callouts, kinetic type, icons, HUD, infographics, UI moments
+    card.js              # a widescreen video as a vertical short: a card cut into zoomed beats, lines, graphics, an end card
     beats.js             # a music track's tempo, beats, bars, and drops, to cut a video on its beat
     reference.js         # how a reference video is edited (cuts, transitions, pacing, palette, tempo), and a plan to match it
     gallery.js           # rebuilds the template gallery in docs/gallery

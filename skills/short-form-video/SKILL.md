@@ -337,6 +337,12 @@ command below.
      kinetic type, an icon, a HUD element (`editing-techniques.md`,
      "Graphics"). Ask what should be named or pointed at, look at a still
      of the cut to place each one, and time it to the word it's about.
+   - **When the user hands over a widescreen video** (a product demo, a
+     screen recording, their site's explainer) for a vertical short, make
+     it with `scripts/video/card.js` ("A widescreen video, vertical" in
+     `video-rendering.md`): the video plays as a card cut into beats that
+     zoom into what matters, its lines big above it, graphics over it, and
+     an end card. Only the user's own video, or one their own site serves.
      Don't offer to render or generate a fake version of real people or
      real events.
    - **Either way, continue to step 4.** The script and packages below are
@@ -533,6 +539,7 @@ Trigger on requests like:
 - "Use our own mascot / character / avatar (here's the .glb)"
 - "Make a 16:9 version for YouTube / Reddit / LinkedIn"
 - "Add a lower third / an arrow / motion graphics / a HUD to my video"
+- "Make my demo / screen recording / explainer into a vertical short"
 - "We need something memeable / relatable for the feed this week"
 
 **Do not** trigger when the user hands over their own clips of a place, a

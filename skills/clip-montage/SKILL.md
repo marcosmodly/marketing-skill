@@ -288,7 +288,9 @@ Trigger on requests like:
 
 **Do not** trigger when the user has only photos and can't film clips:
 that's `montage-video`. A single talking-head take that should become a
-captioned jump-cut video is `cut.js`, through `short-form-video`. A
+captioned jump-cut video is `cut.js`, through `short-form-video`; one
+widescreen video (a demo, a screen recording, an explainer) made vertical
+is `card.js`, through `short-form-video`. A
 scripted ad, an explainer, or an everyday meme post with no footage of
 the user's own is `short-form-video`. A long-form or horizontal video
 brief is `visual-brief-generator`.
