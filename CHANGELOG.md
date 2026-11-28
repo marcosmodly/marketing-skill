@@ -3,6 +3,14 @@
 What changed in each version of the plugin (`.claude-plugin/plugin.json`).
 Skills that read "our changelog" for source material read this file too.
 
+## Unreleased
+
+- A `--draft` render of a page whose half size is odd, like LinkedIn's
+  4:5 (`<body data-size="1080x1350">`, a 540x675 draft), no longer fails
+  in ffmpeg: the draft comes out at 540x674, one row short. A page with an
+  odd `data-size` itself, like 1081x1350, now stops before rendering and
+  says which even size to use, instead of failing midway.
+
 ## 0.11.1 (2026-11-21)
 
 - **Widescreen videos made vertical.** A product demo, a screen recording,
