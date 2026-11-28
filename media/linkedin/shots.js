@@ -576,7 +576,7 @@ SHOTS.write = async (el, shot) => {
   const RAD = 4.2;
   const meshes = live.map((lc, i) => {
     const g = new THREE.Group();
-    const slab = new THREE.Mesh(new RoundedBoxGeometry(CW, CH, 0.06, 4, 0.1), plastic(new THREE.Color(i === 0 || i === 3 ? '#e9e4db' : '#101014'), 0.35));
+    const slab = new THREE.Mesh(new RoundedBoxGeometry(CW, CH, 0.06, 4, 0.1), plastic(new THREE.Color(i === 0 || i === 3 ? '#a9a39a' : '#101014'), 0.5));
     const face = new THREE.Mesh(new THREE.PlaneGeometry(CW * 0.985, CH * 0.985), new THREE.MeshBasicMaterial({ map: lc.tex }));
     face.position.z = 0.031;
     g.add(slab, face);
@@ -740,7 +740,9 @@ SHOTS.approve = async (el, shot) => {
   const base = new THREE.Mesh(new RoundedBoxGeometry(BW + 0.3, BH + 0.3, 0.2, 6, (BH + 0.3) / 2), metal(new THREE.Color('#1d1d23'), 0.3));
   scene.add(base);
   const cursor = cursorMesh();
-  cursor.scale.setScalar(0.6);
+  cursor.scale.setScalar(0.5);
+  // unlit, so the bloom doesn't turn the white arrow into a glow
+  cursor.traverse((o) => { if (o.isMesh) o.material = new THREE.MeshBasicMaterial({ color: o.material.color.getHex() === 0xffffff ? 0xe6e6ea : 0x111114 }); });
   scene.add(cursor);
   const ringMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.9, 2.2, 1.4), transparent: true, opacity: 0, toneMapped: false, depthWrite: false, blending: THREE.AdditiveBlending });
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.97, 1.0, 96), ringMat);
