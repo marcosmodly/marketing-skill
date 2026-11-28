@@ -1,0 +1,85 @@
+  /* ---- the LinkedIn cut: 1080x1350 (4:5), dark, Inter Display headlines over the 3D ---- */
+  :root { --accent: #d97757; --bg: #0a0a0d; --text: #f4f1ea; --muted: #a9a7b2; --on-accent: #121212; }
+  html, body { width: 1080px; height: 1350px; }
+  body { font-family: "Inter", "Liberation Sans", sans-serif; }
+  .cam { position: absolute; inset: 0; overflow: hidden; }
+  .art { width: 1080px; height: 1350px; transform-origin: 50% 55%; }
+  .art-scrim { display: none; }
+
+  /* a dark wash behind the headline, and a vignette */
+  .topfade { position: absolute; left: 0; right: 0; top: 0; height: 640px; pointer-events: none;
+             background: linear-gradient(to bottom, rgba(7,7,10,.82), rgba(7,7,10,.55) 45%, rgba(7,7,10,0)); }
+  .botfade { position: absolute; left: 0; right: 0; bottom: 0; height: 260px; pointer-events: none;
+             background: linear-gradient(to top, rgba(7,7,10,.6), rgba(7,7,10,0)); }
+  .vig { position: absolute; inset: 0; pointer-events: none; z-index: 4;
+         background: radial-gradient(ellipse 80% 72% at 50% 52%, transparent 55%, rgba(0,0,0,.55) 100%); }
+
+  /* headlines: each word rises out of a mask */
+  .t { position: absolute; left: 84px; right: 84px; top: 96px; z-index: 6; color: var(--text);
+       font-family: "Inter Display", "Inter", sans-serif; font-weight: 800; font-size: 100px; line-height: 1.0; letter-spacing: -.045em;
+       text-shadow: 0 4px 40px rgba(0,0,0,.45);
+       animation: gate .01s linear var(--at, 0s) both, tOut .38s cubic-bezier(.5,0,.75,0) var(--out, 999s) forwards; }
+  .t.now { animation: tOut .38s cubic-bezier(.5,0,.75,0) var(--out, 999s) forwards; }
+  @keyframes gate { from { opacity: 0; } to { opacity: 1; } }
+  .t.center { text-align: center; }
+  @keyframes tOut { to { opacity: 0; transform: translateY(-34px); filter: blur(14px); } }
+  .ln { display: block; overflow: hidden; padding: .04em .06em .12em; margin: -.04em -.06em -.12em; }
+  .ln:has(.slam) { overflow: visible; }
+  .ln b { display: inline-block; font-weight: inherit; animation: wIn .75s cubic-bezier(.16,1,.3,1) var(--in) both; }
+  .now .ln b.n, .ln b.n { animation: nowIn .6s cubic-bezier(.2,.8,.2,1) 0s both; }
+  @keyframes wIn { from { transform: translateY(112%) rotate(5deg); } to { transform: none; } }
+  .ac b, b.ac, .ac i { color: transparent; background: linear-gradient(100deg, #f8bc9c 0%, #e58a66 45%, #cf6544 100%); -webkit-background-clip: text; background-clip: text; }
+  .t .ac-word { color: var(--accent); }
+
+  .slam { display: inline-block; animation: slamIn .55s cubic-bezier(.2,1.35,.35,1) var(--in) both; }
+  @keyframes slamIn { 0% { opacity: 0; transform: scale(1.9); filter: blur(18px); } 55% { opacity: 1; filter: blur(0); } 100% { opacity: 1; transform: none; filter: none; } }
+  .huge { font-size: 150px; letter-spacing: -.055em; }
+
+  .eb { display: flex; align-items: center; gap: 16px; margin-bottom: 26px; font: 500 26px/1 "JetBrains Mono", monospace; letter-spacing: .16em;
+        text-transform: uppercase; color: var(--accent); animation: ebIn .6s cubic-bezier(.16,1,.3,1) var(--in) both; }
+  .eb::before { content: ''; width: 44px; height: 3px; border-radius: 2px; background: currentColor; }
+  .center .eb { justify-content: center; }
+  @keyframes ebIn { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: none; } }
+
+  .sub { margin-top: 30px; font: 500 38px/1.3 "Inter", sans-serif; letter-spacing: -.012em; color: var(--muted); text-shadow: 0 2px 20px rgba(0,0,0,.6);
+         animation: subIn .7s cubic-bezier(.16,1,.3,1) var(--in) both; }
+  .sub b { color: var(--text); font-weight: 700; }
+  @keyframes subIn { from { opacity: 0; transform: translateY(24px); filter: blur(8px); } to { opacity: 1; transform: none; filter: none; } }
+  .tag { display: inline-block; margin-top: 24px; padding: 12px 22px; border-radius: 40px; border: 2px solid rgba(217,119,87,.6); background: rgba(217,119,87,.12);
+         font: 600 30px/1 "Inter", sans-serif; letter-spacing: 0; color: #f6c3aa; text-shadow: none; animation: popIn .5s cubic-bezier(.2,.9,.3,1.25) var(--in) both; }
+
+  /* a word that swaps on the beat, each one rising in and out of the same slot */
+  .rot { position: relative; display: block; height: 1.16em; overflow: hidden; margin: -.04em -.06em 0; padding: 0 .06em; }
+  .rot i { position: absolute; left: .06em; top: 0; font-style: normal; white-space: nowrap;
+           animation: rIn .5s cubic-bezier(.16,1,.3,1) var(--in) both, rOut .32s cubic-bezier(.7,0,.84,0) var(--out, 999s) forwards; }
+  @keyframes rIn { from { transform: translateY(110%); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes rOut { to { transform: translateY(-110%); opacity: 0; } }
+
+  /* the end card */
+  .end { position: absolute; left: 70px; right: 70px; top: 78px; z-index: 6; text-align: center; animation: gate .01s linear var(--at, 0s) both; }
+  .end .ln { font: 800 112px/1 "Inter Display", "Inter", sans-serif; letter-spacing: -.05em; }
+  .end .name { font: 800 112px/1 "Inter Display", "Inter", sans-serif; letter-spacing: -.05em; color: var(--text); }
+  .end .line { margin-top: 22px; font: 500 38px/1.3 "Inter", sans-serif; color: var(--muted); letter-spacing: -.01em; }
+  .foot { position: absolute; left: 60px; right: 60px; bottom: 70px; z-index: 6; animation: gate .01s linear var(--at, 0s) both; display: flex; flex-direction: column; align-items: center; gap: 22px; }
+  .url { display: inline-flex; align-items: center; gap: 16px; padding: 20px 34px; border-radius: 60px; background: rgba(20,20,26,.82); border: 2px solid #34343d;
+         font: 500 31px/1 "JetBrains Mono", monospace; color: var(--text); box-shadow: 0 20px 60px rgba(0,0,0,.5);
+         animation: popIn .55s cubic-bezier(.2,.9,.3,1.25) var(--in) both; }
+  .url svg { width: 36px; height: 36px; flex: none; }
+  .cta { font: 800 44px/1 "Inter Display", "Inter", sans-serif; letter-spacing: -.02em; color: var(--accent); animation: riseIn .5s cubic-bezier(.2,.8,.2,1) var(--in) both; }
+  .cta span { display: inline-block; animation: nudge .9s ease-in-out calc(var(--in) + .5s) 3; }
+  @keyframes nudge { 0%, 100% { transform: none; } 50% { transform: translateY(10px); } }
+
+  /* cuts: a white flash, and the picture snapping in from a blurred zoom */
+  .flash { position: absolute; inset: 0; z-index: 8; background: #fff; opacity: 0; pointer-events: none; mix-blend-mode: screen;
+           animation: flashK var(--for, .4s) cubic-bezier(.2,.6,.3,1) var(--in) both; }
+  .flash.warm { background: #ffd2bd; }
+  .flash.green { background: #b9f5d4; }
+  @keyframes flashK { 0% { opacity: 0; } 8% { opacity: var(--k, .7); } 100% { opacity: 0; } }
+  @keyframes cutZ { from { transform: scale(1.1); filter: blur(10px) brightness(1.35); } to { transform: none; filter: none; } }
+  @keyframes kick { 0% { transform: scale(1.035); } 100% { transform: none; } }
+  .cue { position: absolute; width: 0; height: 0; }
+
+  /* a thin progress line along the bottom, in the accent */
+  .prog { position: absolute; left: 0; bottom: 0; height: 6px; width: 1080px; z-index: 7; transform-origin: 0 50%; background: linear-gradient(90deg, #f6b493, var(--accent));
+          animation: progK 30s linear 0s both; opacity: .9; }
+  @keyframes progK { from { transform: scaleX(0); } to { transform: scaleX(1); } }
