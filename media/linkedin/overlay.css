@@ -81,5 +81,5 @@
 
   /* a thin progress line along the bottom, in the accent */
   .prog { position: absolute; left: 0; bottom: 0; height: 6px; width: 1080px; z-index: 7; transform-origin: 0 50%; background: linear-gradient(90deg, #f6b493, var(--accent));
-          animation: progK 30s linear 0s both; opacity: .9; }
+          animation: progK var(--total, 30s) linear 0s both; opacity: .9; }
   @keyframes progK { from { transform: scaleX(0); } to { transform: scaleX(1); } }

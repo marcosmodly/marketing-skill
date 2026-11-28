@@ -19,6 +19,8 @@ Link in the first comment. What should it make next?
 
 #ClaudeCode #OpenSource #MarketingAutomation #ContentMarketing #AI
 
+Music from #Uppbeat (free for Creators!): https://uppbeat.io/music/tracks/21-on-the-block/funky-diesel License code: WKCBH1LMDV3AQDIE
+
 ## First comment
 
 github.com/marcosmodly/marketing-skill

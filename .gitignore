@@ -34,3 +34,7 @@ evals/results/
 
 # trigger eval output
 trigger-evals/results/
+
+# licensed music for the LinkedIn cut, and the edit cut from it: used in the render, never redistributed
+media/linkedin/assets/*.mp3
+media/linkedin/assets/*.wav
