@@ -463,6 +463,16 @@ function useFrameOf(pagePath) {
   SAFE_ZONE = WIDTH > HEIGHT ? { left: 60, right: WIDTH - 60, top: 36, bottom: HEIGHT - 36 } : PORTRAIT_SAFE;
 }
 
+// H.264 in yuv420p, what every platform plays, needs an even width and height, so a video
+// can't be made at an odd data-size. Says so, with the size to use instead (stills don't mind).
+function oddFrameProblem(pagePath) {
+  if (WIDTH % 2 === 0 && HEIGHT % 2 === 0) return '';
+  const even = (n) => n - (n % 2);
+  return `${pagePath} has <body data-size="${WIDTH}x${HEIGHT}">, but a video's width and height have to be even numbers ` +
+    `(H.264 can't encode an odd one). Use data-size="${even(WIDTH)}x${even(HEIGHT)}".`;
+}
+const rendersVideo = (args) => !args.stills && !args.check && !args.slides && !args.voiceLengths && !args.audioOnly;
+
 // Checks every visible, settled text element at the current moment: inside the safe zone,
 // not overflowing its own box, not clipped by an overflow:hidden ancestor, and not
 // colliding with other text. Text mid-animation is skipped, since it's moving on purpose.
@@ -1426,9 +1436,15 @@ function sample(args) {
 // browsers, each rendering a contiguous run into its own segment, and the segments are joined
 // without re-encoding. `open(browser)` returns a page ready to seek, set up the same way in
 // every worker; `onFrame(page, t)` runs before each capture (the layout lint uses it). `scale`
-// below 1 captures smaller frames, for drafts.
+// below 1 captures smaller frames, for drafts. Returns the size it encoded, which is always even.
 async function renderFrames({ chromium, open, from = 0, to, fps, workers = 1, file, crf = 18, preset = 'slow', tune,
   scale = 1, width = WIDTH, height = HEIGHT, onFrame }) {
+  // libx264 (yuv420p) refuses an odd width or height, so a frame that scales to one (a draft of a
+  // 1080x1350 page is 540x675) is captured at the even size just below it, dropping its last row
+  // or column, and the screenshot's clip is cut to match so each PNG is exactly that size
+  const even = (n) => 2 * Math.floor(n / 2);
+  const outWidth = even(width * scale);
+  const outHeight = even(height * scale);
   const total = to - from;
   const count = Math.max(1, Math.min(workers, Math.ceil(total / fps)));
   const per = Math.ceil(total / count);
@@ -1442,7 +1458,8 @@ async function renderFrames({ chromium, open, from = 0, to, fps, workers = 1, fi
       process.stderr.write(`\rframe ${done}/${total} (${rate.toFixed(1)} fps, ~${Math.round((total - done) / rate)}s left)   `);
     }
   };
-  const clip = scale === 1 ? undefined : { x: 0, y: 0, width, height, scale };
+  const clip = scale === 1 && outWidth === width && outHeight === height ? undefined
+    : { x: 0, y: 0, width: outWidth / scale, height: outHeight / scale, scale };
   const segment = async (first, last, out) => {
     const browser = await launchBrowser(chromium);
     try {
@@ -1481,7 +1498,7 @@ async function renderFrames({ chromium, open, from = 0, to, fps, workers = 1, fi
   fs.writeFileSync(list, segments.map((f) => `file '${f}'`).join('\n'));
   ffmpeg(['-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', '-movflags', '+faststart', file]);
   fs.rmSync(tmp, { recursive: true, force: true });
-  return { seconds: (Date.now() - started) / 1000, workers: segments.length };
+  return { seconds: (Date.now() - started) / 1000, workers: segments.length, width: outWidth, height: outHeight };
 }
 
 // Workers by default: one per core but one, up to four (each is a whole browser).
@@ -1650,7 +1667,7 @@ async function runPage(browser, pagePath, outPath, args, variant, many) {
     else ({ audio } = writeSoundtrack(settings, duration, tmp, videoOnly, out));
     fs.rmSync(tmp, { recursive: true, force: true });
     for (const p of lintSeen.values()) console.warn(`Layout${label}: ${describeLint(p)}`);
-    const size = args.draft ? `${WIDTH / 2}x${HEIGHT / 2} draft` : `${WIDTH}x${HEIGHT}`;
+    const size = `${timing.width}x${timing.height}${args.draft ? ' draft' : ''}`;
     console.log(`Wrote ${out}: ${size}, ${duration}s at ${fps}fps, ${audio} (rendered in ${Math.round(timing.seconds)}s on ${timing.workers} worker${timing.workers === 1 ? '' : 's'})`);
     if (voiced.cues.length) {
       // the captions as a track for the platforms' own caption upload (YouTube takes .srt)
@@ -1685,6 +1702,12 @@ async function batch(args) {
     const probe = await openPage(browser, pagePath);
     const found = await variantsOf(probe.page);
     await probe.page.close();
+    const odd = rendersVideo(args) ? oddFrameProblem(pagePath) : '';
+    if (odd) {
+      console.error(`\n== ${pagePath}\n${odd}`);
+      results.push({ page: pagePath, variant: null, out, ok: false });
+      continue;
+    }
     for (const v of found.length ? found : [null]) {
       console.log(`\n== ${pagePath}${v ? ` [variant ${v}]` : ''}`);
       let code;
@@ -1728,6 +1751,8 @@ async function main() {
   }
   let variants = asked.length ? asked : found;
   const rendering = outPath && !args.stills && !args.check && !args.slides && !args.voiceLengths;
+  const odd = outPath && rendersVideo(args) ? oddFrameProblem(pagePath) : '';
+  if (odd) fail(odd);
   if (rendering && found.length && !asked.length) {
     fail(`This page has hook variants (${found.join(', ')}). Render one with --variant ${found[0]}, or all with --variants ${found.join(',')}.`);
   }
